@@ -1,6 +1,10 @@
 # Papers & large documents
 *.docx
 *.pdf
+system_design.md
+causal_audit.md
+causal_diagnostic_research.md
+PAPER_CLAIMS.md
 
 # Python
 __pycache__/
