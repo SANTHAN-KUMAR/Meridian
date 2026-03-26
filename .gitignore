@@ -1,0 +1,38 @@
+# Papers & large documents
+*.docx
+*.pdf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Agent/Gemini internal
+agent/
+.gemini/
+
+# Pytest
+.pytest_cache/
+
+# Node
+node_modules/
