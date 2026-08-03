@@ -40,3 +40,4 @@ agent/
 
 # Node
 node_modules/
+audit/repro/out/
