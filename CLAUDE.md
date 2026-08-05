@@ -152,7 +152,26 @@ An oracle estimator — handed the unmeasured confounder, the true nuisance func
 Run the oracle first, not last. It is the cheapest experiment that can kill a project, which is
 exactly why it should be the earliest.
 
-### 4.4 Estimators must fail loudly on unidentified data
+### 4.4 Choose problems where the assignment is hard and the outcome is easy
+
+Causal machinery removes **confounding bias**. It does nothing about **outcome-model error**. So the
+value of a causal method is visible only when confounding bias is the larger of the two.
+
+> **Before adopting a problem, estimate both. If the outcome is a complicated dynamical object —
+> a stiff ODE, a long-memory process, a system where the response depends on the whole recent history
+> — the outcome-model error will dominate and no causal method can demonstrate value on it, however
+> correct the identification argument is.**
+
+Causal inference earns its keep where the *assignment mechanism* is complicated and the *outcome
+model* is simple: a messy selection process producing a scalar response. It is a poor fit for the
+reverse, and the reverse is easy to mistake for a rich research problem, because complex dynamics
+look like depth.
+
+The diagnostic is cheap and it is a special case of §4.3: run an oracle that sees the confounder.
+If oracle error ≈ naive error, the residual is misspecification, not confounding, and the entire
+comparison you were planning is unobservable. Do this **before** committing to a problem, not after.
+
+### 4.5 Estimators must fail loudly on unidentified data
 
 Construct a dataset where the target is provably not identified — deterministic exposure, zero proxy
 strength, no overlap — and feed it to the estimator. **It must refuse, warn, or return a non-finite
@@ -367,6 +386,7 @@ warranted, stop and ask; do not proceed and document it.
 13. No estimate reported from a design where `SE/|θ| ≳ 1`. §4.1
 14. No result reported from a benchmark whose oracle loses to a trivial baseline. §4.3
 15. No novelty claim without a reproducible search protocol and a date. §10.4
+16. No problem adopted before measuring whether confounding bias or outcome-model error dominates. §4.4
 
 ---
 
