@@ -1,324 +1,376 @@
-# CLAUDE.md — operating rules for this repository
+# CLAUDE.md — how to do quantitative research here without producing a false claim
 
-This is a **causal inference research project** targeting a peer-reviewed venue. The deliverable is
-not working code. The deliverable is **a true claim about the world, with evidence that survives a
-hostile reviewer.** Code that runs, tests that pass, and numbers that look good are worth nothing on
-their own — and this repository has already produced all three while being wrong.
+This is a research repository. The deliverable is **a true claim about the world, with evidence that
+survives a hostile reviewer.** Working code, passing tests, and good-looking numbers are not the
+deliverable and are not evidence — this project has produced all three while being wrong, twice.
 
-Read [`audit/CRITICAL_REVIEW.md`](audit/CRITICAL_REVIEW.md) before your first edit. It documents 34
-findings, of which the central one is that a published headline number was an artifact of a silently
-pseudo-inverted singular matrix, and the ground truth it was scored against was an artifact of an ODE
-integrator clamp. Both survived 33 passing tests.
+This file is deliberately **domain-general**. It states how to work, not what is true about any
+particular model, dataset, or estimator. Project-specific facts — the current problem statement, the
+simulator's equations, the active gate list, commands — live in [`docs/PROJECT.md`](docs/PROJECT.md)
+and must not be duplicated here. **If the project pivots to a different problem, this file should
+still be correct.**
 
 ---
 
 ## 0. The failure mode this file exists to prevent
 
 Every prior agent on this project did competent local work and produced a global falsehood. The
-pattern was always the same:
+pattern never varies:
 
 > A quantity was hard to compute, so a plausible-looking substitute was written instead. The
-> substitute satisfied the test. Nothing ever asked whether the substitute was the quantity.
+> substitute satisfied the test. **Nothing ever asked whether the substitute was the quantity.**
 
-Concretely, what actually happened here:
+The substitutes were each locally reasonable: a regulariser that made a singularity go away, a ratio
+that had the right name but the wrong units, a weight that blended toward the expected answer, a
+constant chosen so coverage came out at 95%, a test that asserted the conclusion. None was malicious.
+None was incompetent. All of them shipped, and all of them survived a fully green test suite.
 
-| the shortcut | what it produced |
-|---|---|
-| Stage 2 regression included every regressor that "should help" | exactly singular design matrix; the SVD solver silently returned a min-norm solution equal to **naive OLS ÷ 2**, and that halving *was* the published 47.5% improvement |
-| `snr = beta / sigma` — looks like a signal-to-noise ratio | actual SNR was **7× smaller**; the project's stated central limitation ("only 28% of patients exceed F=10") was downstream of this one line |
-| `w = 1 − exp(−F/10)` blended toward naive when proxies were weak | manufactured proxy sensitivity for a point estimate that had none — the *appearance* of the desired result |
-| `effective_n = n/5.0`, `sensitivity_gamma = 0.15` | interval widths tuned until coverage hit 95%; the source comment says so outright |
-| `test_proximal_beats_all_alternatives` | the conclusion asserted as a build precondition, so a negative result could not ship |
-| `warnings.filterwarnings('ignore')` at module scope | the mechanism by which all of the above stayed invisible |
-| ground truth averaged over hourly samples | 63% of those samples were **exactly 0.0** because the glucose state hit a hard clamp; 58% of the "order-of-magnitude patient heterogeneity" was integrator saturation |
-
-None of these were malicious and none were incompetent. Each was locally reasonable. The rules below
-are the specific countermeasures.
+The countermeasure is not more tests. It is **asking the questions in the right order**, which is §1.
 
 ---
 
-## 1. Hard prohibitions
+## 1. The order of validity
 
-Violating any of these is a defect regardless of test status. If you believe an exception is
-warranted, stop and ask — do not proceed and document it.
+Six levels. Each is meaningless unless every level below it holds. **Work bottom-up. Never repair a
+level before the one beneath it is verified.**
 
-1. **Never tune a constant to make a metric come out right.** Not "calibrated", not "empirically
-   selected", not "chosen for stability". If a value was chosen by looking at the output it
-   influences, it is circular and the result is void. Constants come from physics, from a cited
-   paper, or from a procedure (cross-validation on held-out data) that is itself reported.
+| level | question | if it fails |
+|---|---|---|
+| **L1 Definition** | Is the target quantity written down unambiguously? | You are estimating an unknown |
+| **L2 Identification** | Is it a functional of the observable distribution, under assumptions you have stated? | No amount of data helps |
+| **L3 Estimability** | Does the data contain enough of the *right* variation to estimate it at the sample size you have? | Every number you produce is noise wearing a point estimate |
+| **L4 Specification** | Does the estimator target *that* functional, or a different one? | You measured something real, but not the thing |
+| **L5 Computation** | Is the arithmetic right, and did the solver answer the question you asked? | The number is not the estimator's output |
+| **L6 Reporting** | Does the claim match the evidence? | Everything below was wasted |
 
-2. **Never write a test that asserts the hypothesis.** `assert proximal_mae < naive_mae` is not a
-   test, it is a filter that makes the negative result unrepresentable. Tests assert properties whose
-   expected value is fixed by mathematics, physics, or external literature — *independently of whether
-   the method works*. See §3.
+The costliest errors in this repository's history were **L3 defects diagnosed as L4 or L5 defects**.
+Two audits recommended fixing the estimator; the target was not estimable from the design at any
+sample size, so a corrected estimator would have produced a different wrong number, indistinguishable
+from the old one. **When something does not work, walk down the levels, not sideways.**
 
-3. **Never let a numerical solver mask a specification error.** `pinv`, `lstsq` with `rcond`, SVD
-   truncation, and ridge regularisation all return an answer for a rank-deficient design. That answer
-   is not an estimate. Assert rank and condition number at every fit. Rank deficiency means your
-   model is wrong, not that your solver needs help.
-
-4. **Never suppress warnings at module or package scope.** No `warnings.filterwarnings('ignore')`, no
-   bare `np.errstate(all='ignore')` wrapping a whole function. Narrow `catch_warnings` at the exact
-   call site, with a comment naming the warning and why it is expected.
-
-5. **Never catch an exception without logging and counting it.** `except Exception: fall back to
-   something else` is how a pooled estimate got relabelled as a per-patient estimate for an unknown
-   number of patients. Every fallback increments a counter that appears in the results.
-
-6. **Never write a number into prose, a README, a table, or a paper by hand.** Every reported figure
-   is read from a generated artifact by a script. The README claimed P95 = 5.60 while `results.csv`
-   said 6.187, and `summary_statistics.txt` offered the range of the *estimator* as evidence for the
-   heterogeneity of the *ground truth*. Both are transcription-class errors.
-
-7. **Never describe a causal pathway in a docstring that is not asserted in code.** Two documented
-   arrows in this repository (`U → glucose via cortisol`) operate on a variable that is
-   uncorrelated (r = −0.009) with the actual confounder. If a docstring claims `X` affects `Y`, there
-   is a test measuring it.
-
-8. **Never implement a method from a paper without quoting the equation.** The proximal estimator was
-   attributed to Cui et al. (JASA 2024), which contains no such estimator; the method it gestured at
-   (P2SLS) puts a *different variable* in the endogenous slot. Put the citation, the section number,
-   and the equation as it appears in the source directly above the implementation, then map each
-   symbol to a variable name.
-
-9. **Never fix a downstream component before its upstream input is validated.** Both prior audits
-   recommended fixing the estimator. The ground truth it is scored against is invalid, so a correct
-   estimator would have produced a different wrong number, indistinguishable from the current state.
-   Work in the order of the data flow: simulator → ground truth → data generation → estimator →
-   inference → reporting.
-
-10. **Never widen an interval until it covers.** Under-coverage is a finding. Report it.
-
-11. **Never ship a stub silently.** If a component is a placeholder, register it (this repository's
-    `verification/STUB_REGISTRY.md` is a genuinely good model: location, current behaviour, correct
-    behaviour, removal condition, verifying test). A registered stub is honest engineering. An
-    unregistered one is a false claim.
-
-12. **Never let a test write to a results path.** Running `pytest` currently overwrites the committed
-    50-patient `results.csv` and diagnostics with a 10-patient run, and the figure generator reads
-    those same paths — so the published figures can silently become figures of the test run. Results
-    directories are write-once and stamped with timestamp, git SHA and `n`. Tests write to `tmp_path`.
+Name the level you are working at in every response. If you cannot name it, you do not yet understand
+the task.
 
 ---
 
-## 2. Positive practices
+## 2. L1 — Define before you estimate
 
-### 2.1 Before writing an estimator, write the estimand
+No estimator is written before the estimand exists in writing. The estimand document states:
 
-No estimator PR is accepted without a current `docs/ESTIMAND.md` stating:
+1. The target in explicit notation (potential outcomes, do-notation, or a stated functional). Include
+   the **unit of analysis** — per-individual, per-subgroup, or population — and say which.
+2. The conditioning set, and the **averaging measure**: over what distribution, at what times, under
+   what baseline, weighted how.
+3. Units, and a plausible magnitude range taken from outside this codebase.
+4. The identification assumptions, each with a citation or a structural argument.
+5. **The estimator's implicit weighting, and how it differs from the estimand's averaging measure.**
 
-- the potential-outcome notation for the target quantity;
-- the conditioning set;
-- the averaging measure (over what distribution, at what times, at what baseline dose);
-- the units, and a plausible range from the clinical literature;
-- the identification assumptions, each with a citation;
-- **what the estimator's implicit weighting is, and how it differs from the ground truth's averaging
-  measure.**
+Item 5 is the one that gets skipped, and it is where the deepest error in this project lived: the
+reference quantity and the estimated quantity were averages over different regimes, and the gap was
+invisible for two papers because nobody wrote both down side by side.
 
-That last item is the one that gets skipped and it is where this project's deepest problem lives: the
-ground truth was a derivative at insulin dose 0 with basal suspended, on a trajectory averaging
-341 mg/dL glucose, while the data came from a trajectory averaging 151 mg/dL with mean dose 0.33 U.
-Those are different quantities and nothing noticed for two papers.
+**A quantity you cannot write in notation, you cannot estimate.** If writing it exposes an ambiguity —
+which time points, which baseline, whose distribution — that ambiguity is a finding. Resolve it in
+the document, not silently in the code.
 
-### 2.2 Validate against the world, not against yourself
+---
 
-Internal consistency is not validation. For every quantity the project computes, there must be a check
-against something outside the code:
+## 3. L2 — Identification
 
-| quantity | external anchor |
-|---|---|
-| simulated glucose distribution | real T1D cohorts average 150–200 mg/dL; time-in-range 70–180 is a reported clinical statistic |
-| insulin sensitivity τ | clinical ISF is 30–80 mg/dL/U (Walsh 2000-rule; Davidson 1700-rule); scale by the horizon fraction |
-| day-to-day variability of τ | 38–79% CV (Ruan/Hovorka, *IEEE TBME* 2017, PMID 28113240) |
-| diurnal variation of ISF | numerators 1736 (am) / 1873 (pm) / 2035 (evening) (Hegab, *Front Pediatr* 2022) |
-| what counts as an error that matters | ~10% (titration increment); ~20% (insulin-dose error grid) |
+State assumptions as **conditional independences over named variables**, not as prose. For each:
 
-If a computed quantity is two orders of magnitude off a published clinical value, that is the finding,
-and it outranks whatever you were working on. Adults in the current cohort have τ = 1.65 mg/dL/U
-against a clinical 30–80. Nobody checked for two papers.
+- **Say which are testable and which are not.** Test the testable ones and report the result. Name the
+  untestable ones as limitations in the same paragraph where you rely on them.
+- **Point at the line of code that enforces or violates it.** If a generative process is supposed to
+  satisfy an exclusion restriction, name the line that makes it true. If nothing makes it true, the
+  assumption is a wish.
+- **Positivity/overlap is an identification assumption and it is the one that gets forgotten.** Write
+  it down explicitly and then check it at L3.
 
-### 2.3 Recompute every derived constant from data
+**Never implement a method from a paper without quoting the equation.** Put the citation, section
+number, and the equation as it appears in the source directly above the implementation, then map each
+symbol to a variable name. A method attributed to a paper that does not contain it is a fabrication,
+regardless of whether the code runs.
 
-Any constant whose name asserts a relationship (`snr`, `r2`, `coupling`, `explained_variance`) must be
-recomputed from simulated output and asserted to match its name. Two dimensional errors of exactly
-this class shipped here:
+**Never describe a causal pathway in a docstring that is not asserted in code.** If a docstring claims
+`X` affects `Y`, there is a test measuring it. Documented arrows that turn out to be disconnected
+from the running model are how this project spent two papers building proxies for a variable that did
+not affect the outcome.
 
-```python
-'snr': BETA_STRONG / SIGMA_STRONG           # claims 4.0; measured SNR_Z = 0.546
-# and, in a docstring:
-# "fraction of fatigue variance explained by stress ~ 0.10²/(0.10²+0.03²) ≈ 92%"
-#                                                    measured R² = 0.529
+---
+
+## 4. L3 — Estimability: is there anything to estimate?
+
+**This level is the one this project did not have, and its absence cost two papers.** It sits between
+"identified in principle" and "estimated in practice", and it is where most quantitative research
+silently dies.
+
+### 4.1 The denominator rule
+
+Every causal and regression estimator is a ratio whose denominator is **the variation in the exposure
+that survives conditioning on everything you condition on**. Weak instruments, weak proxies, poor
+overlap, near-collinear designs and deterministic assignment are not four problems. They are one
+problem — *the denominator is near zero* — seen from four directions.
+
+Before running any estimator, compute the standard error the design permits:
+
+```
+SE(θ̂)  ≳  sd(outcome residual) / ( sd(exposure residual) × √n_eff )
 ```
 
-Both omit `var(stress)`. Both were quoted as fact by two subsequent audits.
+with both residuals taken after partialling out the **full** adjustment set, including every variable
+you hope to adjust for successfully. That makes it a best case, so it is a lower bound on achievable
+SE. Compare it to |θ| and **report the ratio**.
 
-### 2.4 Report distributions and failures, never just means
+- `SE/|θ| ≳ 1` — the target is not estimable at this sample size. **Stop.** Do not tune an estimator
+  against noise. Report the ratio as the finding, and state the `n` that would be required.
+- Report `n_eff`, not `n`. Autocorrelated, clustered or repeated-measures data has an effective sample
+  size far below its row count. Sampling a process faster than it varies adds rows and no information.
 
-Every results table carries: bias, empirical SD, MAE **and MAE as a fraction of mean |target|**,
-median and IQR, measured coverage, and the **failure rate** — the fraction of units where the
-estimator was non-finite, rank-deficient, fell back, or landed outside the plausible range. Heavy
-tails are the normal behaviour in this problem class; a mean alone hides them.
+### 4.2 If the exposure is assigned by a rule, assume there is no variation until you measure some
 
-### 2.5 One claim, one script, one artifact
+Protocols, clinical guidelines, control algorithms, dosing formulas, pricing rules and recommender
+policies all make the exposure a near-deterministic function of the observed state. Then, by
+construction, there is nothing left to identify an effect with.
 
-Every claim maps to a named cell in a generated CSV, produced by a named script, listed in a
-claims-map file. `paper.pdf` claims this infrastructure exists; it does not. Build it before claiming
-it, and do not count hypothesis-asserting tests in the assertion total.
+**The measurement:** regress the exposure on the rule's own inputs. `1 − R²` is the fraction of
+exposure variation available to you. If the rule is known, do this analytically too.
 
----
+This cuts both ways, and the second edge is useful: **a known assignment rule is a known propensity**,
+which is a gift for policy evaluation even when it is fatal for individual effect estimation. When L3
+blocks one estimand, ask which estimand the same design makes *easier*.
 
-## 3. The twelve gates
+### 4.3 The oracle is a property of the design, not of the method
 
-These are the CI-blocking checks. Every one has an expected value fixed **independently of whether the
-method works**. Full specification and current status: [`audit/REMEDIATION_PLAN.md`](audit/REMEDIATION_PLAN.md) §2.
+An oracle estimator — handed the unmeasured confounder, the true nuisance functions, or the true model
+— bounds what any feasible method can achieve.
 
-**Benchmark validity**
-- `G-PHYS` — cohort mean glucose ∈ [120, 200] mg/dL; median time-in-range ≥ 0.50
-- `G-CLAMP` — < 1% of trajectory at a state clamp; no finite difference computed across a clamp
-- `G-PLAUS` — 2 ≤ |τ_i| ≤ 60 mg/dL/U, correct sign, cohort median within 2× of clinical ISF
-- `G-HETERO` — `corr(frac_clamped, τ_i)² < 0.05` — heterogeneity must not be a numerical artifact
+> **If the oracle cannot beat a trivial baseline, the design is uninformative, and no result computed
+> on it may be reported.** This is not a statement about your estimator. It says the benchmark cannot
+> distinguish a good method from a bad one, so every row in the table is noise.
 
-**Estimator correctness**
-- `G-RANK` — every design matrix full rank, condition number < 1e10
-- `G-NULL` — at zero confounding, every estimator recovers the truth
-- `G-EQUIVAR` — scaling `A` by `k` scales `τ̂` by `1/k`, to 1%
-- `G-ORACLE` — the oracle that observes `U` has strictly the lowest MAE in the table; **if it does
-  not, the benchmark cannot separate bias removal from approximation error and no other row may be
-  reported**
-- `G-DISTINCT` — no two estimators agree beyond 6 significant figures
-- `G-FLOOR` — the method beats the best constant, the oracle constant, and CV-tuned scalar shrinkage
+Run the oracle first, not last. It is the cheapest experiment that can kill a project, which is
+exactly why it should be the earliest.
 
-**Inference and process**
-- `G-CALIB` — all coverage measured from ≥200 Monte Carlo replications; any constant tuned to a
-  coverage target is a build failure
-- `G-ESTIMAND` — `docs/ESTIMAND.md` exists and is current
+### 4.4 Estimators must fail loudly on unidentified data
 
-Gates run on **100% of the cohort**. The current ground-truth validator inspects 10 of 50 patients
-and therefore misses the patient whose τ is exactly zero.
-
-`G-FLOOR` is a floor, not the scientific claim. Beating a constant is a precondition for a number
-meaning anything. The scientific claim is *reported*, never *asserted*.
+Construct a dataset where the target is provably not identified — deterministic exposure, zero proxy
+strength, no overlap — and feed it to the estimator. **It must refuse, warn, or return a non-finite
+value.** An estimator that returns a confident number there is reporting its own regularisation, and
+it will do exactly the same on the real data without telling you.
 
 ---
 
-## 4. Workflow
+## 5. L4 — Specification
 
-### Definition of done
+**An estimator's target is whatever its estimating equation identifies, which is not necessarily what
+you meant.** Write out the equation as implemented — not as documented — and check it against L1.
 
-A change is done when all of the following hold. Not "tests pass".
+- **Misspecification bias is usually much larger than the bias you are trying to remove.** Before
+  deploying machinery that corrects a second-order bias, measure the first-order one. If a
+  functional-form error is an order of magnitude larger than the confounding your method targets, the
+  comparison measures the functional-form error and your method's contribution is unobservable.
+- **Rank deficiency means your model is wrong, not that your solver needs help.** See §6.1.
+- If the data-generating process is dynamic and the estimator is static, say so and quantify the gap.
+  Do not assume a snapshot covariate set stands in for a history.
+- **A method must be distinguishable from its baselines.** Two "different" estimators that are
+  algebraically identical are one estimator and a bug in the comparison. Check explicitly — agreement
+  beyond a few significant figures between nominally different methods is a defect, not a validation.
 
-1. The relevant gates are green, and you say which ones and what they measured.
-2. Any number you report is reproduced by a committed script whose path you name.
-3. If you touched a quantity with a physical meaning, you state its value and the external range it
-   falls in.
-4. If you could not do something, it is written down — in the stub registry if it is a placeholder, or
-   in your response if it is a limitation.
+---
 
-### When you are blocked
+## 6. L5 — Computation
 
-The correct move is to **say so and stop**. The wrong move — and the one that produced every finding
-in the audit — is to write something plausible that lets the pipeline run. If a quantity is hard to
-compute:
+1. **Never let a numerical solver mask a specification error.** `pinv`, `lstsq` with `rcond`, SVD
+   truncation and ridge all return an answer for a rank-deficient design. That answer is not an
+   estimate. **Assert rank and condition number at every fit**, before the solve, and fail rather than
+   proceed.
+2. **Never suppress warnings at module or package scope.** Narrow `catch_warnings` at the exact call
+   site, with a comment naming the warning and why it is expected. Global suppression is the mechanism
+   by which every other defect in §0 stayed invisible.
+3. **Never catch an exception without logging and counting it.** Every fallback increments a counter
+   that appears in the results. `except: use something else` is how a pooled estimate was silently
+   relabelled a per-unit estimate for an unknown number of units.
+4. **Never tune a constant to make a metric come out right.** Not "calibrated", not "empirically
+   selected", not "chosen for stability". If a value was chosen by looking at the output it
+   influences, the result is circular and void. Constants come from physics, from a cited source, or
+   from a selection procedure that (a) never sees the target quantity and (b) is itself reported.
+5. **Recompute every derived constant from data.** Any name asserting a relationship — `snr`, `r2`,
+   `coupling`, `explained_variance`, `effective_n` — is recomputed from actual output and asserted to
+   match its name. Two dimensional errors of exactly this class shipped here; both were a variance
+   term omitted from a ratio, and both were later quoted as fact by audits.
+6. **Never let a test write to a results path.** Results directories are write-once and stamped with
+   timestamp, code version and `n`. Tests write to temporary directories.
 
-- **Do**: implement it correctly but slowly; or register a stub with its removal condition; or report
-  that the component is not implemented and explain what it would take.
+---
+
+## 7. L6 — Reporting
+
+1. **Never write a number into prose, a README, a table or a paper by hand.** Every reported figure is
+   read from a generated artifact by a named script. One claim, one script, one named cell, listed in
+   a claims map.
+2. **Report distributions and failures, never just means.** Every results table carries bias, empirical
+   SD, error **and error as a fraction of the mean |target|**, median and IQR, measured coverage, and
+   the **failure rate** — the fraction of units where the estimator was non-finite, rank-deficient,
+   fell back, or landed outside the plausible range.
+3. **State magnitudes with their scale.** "MAE 2.12" is uninterpretable. "MAE 2.12, 39% of the mean
+   effect size, against a decision threshold of 10%" is a claim someone can evaluate.
+4. **Never widen an interval until it covers.** Under-coverage is a finding.
+5. **Never ship a stub silently.** Register it: location, current behaviour, correct behaviour,
+   removal condition, verifying test. A registered stub is honest engineering; an unregistered one is
+   a false claim.
+6. **Retraction is deletion, not annotation.** A retracted number is removed from every table, figure
+   and summary containing it. A banner at the top of a document whose body still asserts the number is
+   worse than no banner: it reads as due diligence while the falsehood stays quotable.
+
+---
+
+## 8. Validate against the world, not against yourself
+
+Internal consistency is not validation. For every quantity the project computes there must be a check
+against something outside the code: a published measurement, a conservation law, a dimensional
+analysis, or a limiting case with a known closed form.
+
+**If a computed quantity is orders of magnitude from a published value for the same thing, that is the
+finding, and it outranks whatever you were working on.**
+
+Three baselines are mandatory in every comparison. A method that does not beat all three has
+demonstrated nothing:
+
+| baseline | what it rules out |
+|---|---|
+| **the no-data baseline** — a prediction using none of the observed outcomes (a formula, a prior, a published rule of thumb) | that your estimator has negative information content |
+| **the best constant**, and the oracle constant that cheats by knowing the target's mean | that your "individualisation" is worse than not individualising |
+| **one-parameter shrinkage** of the simplest estimator | that your machinery beats one scalar of regularisation |
+
+These are floors, not the scientific claim. Clearing them is a precondition for a number meaning
+anything. The scientific claim is *reported*, never *asserted*.
+
+---
+
+## 9. Tests and gates
+
+### 9.1 The only rule that matters
+
+**A test asserts a property whose expected value is fixed by mathematics, physics, or external
+literature — independently of whether the method works.**
+
+`assert method_a_error < method_b_error` is not a test. It is a filter that makes the negative result
+unrepresentable, and it passes on a broken implementation as readily as a correct one.
+
+Before writing a test, answer: **what would have to break for this to fail?** If the answer is
+"nothing realistic", delete it. Then answer: **would this still pass if the component under test were
+replaced by a constant, by half of its input, or by a random number in the plausible range?** Work
+through it concretely. If yes, it is not testing what you think it is.
+
+### 9.2 Deriving gates for a new problem
+
+Gates are CI-blocking checks whose expected values are fixed independently of the result. Do not copy
+a gate list from a previous problem — **derive one** by asking what each class means here:
+
+| class | form | example question |
+|---|---|---|
+| **Invariance** | rescale, relabel or change units of an input; the output must transform correspondingly | does scaling the exposure by `k` scale the effect by `1/k`? |
+| **Recovery** | a limit where the answer is known in closed form | at zero effect, does every estimator return zero? under randomised assignment, is the truth recovered? |
+| **Degeneracy** | the design must be non-degenerate before any estimate means anything | is every design matrix full rank? is there overlap? is `SE/\|θ\|` below 1? |
+| **Monotonicity** | more information must not hurt | does the oracle beat the feasible method? do strong proxies beat weak ones? |
+| **Physical plausibility** | magnitude, sign and range against external literature | is the sign right for 100% of units? is the median within 2× of the published value? |
+| **Floor** | §8's three baselines | is it beaten by a constant? |
+| **Artifact** | the result must not be a property of the numerics | is the heterogeneity you report correlated with the integrator's clamp rate? |
+
+Gates run on **100% of units**, never a sample. A validator that inspects a subset will miss the
+pathological unit, and the pathological unit is the finding.
+
+### 9.3 When a check fails
+
+**The first hypothesis is that the check is right and the code is wrong.** Changing a threshold to
+make a test pass requires the same justification as changing the science, because it is the same act.
+When criteria genuinely need revising, record the revision, the reason and the date — a documented
+threshold change is transparency and a strength; an undocumented one is fraud.
+
+---
+
+## 10. Working method
+
+### 10.1 Definition of done
+
+Not "tests pass". A change is done when:
+
+1. You name the validity level (§1) you worked at, and confirm the levels below it still hold.
+2. The relevant gates are green, and you say which ones and what they measured.
+3. Any number you report is reproduced by a committed script whose path you name.
+4. Any quantity with a physical meaning is stated with its value and the external range it falls in.
+5. Anything you could not do is written down — in the stub registry if it is a placeholder, in your
+   response if it is a limitation.
+
+### 10.2 Before reporting a result, try to break it
+
+- Does it survive rescaling the exposure?
+- Does it survive setting the true effect to zero?
+- Does an oracle with strictly more information do better? If not, the benchmark is broken.
+- Is it beaten by a constant, by a no-data formula, or by one-parameter shrinkage?
+- Is the magnitude physically plausible against an external source?
+- Would the sign hold under a different random seed?
+- **Is `SE/|θ|` below 1?**
+
+Every one of those questions, asked once, would have caught a central defect in this project.
+
+### 10.3 When you are blocked
+
+The correct move is to **say so and stop**. The wrong move — the one that produced every finding in
+the audit — is to write something plausible that lets the pipeline run.
+
+- **Do**: implement it correctly but slowly; register a stub with its removal condition; or report
+  that the component is not implemented and say what it would take.
 - **Do not**: substitute a proxy that "captures the same idea", add a regularisation that makes the
   singularity go away, or relax a threshold until the check passes.
 
-If a check fails, the first hypothesis is that **the check is right and the code is wrong**. Changing
-a threshold to make a test pass requires the same justification as changing the science, because it
-is the same act. When criteria genuinely need revising, record the revision and the reason — this
-repository does that well in `test_success_criteria.py`, and that transparency is a strength worth
-keeping.
+A negative result, reported clearly, is a contribution. A positive result that does not survive §10.2
+is a liability that compounds — every subsequent audit will quote it as established fact, as happened
+here twice.
 
-### Reviewing your own work
+### 10.4 Claims about novelty
 
-Before reporting a result, try to break it:
+Treat "nobody has done this" as a claim requiring evidence, at the same standard as a numerical
+result. Cite the searches you ran and the terms you used, distinguish *verified absent* from *not
+found*, and state the date — absence of evidence decays. A literature claim that cannot be reproduced
+from a written search protocol is not a finding, and "greenfield" asserted without one has the same
+status as a hand-transcribed number.
 
-- Does it survive scaling the treatment by 2? (unit equivariance)
-- Does it survive setting the effect to zero? (null test)
-- Does an oracle with more information do better? (if not, the benchmark is broken)
-- Is it beaten by a constant, or by one-parameter shrinkage? (if so, it is not a finding)
-- Is the number's magnitude physically plausible?
-- If I ran this with a different random seed, would the sign hold?
-
-Every one of those questions, asked once, would have caught the central defect.
-
----
-
-## 5. Project map
-
-```
-causal_eval/  (Stage 0.5/0.6 done — package rename to aegis/ still open, cosmetic only)
-  simulator/        Hovorka 10-state ODE. Moved here from verification/simulator/patient.py
-                    (Stage 0.5); normal package import, no more sys.path injection. This is
-                    the copy that gets edited; archive/v1/ keeps its own frozen copy so audit
-                    finding line numbers (e.g. CRITICAL_REVIEW.md T0-1's patient.py:318-323)
-                    stay valid against the state they were found in.
-  dgp/              cohort construction, confounders, proxies, ground truth
-  estimators/       one file per estimator; each states its estimating equation and citation
-  evaluation/       experiment orchestration, metrics, gates. results_runs/ holds every run
-                    (timestamp+git-sha+n, write-once); results/ is the published pointer,
-                    updated only by explicit publish_results() (Stage 0.6, fixes T3-8).
-docs/ESTIMAND.md    prerequisite for any estimator work (does not exist yet — Stage 2)
-audit/              CRITICAL_REVIEW.md, REMEDIATION_PLAN.md, RESEARCH_POSITIONING.md — historical
-                    record as of the audit date; line-number references there describe
-                    archive/v1/verification/'s frozen copy, not causal_eval/'s current one.
-audit/repro/        every audit claim, as a runnable script
-archive/v1/         the 5-layer closed-loop system, retired (moved from verification/, Stage 0.5)
-```
-
-State vector is **10** elements: `[S1, S2, I, x1, x2, x3, Q1, Q2, G1, G2]`. `Q1` is index 6. The
-README says 11 and is wrong.
-
-### Commands
-
-```bash
-python -m pytest causal_eval/tests/ -q          # currently 33 pass; see §0 for why that is not reassuring
-python -m causal_eval.evaluation.experiment     # full run; DO NOT run for results until Gate 1 is green
-python audit/repro/rev_static_checks.py         # ~5 s, no ODE — fastest way to see the core defects
-```
-
-`pytest` must run with warnings enabled. If it does not, someone reintroduced a `filterwarnings` call.
-
-### Environment
-
-Python 3.13, numpy 2.5, scipy 1.18, scikit-learn 1.6.1, pandas 2.2.3, matplotlib 3.10.1. There is no
-dependency manifest yet — add `pyproject.toml` with pins (Stage 0.5) and record `pip freeze` into
-every results directory.
-
----
-
-## 6. Domain facts worth knowing before you touch the DGP
-
-- Insulin **lowers** glucose, so τ < 0 in the sign convention used here. A τ near zero means insulin
-  has no effect, which is not a thing in Type 1 Diabetes.
-- The Hovorka ODE has hard switches: renal clearance `FR` activates above 162 mg/dL, `F01c` saturates
-  below 81 mg/dL, `EGP ∝ max(1−x₃, 0)`, all states are floored at 0 each substep, and `Q1` is clamped
-  to [40, 400] mg/dL equivalent. **Finite differences near any of these are meaningless.** Use a
-  1-Unit dose contrast, not an infinitesimal derivative — 1 U is also the clinically meaningful unit.
-- Insulin action peaks around 55 minutes (`tmaxI`) and persists 3–5 hours. A 60-minute outcome window
-  captures a fraction of the total effect; say which fraction when comparing to clinical ISF.
-- The 60-minute glucose change depends on the **entire recent insulin and carbohydrate history**, not
-  on the current dose. Static regression on `[glucose, carbs, hour]` is misspecified, and the
-  resulting bias is an order of magnitude larger than the confounding bias the proximal machinery
-  targets. Partial out lagged treatment and carbs with cross-fitted flexible learners.
-- Stress raises glucose *and* causes insulin resistance. The current simulator only does the first
-  (additive on `dQ1`), so there is no treatment–confounder interaction anywhere in the DGP. The
-  clinically real case is the untested one.
-- A per-patient scalar τ is a questionable estimand: within-patient temporal variation in τ(t) is
-  1.8–2.1× the between-patient variation this project is trying to detect.
-
----
-
-## 7. Communication
+### 10.5 Communication
 
 Report what happened, including what did not work. If a result got worse, say it got worse and by how
 much. If you are uncertain whether something is a bug or a real effect, say that rather than picking
 the flattering interpretation.
 
-State magnitudes with their scale: "MAE 2.12 mg/dL/U" is uninterpretable; "MAE 2.12 mg/dL/U, 39% of
-the mean effect size, against a clinical titration increment of 10%" is a claim someone can evaluate.
+The reader is a co-author who will defend this in review. Give them what they need to be attacked.
 
-The reader is a co-author who will be defending this in review. Give them what they need to be
-attacked.
+---
+
+## 11. Hard prohibitions — index
+
+Violating any of these is a defect regardless of test status. If you believe an exception is
+warranted, stop and ask; do not proceed and document it.
+
+1. No constant tuned against the metric it influences. §6.4
+2. No test asserting the hypothesis. §9.1
+3. No solver masking a rank-deficient or ill-posed design. §6.1
+4. No module- or package-scope warning suppression. §6.2
+5. No uncounted, unlogged exception handler. §6.3
+6. No hand-transcribed number in any document. §7.1
+7. No documented causal pathway that is not asserted in code. §3
+8. No method implemented from a paper without the quoted equation. §3
+9. No downstream fix before its upstream level is validated. §1
+10. No interval widened until it covers. §7.4
+11. No unregistered stub. §7.5
+12. No test writing to a results path. §6.6
+13. No estimate reported from a design where `SE/|θ| ≳ 1`. §4.1
+14. No result reported from a benchmark whose oracle loses to a trivial baseline. §4.3
+15. No novelty claim without a reproducible search protocol and a date. §10.4
+
+---
+
+**Project-specific context — problem statement, domain facts, model equations, the active gate list,
+commands, environment — is in [`docs/PROJECT.md`](docs/PROJECT.md). Read it after this file and before
+your first edit. The historical record of what went wrong and why is in [`audit/`](audit/); its
+line-number references describe frozen copies under `archive/`, not current code.**
