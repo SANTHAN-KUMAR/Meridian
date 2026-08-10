@@ -41,3 +41,10 @@ agent/
 # Node
 node_modules/
 audit/repro/out/
+
+# VAERS/FAERS raw data — large, user-downloaded, redistributable from CDC/FDA
+AllVAERSDataCSVS.zip
+faers_ascii_2026q2/
+data/faers_sample/
+data/vaers/
+vaers/results/**/*.zip
