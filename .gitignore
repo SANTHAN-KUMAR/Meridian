@@ -48,3 +48,10 @@ faers_ascii_2026q2/
 data/faers_sample/
 data/vaers/
 vaers/results/**/*.zip
+
+# G-KAPPA blank worksheets embed raw VAERS narratives, so they follow the same
+# rule as the archive itself. They are fully regenerable from the committed
+# kappa_sample_manifest.json (ids + seed + frame) plus the archive. The
+# COMPLETED rating files (kappa_ratings_*.csv, no narrative column) are
+# results and ARE committed.
+vaers/results/**/kappa_worksheet_*.csv
