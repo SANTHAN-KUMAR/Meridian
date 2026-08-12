@@ -6,7 +6,7 @@ deliverable and are not evidence — this project has produced all three while b
 
 This file is deliberately **domain-general**. It states how to work, not what is true about any
 particular model, dataset, or estimator. Project-specific facts — the current problem statement, the
-simulator's equations, the active gate list, commands — live in [`docs/PROJECT.md`](docs/PROJECT.md)
+simulator's equations, the active gate list, commands — live in [`README.md`](README.md)
 and must not be duplicated here. **If the project pivots to a different problem, this file should
 still be correct.**
 
@@ -390,7 +390,14 @@ warranted, stop and ask; do not proceed and document it.
 
 ---
 
-**Project-specific context — problem statement, domain facts, model equations, the active gate list,
-commands, environment — is in [`docs/PROJECT.md`](docs/PROJECT.md). Read it after this file and before
-your first edit. The historical record of what went wrong and why is in [`audit/`](audit/); its
-line-number references describe frozen copies under `archive/`, not current code.**
+**Project-specific context lives with each project, not here.** This repository holds two:
+
+- [`vaers/`](vaers/) — LLM extraction and label-efficient inference for a regulatory case
+  definition. Start at [`vaers/ROADMAP.md`](vaers/ROADMAP.md).
+- [`aegis/`](aegis/) — proximal causal inference for insulin sensitivity. **Retired**: its
+  headline is retracted and its benchmark is uninformative (§4.3). Start at
+  [`aegis/PROJECT.md`](aegis/PROJECT.md) and read it before touching anything under `aegis/`.
+
+Read [`README.md`](README.md) for the routing, then the relevant project file, before your first
+edit. AEGIS's record of what went wrong is in [`aegis/audit/`](aegis/audit/); its line-number
+references describe frozen copies under [`aegis/archive/`](aegis/archive/), not current code.
