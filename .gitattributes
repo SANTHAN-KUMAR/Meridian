@@ -1,0 +1,11 @@
+# Line endings.
+#
+# Files that leave this repository to be EXECUTED somewhere else — the phone
+# (Termux/Android /bin/sh), a GPU host, a Kaggle kernel — must be checked out
+# with LF regardless of platform. A Windows checkout under core.autocrlf=true
+# writes CRLF, and Android's /bin/sh then fails on the first blank line
+# ("g0_probe.sh: 12: : not found") and on every backslash continuation
+# ("Syntax error: word unexpected"). Observed 2026-09-14 on the OnePlus 15R.
+moe-phone/device/**   text eol=lf
+*.sh                  text eol=lf
+*.ipynb               text eol=lf

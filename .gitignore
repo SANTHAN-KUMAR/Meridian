@@ -59,3 +59,12 @@ vaers/results/**/kappa_worksheet_*.csv
 # moe-phone: HF config/API cache and model weights are re-downloadable, never committed
 moe-phone/cache/
 moe-phone/models/
+
+# Pasted screenshots and one-off downloads dropped into moe-phone/ during a
+# session. The Kaggle output that matters is extracted into results/<date>/;
+# the zip and the raw export are duplicates and are not committed.
+moe-phone/*.jpg
+moe-phone/*.jpeg
+moe-phone/*.png
+moe-phone/kaggle/results.zip
+moe-phone/OnePlus*AI Benchmark*

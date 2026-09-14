@@ -254,15 +254,46 @@ def analyse(repo, a):
                     dram_b = res_bytes + g["E_tok_params"] * B * h * rho
                     t_f = bulk / (a.flash_gbps * 1e9) + scat / (a.flash_gbps_scattered * 1e9)
                     t_d = dram_b / (a.dram_gbps * 1e9)
-                    rows.append({
+
+                    # --- compute term -------------------------------------
+                    # Every weight that participates in a matmul costs one
+                    # multiply and one add: 2 FLOPs. Active weights per token
+                    # are the resident (non-expert) parameters plus the routed
+                    # expert parameters that survive sparsity (same rho as the
+                    # DRAM term, because a skipped neuron is neither read nor
+                    # multiplied).
+                    #
+                    # This DELIBERATELY OVERESTIMATES: `R` includes the
+                    # embedding table, which is a lookup rather than a matmul.
+                    # Overestimating compute biases the comparison AGAINST the
+                    # conclusion "I/O binds", so if I/O still binds, it binds
+                    # robustly. Attention's own O(context) work is not included
+                    # and grows with context — stated, not hidden (ESTIMAND §6).
+                    flops = 2.0 * (R + g["E_tok_params"] * rho)
+                    t_io = max(t_f, t_d)
+                    # The question this answers: how fast must the processor be
+                    # for compute to hide behind I/O? Reported as a REQUIREMENT
+                    # rather than compared against an assumed throughput, so no
+                    # unmeasured hardware number can drive the conclusion
+                    # (CLAUDE.md §6.4). A reader supplies their own via
+                    # --compute-gflops.
+                    req_gflops = (flops / t_io / 1e9) if (fits and t_io > 0) else None
+                    row = {
                         "format": fmt, "bpw": bpw, "resident_fits_ram": fits,
                         "h_label": h_label, "h": round(h, 4), "mode": mode, "d": d,
                         "flash_bulk_GB_per_tok": bulk / 1e9,
                         "flash_scattered_GB_per_tok": scat / 1e9,
                         "dram_GB_per_tok": dram_b / 1e9,
+                        "gflops_per_tok": flops / 1e9,
+                        "required_gflops_to_hide_compute": req_gflops,
                         "tps_overlap_bound": (1 / max(t_f, t_d)) if fits else 0.0,
                         "tps_serial_bound": (1 / (t_f + t_d)) if fits else 0.0,
-                    })
+                    }
+                    if a.compute_gflops and req_gflops is not None:
+                        row["compute_binds"] = a.compute_gflops < req_gflops
+                        t_c = flops / (a.compute_gflops * 1e9)
+                        row["tps_overlap_bound_with_compute"] = 1 / max(t_f, t_d, t_c)
+                    rows.append(row)
     return {"repo": repo, "geometry": g, "total_params": total,
             "resident_params": R, "resident_method": R_method,
             "resident_crosscheck_rel_diff": cross, "rows": rows}
@@ -278,16 +309,30 @@ def main():
                    help="flash bandwidth for SCATTERED per-neuron reads (~1-4 KB), GB/s")
     p.add_argument("--dram-gbps", type=float, required=True,
                    help="achievable DRAM bandwidth for decode, GB/s")
+    p.add_argument("--compute-gflops", type=float, default=None,
+                   help="OPTIONAL sustained arithmetic throughput of the processor you intend to "
+                        "use, GFLOP/s. If omitted, the artifact reports only the REQUIRED "
+                        "throughput for compute to hide behind I/O, so no unmeasured hardware "
+                        "number can drive a conclusion. If given, it is recorded and must be "
+                        "listed in --assumed unless measured.")
     p.add_argument("--assumed", default="",
                    help="comma list of inputs that are ASSUMED rather than measured: "
                         "flash,dram,ram — recorded in the artifact")
     p.add_argument("--threshold-tps", type=float, required=True,
                    help="decode rate counted as 'comfortable'; its source must be cited "
                         "in ESTIMAND.md §4")
+    p.add_argument("--densities", default=None,
+                   help="comma list of FFN densities to sweep, overriding the default grid. "
+                        "Needed to reach the density of a RETRAINED activation-sparse model "
+                        "(TurboSparse is ~97%% exact-zero, i.e. d~0.03), which the default grid "
+                        "cannot express — see the external-validation note in the docstring.")
     p.add_argument("--models", nargs="*", default=DEFAULT_MODELS)
     p.add_argument("--tag", default="",
                    help="suffix for the artifact name, so scenario runs do not overwrite each other")
     a = p.parse_args()
+    if a.densities:
+        global DENSITIES
+        DENSITIES = [float(x) for x in a.densities.split(",")]
 
     out = {"inputs": vars(a), "assumed": [x for x in a.assumed.split(",") if x],
            "status": "UPPER BOUND — see module docstring for every ignored cost",
@@ -300,7 +345,9 @@ def main():
             out["failures"].append({"repo": repo, "error": f"{type(e).__name__}: {e}"})
 
     hdr = f"{'model':34s} {'E_tok':>7s} {'E_all':>7s} {'resid':>7s}  " \
-          f"{'Q4_0 dense h=floor':>18s}  {'best Q4_0 gate_first d=0.1 h=floor':>34s}"
+          f"{'Q4_0 dense h=floor':>18s}  " \
+          f"{'Q4_0 gate_first d=' + str(min(DENSITIES)) + ' h=floor':>34s}  " \
+          f"{'GFLOP/s req':>8s}"
     print(out["status"])
     if out["assumed"]:
         print("ASSUMED (unmeasured) inputs:", ", ".join(out["assumed"]))
@@ -312,14 +359,43 @@ def main():
             for r in m["rows"]:
                 if r["format"] == "Q4_0" and r["h_label"] == "floor" and r["mode"] == mode and r["d"] == d:
                     return r
-        dense, sparse = pick("gate_first", 1.0), pick("gate_first", 0.1)
+        # Lowest/highest density in the ACTIVE grid, not hardcoded 1.0/0.1 —
+        # otherwise a custom --densities sweep finds no row and crashes.
+        dense = pick("gate_first", max(DENSITIES))
+        sparse = pick("gate_first", min(DENSITIES))
         fmt = lambda r: ("does not fit" if not r["resident_fits_ram"]
                          else f"{r['tps_overlap_bound']:6.2f} tok/s")
+        # Two different questions, and reporting only the second is misleading:
+        #   at_shown  - the requirement AT THE CONFIGURATION whose tok/s is
+        #               printed on this line (gate_first d=0.1, h=floor). This
+        #               is what a reader compares against their processor.
+        #   max_any   - the requirement at the most I/O-favourable configuration
+        #               anywhere in the sweep (high hit rate, so little flash
+        #               traffic and little time to hide compute behind).
+        # The two differ by ~10x, because the better the expert cache works, the
+        # LESS time there is to hide compute in — so compute becomes more likely
+        # to bind exactly when caching succeeds.
+        reqs = [r["required_gflops_to_hide_compute"] for r in m["rows"]
+                if r.get("required_gflops_to_hide_compute") is not None]
+        m["max_required_gflops_to_hide_compute"] = max(reqs) if reqs else None
+        m["required_gflops_at_shown_config"] = (
+            sparse.get("required_gflops_to_hide_compute") if sparse else None)
+        req = (f"{m['required_gflops_at_shown_config']:7.1f}"
+               if m["required_gflops_at_shown_config"] else "    n/a")
         print(f"{m['repo']:34s} {g['E_tok_params']/1e9:6.2f}B {g['E_all_params']/1e9:6.1f}B "
-              f"{m['resident_params']/1e9:6.2f}B  {fmt(dense):>18s}  {fmt(sparse):>34s}")
+              f"{m['resident_params']/1e9:6.2f}B  {fmt(dense):>18s}  {fmt(sparse):>34s}  {req:>8s}")
     for f in out["failures"]:
         print(f"FAILED {f['repo']}: {f['error']}")
     print(f"{len(out['failures'])} of {len(a.models)} models could not be analysed.")
+    print("")
+    print("GFLOP/s req = arithmetic throughput the processor must sustain for compute to hide")
+    print("              behind I/O, AT THE CONFIGURATION SHOWN on each line. Above it, I/O")
+    print("              binds and CPU-vs-GPU-vs-NPU placement cannot raise this bound.")
+    print("              `max_required_gflops_to_hide_compute` in the artifact is the same")
+    print("              quantity at the most I/O-favourable configuration in the sweep, which")
+    print("              is ~10x larger: the better the expert cache works, the less time there")
+    print("              is to hide compute in, so compute binds exactly when caching succeeds.")
+    print("              Pass --compute-gflops to have every row flagged against your hardware.")
 
     path = write_path(f"byte_budget{'_' + a.tag if a.tag else ''}.json")
     with open(path, "w", encoding="utf-8") as f:

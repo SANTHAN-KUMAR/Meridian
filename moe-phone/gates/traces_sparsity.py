@@ -189,8 +189,23 @@ def instrument(model, S, top_k):
 
 
 def router_logits(gate, x):
+    """Apply a router's weight matrix to an arbitrary activation.
+
+    `x` is moved to the weight's DEVICE as well as its dtype. The Fate-style
+    lookahead (arXiv 2502.12224) deliberately applies layer l+1's gate to layer
+    l's router input, and under `device_map="auto"` those two layers can sit on
+    different GPUs. At the shard boundary this raised, on Kaggle's 2x T4
+    (2026-09-14):
+
+        RuntimeError: Expected all tensors to be on the same device, but got
+        mat2 is on cuda:1, different from other tensors on cuda:0
+
+    The CPU self-test cannot reach this path, because it has one device. That
+    is a gap in the self-test, not a reason the check is unnecessary: see
+    selftest()'s cross-device case, which runs only when a second device exists.
+    """
     W = gate.weight
-    return F.linear(x.to(W.dtype), W).float()
+    return F.linear(x.to(device=W.device, dtype=W.dtype), W).float()
 
 
 def lookahead_supported(model):
@@ -441,6 +456,26 @@ def selftest():
         check(res["densities"]["0.1"]["kl_mean"] > 0.0, f"[{tag}] density 0.1 changes the output (KL > 0)")
         fl = format_floor(model, floor_store, "cpu")
         check(fl["kl_mean"] > 0.0 and fl["tokens"] > 0, f"[{tag}] Q4_0 floor is measurable (KL > 0)")
+
+    # Cross-device lookahead. The Fate lookahead applies layer l+1's gate to
+    # layer l's input, and under device_map="auto" those layers can be on
+    # different GPUs; that combination raised a RuntimeError on Kaggle's 2x T4
+    # on 2026-09-14 while this self-test passed, because one device cannot
+    # exercise it. Run it whenever a second device exists, and SAY SO when it
+    # cannot be run rather than reporting a pass that did not happen.
+    n_dev = torch.cuda.device_count()
+    if n_dev >= 2:
+        gate = torch.nn.Linear(8, 4, bias=False).to("cuda:1")
+        x = torch.randn(3, 8, device="cuda:0")
+        try:
+            out = router_logits(gate, x)
+            check(out.shape == (3, 4), "cross-device lookahead: gate on cuda:1, input on cuda:0")
+        except RuntimeError as e:
+            check(False, f"cross-device lookahead raised {type(e).__name__}: {e}")
+    else:
+        print(f"SKIP  cross-device lookahead: needs 2 CUDA devices, found {n_dev}. "
+              f"This is the path that failed on Kaggle 2x T4 and it is NOT covered here.")
+
     print(f"\n{len(failures)} failure(s)")
     return 1 if failures else 0
 
@@ -482,8 +517,17 @@ def main():
 
     from transformers import AutoModelForCausalLM, AutoTokenizer
     cuda = torch.cuda.is_available()
+    # torch.cuda.is_bf16_supported() returns True on a Tesla T4, because PyTorch
+    # EMULATES bfloat16 there by upcasting to fp32. That is numerically fine but
+    # several times slower, and it silently contradicts protocols/RUNBOOK.md,
+    # which states "T4s have no bfloat16, so the reference runs in float16" — a
+    # documented behaviour that the code did not assert. Compute capability >= 8.0
+    # (Ampere) is the test for NATIVE bfloat16. Taken as the minimum over all
+    # visible devices, since the model is sharded across them.
+    native_bf16 = cuda and min(torch.cuda.get_device_capability(i)[0]
+                               for i in range(torch.cuda.device_count())) >= 8
     if a.dtype == "auto":
-        dtype = torch.bfloat16 if cuda and torch.cuda.is_bf16_supported() else torch.float16
+        dtype = torch.bfloat16 if native_bf16 else torch.float16
     else:
         dtype = getattr(torch, a.dtype)
     t0 = time.time()
@@ -500,7 +544,9 @@ def main():
     print(f"{a.model}: {len(calib)} calibration + {len(evalw)} evaluation windows of {a.seq_len}, dtype {dtype}")
     res, traces, floor_store, _ = run(model, calib, evalw, dens, a.floor_tokens, device)
     res["floor"] = None if a.no_floor else format_floor(model, floor_store, device)
-    res.update({"model": a.model, "dtype": str(dtype), "seq_len": a.seq_len,
+    res.update({"model": a.model, "dtype": str(dtype), "bf16_native": native_bf16,
+                "n_cuda_devices": torch.cuda.device_count() if cuda else 0,
+                "seq_len": a.seq_len,
                 "calib_windows": len(calib), "eval_windows": len(evalw),
                 "corpus": "wikitext-2-raw-v1 (calibration: train, evaluation: test)",
                 "transformers": __import__("transformers").__version__, "torch": torch.__version__,

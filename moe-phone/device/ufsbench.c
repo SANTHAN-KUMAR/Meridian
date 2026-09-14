@@ -87,7 +87,30 @@ static double read_num(const char *path) {
     return v;
 }
 
-static double max_thermal_c(void) {
+/* Highest genuine on-die temperature, in degrees C, and the zone it came from.
+ *
+ * Two classes of /sys/class/thermal entry are NOT temperatures and must not be
+ * averaged or maximised over. Both were found on the OnePlus 15R:
+ *   - threshold/level pseudo-zones: `cpu-hw-trip-*` reads a constant 95000,
+ *     `*-bcl-*` and `*-lvl*` are battery current-limit LEVELS (0, 1, 2, -843),
+ *     and `socd` reads a bare 75 (state-of-charge depletion). `socd` at 75 was
+ *     read as "75.0 C" and became the maximum in EVERY row of the 2026-09-14
+ *     G1 run, whose temperature columns are therefore void.
+ *   - disabled sensors, which report the -273000 (absolute zero) sentinel.
+ *
+ * The filter is a property of the interface, not a blacklist of names that has
+ * to grow once per device: Linux thermal sysfs defines `temp` in MILLIdegrees
+ * Celsius (Documentation/driver-api/thermal/sysfs-api.rst), so any |raw| < 1000
+ * is under 1 mC of magnitude and cannot be a phone temperature - it is a level
+ * or an index. The name filter is then only needed for `trip`, whose 95000 IS
+ * a plausible millidegree value.
+ *
+ * Returns NAN and zone[0]=0 if nothing qualifies. */
+#define TEMP_MIN_C 0.0
+#define TEMP_MAX_C 120.0
+
+static double max_thermal_c(char *zone, size_t zone_n) {
+    if (zone && zone_n) zone[0] = 0;
     DIR *d = opendir("/sys/class/thermal");
     if (!d) return NAN;
     struct dirent *e;
@@ -95,21 +118,22 @@ static double max_thermal_c(void) {
     char p[512], type[128];
     while ((e = readdir(d))) {
         if (strncmp(e->d_name, "thermal_zone", 12)) continue;
-        /* Skip zones that report a configured threshold, not a sensor reading:
-         * on the OnePlus 15R `cpu-hw-trip-*` reads a constant 95000 (found in
-         * the first G1 run, whose temperature columns are therefore invalid),
-         * and `*-bcl-*` zones are battery current-limit levels. */
         snprintf(p, sizeof p, "/sys/class/thermal/%s/type", e->d_name);
         FILE *tf = fopen(p, "r");
         type[0] = 0;
         if (tf) { if (!fgets(type, sizeof type, tf)) type[0] = 0; fclose(tf); }
-        if (strstr(type, "trip") || strstr(type, "bcl")) continue;
+        type[strcspn(type, "\r\n")] = 0;
+        if (strstr(type, "trip") || strstr(type, "bcl") || strstr(type, "-lvl")) continue;
         snprintf(p, sizeof p, "/sys/class/thermal/%s/temp", e->d_name);
-        double v = read_num(p);
-        if (isnan(v) || v <= 0) continue;
-        if (v > 1000) v /= 1000.0; /* millidegrees */
-        if (v > 150) continue;     /* implausible sensor value */
-        if (isnan(best) || v > best) best = v;
+        double raw = read_num(p);
+        if (isnan(raw)) continue;
+        if (fabs(raw) < 1000.0) continue;   /* a level or index, not millidegrees */
+        double c = raw / 1000.0;
+        if (c < TEMP_MIN_C || c > TEMP_MAX_C) continue;  /* disabled-sensor sentinels */
+        if (isnan(best) || c > best) {
+            best = c;
+            if (zone && zone_n) snprintf(zone, zone_n, "%s", type[0] ? type : e->d_name);
+        }
     }
     closedir(d);
     return best;
@@ -262,7 +286,8 @@ int main(int argc, char **argv) {
     FILE *csv = fopen(out, "w");
     if (!csv) { perror("out"); return 1; }
     const char *hdr = "repeat,mode,pattern,size_kb,threads,bytes,seconds,MBps,iops,"
-                      "lat_p50_us,lat_p99_us,errors,first_errno,power_w,temp_start_c,temp_end_c\n";
+                      "lat_p50_us,lat_p99_us,errors,first_errno,power_w,temp_start_c,temp_end_c,"
+                      "temp_zone\n";
     fputs(hdr, csv);
     fputs(hdr, stdout);
 
@@ -274,10 +299,17 @@ int main(int argc, char **argv) {
         sleep(5);
         atomic_store(&p.stop, 1);
         pthread_join(pt, NULL);
-        char line[256];
-        snprintf(line, sizeof line, "0,idle,none,0,0,0,5,0,0,0,0,0,0,%.4f,%.1f,%.1f\n",
-                 p.n ? p.sum_w / p.n : NAN, max_thermal_c(), max_thermal_c());
+        char line[256], zone[128];
+        double t_idle = max_thermal_c(zone, sizeof zone);
+        snprintf(line, sizeof line, "0,idle,none,0,0,0,5,0,0,0,0,0,0,%.4f,%.1f,%.1f,%s\n",
+                 p.n ? p.sum_w / p.n : NAN, t_idle, t_idle, zone[0] ? zone : "none");
         fputs(line, csv); fputs(line, stdout); fflush(csv);
+        /* An unreadable rail must announce itself, not arrive as a quiet NaN:
+         * on the OnePlus 15R (ColorOS 16, unrooted) every
+         * battery power-supply sysfs node is denied even to adb shell. */
+        if (!p.n)
+            fprintf(stderr, "NOTE: no readable battery power rail; power_w is NaN "
+                            "and J/GB is NOT measurable on this device.\n");
     }
 
     int direct_ok = 1;
@@ -321,7 +353,8 @@ int main(int argc, char **argv) {
                     pthread_t *tid = calloc((size_t)nt, sizeof *tid);
                     power_t p = {0};
                     pthread_t pt;
-                    double temp0 = max_thermal_c();
+                    char zone0[128], zone1[128];
+                    double temp0 = max_thermal_c(zone0, sizeof zone0);
                     if (power) pthread_create(&pt, NULL, power_thread, &p);
                     double t0 = now_s();
                     for (int k = 0; k < nt; k++) {
@@ -348,11 +381,12 @@ int main(int argc, char **argv) {
                     qsort(all, nl, sizeof(float), cmp_float);
                     double p50 = nl ? all[nl / 2] : NAN, p99 = nl ? all[(uint64_t)(nl * 0.99)] : NAN;
                     char line[512];
-                    snprintf(line, sizeof line, "%d,%s,%s,%ld,%d,%llu,%.4f,%.2f,%.1f,%.1f,%.1f,%llu,%d,%.4f,%.1f,%.1f\n",
+                    double temp1 = max_thermal_c(zone1, sizeof zone1);
+                    snprintf(line, sizeof line, "%d,%s,%s,%ld,%d,%llu,%.4f,%.2f,%.1f,%.1f,%.1f,%llu,%d,%.4f,%.1f,%.1f,%s\n",
                              rep, direct ? "direct" : "buffered", seq ? "seq" : "rand", sizes[si], nt,
                              (unsigned long long)bytes, el, bytes / el / 1e6, reads / el, p50, p99,
                              (unsigned long long)errs, ferr, power && p.n ? p.sum_w / p.n : NAN,
-                             temp0, max_thermal_c());
+                             temp0, temp1, zone1[0] ? zone1 : "none");
                     fputs(line, csv); fputs(line, stdout); fflush(csv); fflush(stdout);
                     free(all); free(w); free(tid);
                 }
