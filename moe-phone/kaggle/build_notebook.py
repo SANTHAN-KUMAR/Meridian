@@ -177,22 +177,49 @@ S9_CELL = """\
 # it, collect a trace at a materially different EXPERT COUNT and compare the two
 # curves at equal rho.
 #
-# Qwen3-30B-A3B is the right target: E=128 (double OLMoE) at the same top-8, and it
-# is a model already in the candidate table rather than a proxy. It needs 4-bit to
-# fit 2x T4. --densities 1.0 --no-floor skips the fidelity sweep, because traces
-# are all that S9 needs; that makes this far cheaper than the G3 cell above.
+# CHOOSING THE MODEL. The requirement is a materially different EXPERT COUNT that
+# actually fits here. Note --load-in-4bit shrinks what sits in VRAM, NOT what is
+# downloaded: transformers fetches the full 16-bit weights and quantises on load.
+# So the download size, not the GPU, is usually the binding constraint on Kaggle.
+#
+#   Qwen/Qwen1.5-MoE-A2.7B   E=60,  k=4   ~29 GB download   DEFAULT, fits
+#   deepseek-ai/DeepSeek-V2-Lite  E=64, k=6  ~31 GB         needs trust_remote_code
+#   Qwen/Qwen3-30B-A3B       E=128, k=8   ~61 GB download   the ideal target, and
+#                                                           the one in our candidate
+#                                                           table -- but the download
+#                                                           will likely exceed Kaggle
+#                                                           disk. Use a machine with
+#                                                           more disk, or a
+#                                                           pre-quantised repo.
+#
+# --densities 1.0 --no-floor skips the fidelity sweep, because traces are all S9
+# needs; that makes this far cheaper than the G3 cell above.
 #
 # SET THIS TO True TO RUN IT. It is off by default so the notebook's default path
 # stays the OLMoE reproduction.
 RUN_S9 = False
-S9_MODEL = "Qwen/Qwen3-30B-A3B"
+S9_MODEL = "Qwen/Qwen1.5-MoE-A2.7B"
 
 if RUN_S9:
+    # Peek at the geometry from config.json BEFORE downloading any weights: if E
+    # is not materially different from OLMoE's 64, this run cannot test anything
+    # and there is no point spending the download.
+    from transformers import AutoConfig
+    _c = AutoConfig.from_pretrained(S9_MODEL, trust_remote_code=True)
+    _E = getattr(_c, "num_experts", None) or getattr(_c, "n_routed_experts", None)
+    _k = (getattr(_c, "num_experts_per_tok", None)
+          or getattr(_c, "num_experts_per_token", None))
+    print(f"{S9_MODEL}: E={_E}, k={_k}   (OLMoE is E=64, k=8)")
+    print(f"rho = cache_fraction * E / k = cache_fraction * {(_E / _k) if _E and _k else '?'}")
+    assert _E and _k, "could not read the expert geometry from this config"
+    assert _E != 64 or _k != 8, (
+        "same geometry as OLMoE -- this run cannot test the transfer assumption")
+
     import subprocess, sys as _sys
     subprocess.run([_sys.executable, "-m", "pip", "install", "-q", "bitsandbytes"],
                    check=False)
     run("traces_sparsity.py", "--model", S9_MODEL, "--load-in-4bit",
-        "--densities", "1.0", "--no-floor",
+        "--trust-remote-code", "--densities", "1.0", "--no-floor",
         "--windows", "64", "--calib-windows", "4", "--seq-len", "512",
         "--out-dir", "/kaggle/working/out", label="S9 traces: " + S9_MODEL)
     tag = S9_MODEL.split("/")[-1]
