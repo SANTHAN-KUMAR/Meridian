@@ -81,7 +81,7 @@ Each row is designed so **both outcomes are a primary result**, not a supporting
 
 | id | assumption in PowerInfer-2's design | our hypothesis | test |
 |---|---|---|---|
-| **A1** | useful flash savings need a model **retrained** to be activation-sparse | stock MoE experts are already sparse enough, training-free ([2605.08575](https://arxiv.org/abs/2605.08575) reports up to 90% intra-expert sparsity without modification — GPU compute only, never I/O, never a phone). **MEASURED 2026-09-14 on OLMoE-1B-7B: our hypothesis FAILS.** No density below 1.0 stays inside the pre-registered Q4_0 Tier-A margin; the mildest setting tested already exceeds it several-fold in both KL and top-1 flip rate, and calibration degrades monotonically. This is not a direct contradiction of 2605.08575, which measured compute sparsity rather than fidelity against a quantization-equivalent margin — but it removes the lever *for this purpose*. **One model; the 30B-class runs decide whether this is granularity-dependent** | G3: fidelity vs density on stock models |
+| **A1** | useful flash savings need a model **retrained** to be activation-sparse | stock MoE experts are already sparse enough, training-free ([2605.08575](https://arxiv.org/abs/2605.08575) reports up to 90% intra-expert sparsity without modification — GPU compute only, never I/O, never a phone). **MEASURED 2026-09-14 on OLMoE-1B-7B, then RE-READ against the literature.** No density below 1.0 stays inside the pre-registered Q4_0 Tier-A margin. **This is not a contradiction of the literature — it is a measurement-sensitivity result.** (a) Across 32 activation-sparsity papers checked by full-text grep, **none reports KL divergence or top-1 flip rate** against the dense model; the field's bar is perplexity or benchmark average. (b) 2605.08575's headline 90% is **Llama-4-Maverick**; its OLMoE-1B-7B cutoff is **71.2%**, and at our density 0.5 OLMoE sits below even their 99%-retention line — so at the exact point where we measure KL 0.18121 and 24.3% top-1 flips, their metric reports >99% retention. (c) Our Q4_0 floor validates externally: our KL 0.05185 vs llama.cpp's published 0.07194 for q4_0. Calibrated statement: **gate-first at density 0.5 costs more distributional fidelity than 3-bit quantization, with a flip rate near 2-bit.** **BUT THE KILL IS NOT YET SAFE (see S8):** gate-first is the *weakest* of three prunable axes per TEAL §5.4.1 (measured ~1.6x our error at matched sparsity), 2509.00454 §4.1 and WINA (2505.19427) Thm 3.2 — and TEAL runs **60%** intermediate-neuron sparsity using |h| = |SiLU(g)*u| where we used |SiLU(g)|. G3 may have killed a CRITERION, not the lever | G3: fidelity vs density on stock models |
 | **A2** | sparsity must be **predicted** by trained networks (2.6 GB of a 7 GB budget) | a **gate-first** read — load gate rows, compute the gate exactly, then load only needed up/down rows — needs no predictor; on dReLU models (TurboSparse) it is **exact**, because a zero gate zeroes the neuron | G3, G5 |
 | **A3** | bytes saved ≈ time saved | phone UFS loses several× per byte on small random reads (PowerInfer-2's own UFS measurements: ~3.5 GB/s at 512 KB vs 0.45–1 GB/s at 4 KB), so **read granularity, not bytes, bounds sparse streaming** | G1 + G4 |
 | **A4** | expert/neuron locality is high enough to cache | measure it: hit rate vs cache size on real routing traces, against the no-locality floor. **MEASURED 2026-09-14 on OLMoE-1B-7B: locality is abundant, and LRU cannot reach it.** Belady sits far above the no-locality floor at every cache size, so F4 does **not** bind — but LRU hits *exactly zero* at the smallest phone-sized caches, below the floor itself, because the per-token request stream cycles through more distinct experts than the cache holds and LRU evicts precisely the one needed next (the closed form in `tests/test_gates.py::test_cyclic_scan_lru_zero_belady_closed_form`). **The eviction policy, not the locality, is the binding constraint** | G2 |
@@ -147,6 +147,71 @@ A fourth, unverified: TurboSparse-Mixtral's checkpoint holds ~5B more parameters
 architecture accounts for (`resident_crosscheck_rel_diff` in the artifact) — consistent with merged
 predictor weights. If confirmed from tensor names, a predictor-free engine reclaims that memory as
 expert cache. Registered as stub S2.
+
+## 3c. What the corrected G2 says, and the engine it implies (2026-09-14)
+
+**Two defects in our own simulator invalidated the first G2 numbers. Both are fixed; the
+superseded values are deleted rather than annotated (`CLAUDE.md` §7.6), and
+`tests/test_gates.py` now pins each corrected behaviour to a property that holds independently
+of any result.**
+
+| defect | what it did | fixed by |
+|---|---|---|
+| `cache_sim.py` simulated one cache **shared by all layers**, while `expert_policy.py`'s pinning policy was **per layer** | the two were compared as if they were the same machine. A global pool is a step function pinned at zero until it holds the whole `L x k` cycle, so it reported no hits at any phone-sized cache | `--scope {per_layer,global}`, total slot budget preserved exactly by `split_capacity()` so both scopes mean the same bytes |
+| replay evicted after **every single expert access** | a miss early in a layer's top-k fetch could evict an expert that the *same* fetch still needed, which was then counted as a miss. A real engine fetches a layer's misses as one event | `--replay {atomic,sequential}`; atomic decides residency for the whole event before any eviction |
+
+Both defects pushed the same way, and they compound. At a 10% cache on
+`traces_OLMoE-1B-7B-0924.npz`: global+sequential 0.000, global+atomic 0.000, per-layer+sequential
+0.123, **per-layer+atomic 0.279**. The published LRU figure was substantially an artifact of
+pooling. The `f_crit = k/E` cliff was too: it is sharp under sequential replay and smooth under
+atomic.
+
+**Decomposition against controls.** The cache fraction is the correct null for LRU — on iid
+uniform routing LRU returns it to three decimals — but it is *not* the null for Belady, which
+beats the fraction even with no locality at all (0.297 vs 0.100 at a 10% cache). So a
+"Belady minus cache fraction" gap is not a measure of exploitable locality. Running the real
+trace against a shuffled control (popularity preserved, order destroyed) and a uniform control
+(neither) decomposes LRU's 0.279 at a 10% cache into **0.100 floor + 0.034 popularity skew +
+0.146 recency**. Recency is the majority term.
+
+**What no classical policy can do.** LFU, cache warming, and static pinning at every reserve
+fraction were measured against LRU on a held-out split. LRU wins at every cache size from 10% up;
+warm-starting is identical to LRU to three decimals once past the warmup, because LRU re-converges
+to the same state within a few hundred tokens. So the LRU-to-Belady gap is not an eviction-rule
+problem — Belady's advantage is **lookahead**, and lookahead is the only lever that closes it.
+
+**How much lookahead.** Sweeping a bounded horizon, where horizon 0 means the engine knows only
+the token it is executing and an unbounded horizon is exactly Belady (that one is asserted as an
+identity in the tests; horizon 0 is bracketed, not identified, because knowing the current token
+already makes it event-atomic): a horizon of **4 tokens reaches Belady** at every cache fraction
+up to 30%, and 2 tokens reaches 89% of it.
+
+> **The engine this implies.** Draft a small number of tokens, then verify them in one pass. The
+> verification of W tokens is one batched forward pass, so layer *l* routes all W positions
+> before it touches layer *l*'s expert weights — the engine reads the true top-k sets off the
+> router it has just run. (Not from the draft model: a restricted self-draft is a different model,
+> and its routing would only be a prediction.) So there is no predictor to train and no accuracy
+> term on the lookahead itself; the draft's acceptance rate is priced separately. That known
+> window is spent two ways at once, on the same cache: each distinct expert in the window is
+> fetched **once** (the union), and eviction uses farthest-next-use over the window (Belady).
+> `gates/engine_sim.py` replays exactly this loop and prices it per **accepted** token, because a
+> rejected draft token still cost its share of the fetches.
+
+**Where a cheap predictor can stand in for a draft, and where it cannot.** A wrong *prefetch*
+spends bandwidth on bytes nobody wanted, which is why the published prefetch results are negative
+(Budgeting Bytes 2609.04238; WiSP 2606.21868; llama.cpp #24528). A wrong *eviction* spends no
+such bandwidth — but it does not follow that a bad predictor is harmless, and an earlier draft of
+this section claimed it did. Measured: ranking victims by a wrong prediction **discards recency,
+which is itself information**, and at accuracy 0 scores 0.095 against LRU's 0.273. Break-even is
+accuracy ~0.70.
+
+The fix is to change what the predictor is allowed to do. Under `mode="protect"` it may only
+**veto** a candidate, never propose one, leaving recency to rank. That is strictly worse with an
+exact lookahead (0.379 vs 0.439) and far more robust: it still beats LRU at accuracy 0.3. So:
+**an exact lookahead from a draft should rank; a predicted lookahead should only veto.**
+
+**Registered as assumptions, not results:** the transfer of a 64-expert curve to other geometries
+at equal rho (S9), and the acceptance rate (S10). Both are below.
 
 ## 4. Research questions
 
@@ -214,7 +279,7 @@ Each wall below is written as the paper it becomes if it binds. Ranked by expect
 | **F1** | training-free sparsity fails fidelity on stock MoE (contradicting 2605.08575), or works on fine-grained but not coarse-grained MoE | **"When does an LLM need to be retrained to run from flash?"** — the sparsity–fidelity frontier across MoE granularity, reconciling 2605.08575 (MoE, sparse) with ActiveFlow's dense-model collapse. Answers whether PowerInfer-2's 150B-token retraining was necessary, per architecture | strong (ML venue) |
 | **F2** | bytes saved do not become time saved | **"Read granularity, not bytes, bounds flash-streamed inference on phones"** — a measured UFS model + layout that recovers large reads for *stock* models (Ripple did this only for ReLU models) | strong (systems venue) |
 | **F6** | without root, Android's memory manager (LMK, page cache, no `mlock`) caps beyond-DRAM inference | **"Beyond-DRAM inference as an unprivileged app"** — PowerInfer-2 required root; the unprivileged regime is the one real users are in and is uncharacterised | strong, practical |
-| **F4** | routing has little locality at phone cache sizes | **DOES NOT BIND (OLMoE, 2026-09-14).** Belady is far above the no-locality floor, so the locality is there. What binds instead is the *policy*: LRU captures none of it at phone-sized caches. The paper this becomes is about eviction and prefetch policy for flash-served MoE, with Belady as the stated oracle and training-free lookahead (measured high recall on this model) as the mechanism that could approach it | medium, re-aimed |
+| **F4** | routing has little locality at phone cache sizes | **DOES NOT BIND (OLMoE, re-measured 2026-09-14 after two simulator defects were found).** Plain LRU reaches **0.279** at a 10% per-layer cache against a 0.100 no-locality floor and a 0.447 per-layer Belady optimum — 2.8x the floor and 63% of the achievable optimum. A **4-token lookahead reaches Belady exactly**, and a batched multi-token verification pass supplies exactly that much, because layer *l* routes all W positions before touching layer *l*'s experts. The paper this becomes is about **how little future knowledge an eviction policy needs**, not about locality being absent | medium, re-aimed |
 | **F3** | neurons cannot be known before reading; gate-first serialises latency | predictability of intra-expert activation without training; latency hiding across layers | medium |
 | **F5** | the NPU does not help decode | measured placement and energy on a 2025 SoC, correcting marketing-level assumptions | medium |
 | **F7** | sustained runs throttle to a fraction of peak | thermally-aware scheduling for long generations | medium |
@@ -245,12 +310,21 @@ HeteroLLM/SOSP set the bar). F1 alone fits an ML venue (ICLR/NeurIPS empirical t
 
 ## 11. Stub registry
 
+Every number this project asserts in prose is listed in [`CLAIMS.md`](CLAIMS.md) with the
+artifact it is read from, and verified by `gates/claims_check.py` in the test suite
+(`CLAUDE.md` §7.1). A stale number fails CI rather than reaching a paper.
+
 | id | location | current behaviour | correct behaviour | removal condition |
 |---|---|---|---|---|
 | S1 | `gates/byte_budget.py` inputs | **narrowed 2026-09-14.** Flash bandwidths and the RAM budget are now **measured on the 15R** (G0/G1, `results/2026-09-14/`); **`--dram-gbps` is still assumed** (HeteroLLM figure) and remains flagged `assumed` in the artifact | DRAM bandwidth measured on the 15R | a DRAM bandwidth probe written and run; `--assumed` empty |
 | S5 | `device/memprobe.c` regime | **CLOSED 2026-09-14.** Both regimes are now measured on the 15R, 3 repeats each, and recorded separately in `g0_device.json` with the mode named: anonymous (zram-compressed) and file-backed (clean, dropped). `g1_analyze.py` and `g0_summarize.py` share one summariser so they cannot disagree, and both report the file-backed median as `--ram-gb` because that is the regime an mmap'd checkpoint lives in | — | closed |
 | S7 | NPU reachability | **RESOLVED 2026-09-14 — POSITIVE, with the mechanism identified.** An earlier CLOSED-NEGATIVE entry here was wrong and is deleted, not annotated (`CLAUDE.md` §7.6). Hexagon **HTP v81** is reachable from ordinary unrooted apps, observed in **three** independent ones on this device: Geekbench AI (`untrusted_app`, own bundled skel), **Google AICore / Gemini Nano** (loads its own 12.3 MB `libQnnHtpV81Skel.so` from its APK onto CDSP), and **OnePlus Gallery's AI Eraser** (SoC-specific precompiled model, filename carries `sm8845`). **The enabling mechanism is Qualcomm's UNSIGNED PD** — `remote_session_control Unsigned PD enable 1 request for domain 3` — which is exactly the documented route for code not signed by Qualcomm or the OEM. Session setup cost ~29 ms spawn + ~55 ms skel load, one-time. The device also ships an OEM on-device LLM runtime at `/odm/lib64/libaiboost_llm.so` (sessions, KV rollback, batching, multimodal, prompt compression — 22 entry points); it initialises but **was not observed creating a session**, so no claim is made about it. **Earlier error:** `device/devprobe.c` tested `open()` on `/dev/fastrpc-cdsp`, got `EACCES`, and that was reported as 'unreachable' — but every app that *succeeds* logs the same denials, because FastRPC probes several nodes and proceeds on the permitted one under unsigned PD. Evidence: `results/2026-09-14/npu_access_mechanism.log`, `npu_selinux_denials.log`, `geekbench_ai_qnn.json` | — | resolved. A5/F5 testable without root; the engine must ship as an APK bundling the QNN skel and request unsigned PD |
+| S8 | `gates/traces_sparsity.py` sparsity criterion | **OPEN, and it gates the A1 kill.** G3 thresholds on |SiLU(gate)| and skips the up/down rows of masked neurons. Three independent sources rank this the weakest of three axes: TEAL (2408.14690) §5.4.1 tested it head to head and measured ~1.6x the activation error at matched sparsity, attributing it to the mask carrying no information about saliency w.r.t. W_up; 2509.00454 §4.1 ranks gate-based last below input and intermediate; WINA (2505.19427) Thm 3.2 gives the bound a magnitude-only rule lacks. TEAL achieves **60%** intermediate sparsity using |h| = |SiLU(g)*u|. Also: 2605.08575's released kernel thresholds the **signed pre-activation** (g >= sigma), not |SiLU(g)| — a different neuron set from the one its own prose describes | ablate three criteria at matched density — (a) one-sided raw gate g >= sigma, (b) WINA's |g_i| * ||W_down[i,:]||_2, (c) full |h| = |SiLU(g)*u| — and report KL/flip for each | **no A1/F1 conclusion may be generalised until this ablation is run.** If KL collapses under (c), the finding is about the criterion, not the axis |
 | S6 | energy | **CORRECTED 2026-09-14 — the earlier 'not measurable' was overstated, and rested on a misread.** G0 recorded `FAILED rc=127: dumpsys powerstats` and that was logged as 'unavailable'; **rc=127 is command-not-found** (dumpsys is not on Termux's PATH), not a denial. Run from the `shell` domain, `dumpsys powerstats` works. What it shows: **no ODPM rails** (`available Channels` and `available EnergyConsumers` are both empty — that part of the original claim survives), but **State Residency data IS available**, including a `cdsp` entity, giving per-subsystem residency and therefore NPU-activity attribution. Combined with `dumpsys battery`'s charge counter (1 mAh steps, ~13.8 J at 3.84 V, measured), energy IS measurable coarsely. **What is genuinely absent is rail-level energy attribution, not energy.** Untested: Termux:API `termux-battery-status` (BatteryManager `CURRENT_NOW`, needs no permission) | per-token energy measured | a validated charge-counter protocol, unplugged, with cdsp residency for attribution |
 | S2 | TurboSparse resident size | HF parameter total exceeds config-derived count by ~73% (`resident_crosscheck_rel_diff`) — attributed to merged predictors, **unverified** | tensor-name audit of the checkpoint index | index audited; resident size corrected or explained |
 | S3 | `byte_budget.py` resident count for GLM-4.5-Air | multi-token-prediction layer counted as resident, overstating resident bytes | handle `num_nextn_predict_layers` | handled, or GLM dropped from the frontier |
 | S4 | `byte_budget.py` hit rate | scenarios + no-locality floor only | measured hit rates from G2 traces | G2 committed |
+| S9 | `gates/engine_target.py` `at_rho()` | reads `h_LRU` off the curve measured on OLMoE's **64-expert top-8** routing and applies it to every candidate model at equal `rho = per-layer slots / top_k`. That the hit rate depends on geometry only through `rho` is an **assumption**, untested across expert counts; 4 of 10 candidate models also sit outside the measured `rho` range and are clamped to an endpoint (flagged `curve_extrapolated` in the artifact). One external check exists and is consistent: an independently reported 512-expert top-10 model reaches 0.693 where our curve interpolates 0.669 at the same `rho`, a 3.5% gap | collect routing traces for at least one high-`E` model (Qwen3-30B-A3B, E=128; Qwen3-Next-80B-A3B, E=512) and measure the curve directly | traces for a second expert count committed and the curves compared at equal `rho`. **Until then no per-model `tok/s` figure derived through `at_rho` may be reported without the assumption stated beside it.** |
+| S10 | `gates/engine_sim.py` `accepted_per_pass()` | the draft acceptance rate `alpha` is **swept, not measured**. Bytes are charged per verified token and credited per accepted token via Leviathan et al. 2023 eq. 1, which assumes i.i.d. per-position acceptance — real acceptance is position-dependent (published per-position figures fall from ~96% at position 1 to ~35-45% by position 4 on prose) | measure `alpha` for the chosen drafter on the target model | a drafter chosen and its acceptance measured on held-out text; replace the sweep with a measured point and re-derive the tok/s |
+| S12 | `gates/cache_sim.py` `--pred-accuracy` | the **primary** engine design in `ARCHITECTURE.md` §3 needs a **cross-token, same-layer** expert predictor — *which experts will token t+1 want at layer l* — and its accuracy is **unmeasured**. It is NOT the quantity G2 measured: G2's 0.88 recall is **cross-layer** lookahead (layer l+1 from layer l's input), which a per-layer cache cannot use at all. What is known is the floor: measured adjacent-token expert overlap on this trace is 0.366, so even a trivial persistence predictor lands around 1.04–1.09x over plain LRU, and protect mode never falls below LRU at any swept accuracy. Also unmodelled: corruption replaces a wrong prediction with a *uniformly random* expert, whereas a real predictor's errors are plausible experts, so the sweep is a conservative reading of a given accuracy rather than a calibrated one | build the predictor and score it on held-out tokens of the committed traces | a measured accuracy substituted for the sweep, and the tok/s re-read off `ARCHITECTURE.md` §3. **Cheapest open measurement in the project — no GPU, the traces are already committed.** |
+| S11 | `gates/engine_sim.py` compute term | assumes compute is free, valid only while the device is flash-bound. `byte_budget.py --compute-gflops` prints the required GFLOP/s but `engine_sim` does not check it | assert the required GFLOP/s against a measured device figure and report the binding term | a measured on-device GFLOP/s for the chosen execution path |

@@ -115,8 +115,40 @@ run("traces_sparsity.py", "--model", "allenai/OLMoE-1B-7B-0924",
 
 CACHE_CELL = """\
 # G2 offline half: replay the routing traces through an expert cache.
+#
+# --controls decomposes the hit rate into floor + popularity skew + recency, so
+#   the result is not "there is locality" but how much of it is which, against
+#   a locality-free null.
+# --both-scopes keeps the retracted shared-pool number visible beside the
+#   per-layer one that replaces it.
+# --lookahead sweeps how many tokens of FUTURE routing a cache needs to reach
+#   the offline optimum. This is the constructive number, because a batched
+#   verification pass over W tokens supplies exactly that much for free: layer l
+#   routes all W positions in one matmul, before it touches layer l's experts.
+# Cost note: the lookahead rule scans the cache on every eviction, so runtime
+# grows with the cache size. Fractions are capped at 0.30 and horizons at 8 to
+# keep this cell to a few minutes; nothing above those changed the conclusion
+# when swept locally.
 run("cache_sim.py", "/kaggle/working/out/traces_OLMoE-1B-7B-0924.npz",
+    "--controls", "--both-scopes", "--both-replays",
+    "--lookahead", "0,1,2,4,8", "--fractions", "0.05,0.10,0.125,0.20,0.30",
     "--out-dir", "/kaggle/working/out", label="G2 cache simulation")
+
+# How far a NOISY lookahead (a predictor, rather than a draft) gets, and under
+# which of the two eviction rules. Fewer fractions: this is the most expensive
+# sweep in the notebook, and the break-even accuracy is what it exists to print.
+run("cache_sim.py", "/kaggle/working/out/traces_OLMoE-1B-7B-0924.npz",
+    "--lookahead", "4", "--pred-accuracy", "1.0,0.9,0.8,0.7,0.5,0.3,0.0",
+    "--fractions", "0.10,0.20", "--max-tokens", "16384",
+    "--out-name", "cache_pred_OLMoE-1B-7B-0924",
+    "--out-dir", "/kaggle/working/out", label="G2c predictor-accuracy sweep")
+
+# The pre-registered sweep across f_crit = k/E, the cache fraction at which a
+# per-layer cache first holds one token's whole working set.
+run("cache_sim.py", "/kaggle/working/out/traces_OLMoE-1B-7B-0924.npz",
+    "--fractions-around-crit", "--both-replays",
+    "--out-name", "cache_fcrit_OLMoE-1B-7B-0924",
+    "--out-dir", "/kaggle/working/out", label="G2 critical-fraction sweep")
 """
 
 ZIP_CELL = """\

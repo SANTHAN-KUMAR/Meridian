@@ -182,6 +182,12 @@ python traces_sparsity.py --model mistralai/Mixtral-8x7B-v0.1 --windows 32 --out
 ### What the GPU results decide
 - **G3 fidelity**: at which density does gate-first sparsity stay within the Q4_0 floor? If none below
   1.0 does, "no retraining" loses its main lever → finding F1 in `POSITION.md`.
-- **G2 locality**: does Belady — and does LRU — beat the no-locality floor at phone-sized caches?
-  If not → finding F4, and G-ROOF's floor-case numbers are the realistic ones.
-- **Lookahead recall**: can the next layer's experts be prefetched without training?
+- **G2 locality**: does LRU beat the no-locality floor at phone-sized caches, and by how much
+  once the hit rate is decomposed against the shuffled and uniform controls? Read the answer per
+  *scope* and *replay* — a shared-pool, per-access simulation reports a different and wrong number
+  (see the defect table in `README.md`). If LRU does not beat the floor → finding F4, and
+  G-ROOF's floor-case numbers are the realistic ones.
+- **Lookahead horizon**: how many tokens of future routing must an eviction policy see to reach
+  Belady? This is the constructive number, because a batched multi-token verification pass
+  supplies exactly its own window for free. Read `--lookahead`, and read `--pred-accuracy` for
+  how far a noisy predictor gets under each of the two eviction rules.

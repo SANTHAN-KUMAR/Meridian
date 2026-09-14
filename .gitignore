@@ -68,3 +68,8 @@ moe-phone/*.jpeg
 moe-phone/*.png
 moe-phone/kaggle/results.zip
 moe-phone/OnePlus*AI Benchmark*
+
+# Raw research scrapes (GitHub issues/PRs, paper dumps). Provenance for the
+# literature claims in moe-phone/, which cite PR and arXiv numbers directly, so
+# the claims stay reproducible without carrying third-party text in the repo.
+.research/

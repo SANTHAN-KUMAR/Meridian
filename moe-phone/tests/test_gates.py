@@ -49,6 +49,291 @@ def test_belady_never_below_lru():
             assert cache_sim.belady_hits(seq, C) >= cache_sim.lru_hits(seq, C)
 
 
+def _synthetic_trace(T=1500, L=6, E=32, k=4, seed=0, locality=0.6):
+    """A trace with tunable temporal locality: with probability `locality` a
+    token reuses the previous token's expert set, else it draws fresh. Nothing
+    here depends on any gate passing."""
+    rng = np.random.default_rng(seed)
+    out = {}
+    for l in range(L):
+        rows, prev = [], rng.choice(E, size=k, replace=False)
+        for _ in range(T):
+            if rng.random() < locality:
+                cur = prev.copy()
+                j = rng.integers(0, k)
+                cur[j] = rng.integers(0, E)
+                cur = np.unique(cur)
+                while cur.size < k:
+                    cur = np.unique(np.append(cur, rng.integers(0, E)))
+            else:
+                cur = rng.choice(E, size=k, replace=False)
+            rows.append(cur[:k])
+            prev = cur[:k]
+        out[l] = np.array(rows, dtype=np.int16)
+    return out, E, L, k
+
+
+def test_split_capacity_preserves_the_total_slot_budget():
+    # Arithmetic, not a result: "10% cache" must mean the same BYTES under
+    # per-layer and global scope or the two are not comparable.
+    for cap in (0, 1, 7, 51, 102, 128, 1023):
+        for L in (1, 3, 16, 61):
+            caps = cache_sim.split_capacity(cap, L)
+            assert len(caps) == L
+            assert sum(caps) == cap
+            assert max(caps) - min(caps) <= 1      # even to within one slot
+
+
+def test_event_stream_and_request_stream_are_the_same_keys():
+    # [T, L, k] flattened in C order IS the token-major request stream. If this
+    # ever diverges the two replay paths are simulating different workloads.
+    tr, E, L, k = _synthetic_trace()
+    seq, T1, L1, k1 = cache_sim.request_stream(tr, E)
+    ev, T2, L2, k2 = cache_sim.event_stream(tr, E)
+    assert (T1, L1, k1) == (T2, L2, k2)
+    assert np.array_equal(ev.reshape(-1), seq)
+
+
+def test_new_replay_reproduces_the_legacy_global_sequential_path():
+    # Regression identity. The scope/replay rewrite must not silently change
+    # the configuration that was already published; it must ADD configurations.
+    tr, E, L, k = _synthetic_trace()
+    seq, T, _, _ = cache_sim.request_stream(tr, E)
+    ev, _, _, _ = cache_sim.event_stream(tr, E)
+    for f in (0.05, 0.2, 0.5):
+        cap = max(1, int(round(f * L * E)))
+        assert (cache_sim.lru_hits_events(ev, cap, "global", "sequential")
+                == cache_sim.lru_hits(seq, cap))
+        assert (cache_sim.belady_hits_scoped(ev, cap, "global")
+                == cache_sim.belady_hits(seq, cap))
+
+
+def test_event_atomic_replay_never_scores_below_sequential():
+    # A theorem about the two replays, independent of any trace's locality:
+    # sequential eviction can discard an expert the CURRENT event still needs
+    # and then count it as a miss; atomic decides residency for the whole event
+    # first, so it can only ever count more hits.
+    for seed in range(4):
+        tr, E, L, k = _synthetic_trace(seed=seed, locality=0.3 + 0.2 * seed)
+        ev, T, _, _ = cache_sim.event_stream(tr, E)
+        for f in (0.03, 0.1, 0.25, 0.6):
+            cap = max(1, int(round(f * L * E)))
+            for scope in ("per_layer", "global"):
+                a = cache_sim.lru_hits_events(ev, cap, scope, "atomic")
+                q = cache_sim.lru_hits_events(ev, cap, scope, "sequential")
+                assert a >= q, (scope, f, a, q)
+
+
+def test_lru_on_locality_free_routing_returns_the_cache_fraction():
+    # Recovery gate (CLAUDE.md 9.2): with iid uniform routing there is no
+    # locality to find, so the correct answer is the cache fraction exactly.
+    # A simulator reporting a hit rate ABOVE the floor here is inventing
+    # locality, which is the failure this whole rewrite exists to rule out.
+    tr, E, L, k = _synthetic_trace(T=4000, locality=0.0)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    n = T * L * k
+    for f in (0.1, 0.25, 0.5):
+        cap = max(1, int(round(f * L * E)))
+        hit = cache_sim.lru_hits_events(ev, cap, "per_layer", "atomic") / n
+        se = math.sqrt(f * (1 - f) / n)
+        assert abs(hit - f) < 5 * se + cap / n
+
+
+def test_belady_is_not_bounded_by_the_cache_fraction():
+    # The floor is the null for an ONLINE memoryless policy, not for an offline
+    # optimum: Belady exploits the realised sequence and beats the fraction even
+    # with no locality at all. Any "Belady minus cache fraction = locality"
+    # reading is therefore wrong, and this pins the reason.
+    tr, E, L, k = _synthetic_trace(T=4000, locality=0.0)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    n = T * L * k
+    f = 0.1
+    cap = max(1, int(round(f * L * E)))
+    assert cache_sim.belady_hits_scoped(ev, cap, "per_layer") / n > 1.5 * f
+
+
+def test_per_layer_belady_never_beats_global_belady():
+    # Per-layer quotas are the SAME optimisation problem with an added
+    # constraint, so the constrained optimum cannot exceed the free one.
+    tr, E, L, k = _synthetic_trace()
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    for f in (0.05, 0.2, 0.5):
+        cap = max(1, int(round(f * L * E)))
+        assert (cache_sim.belady_hits_scoped(ev, cap, "global")
+                >= cache_sim.belady_hits_scoped(ev, cap, "per_layer"))
+
+
+def test_unbounded_lookahead_is_exactly_belady():
+    # An identity, not a result: with the whole future visible, farthest-next-use
+    # IS Belady's rule. If these ever diverge the lookahead sweep is measuring
+    # something other than an approach to the offline optimum.
+    tr, E, L, k = _synthetic_trace()
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    for f in (0.05, 0.2, 0.5):
+        cap = max(1, int(round(f * L * E)))
+        assert (cache_sim.lookahead_hits(ev, cap, None)
+                == cache_sim.belady_hits_scoped(ev, cap, "per_layer"))
+
+
+def test_lookahead_is_bracketed_by_sequential_lru_and_belady():
+    # horizon 0 does not mean "no information": the engine is executing the
+    # current token, so it always knows that token's own expert set. So H=0 must
+    # beat sequential LRU (which throws that away) and no horizon may beat the
+    # offline optimum.
+    tr, E, L, k = _synthetic_trace()
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    for f in (0.05, 0.2, 0.5):
+        cap = max(1, int(round(f * L * E)))
+        seq = cache_sim.lru_hits_events(ev, cap, "per_layer", "sequential")
+        bel = cache_sim.belady_hits_scoped(ev, cap, "per_layer")
+        for h in (0, 1, 4, 16, None):
+            got = cache_sim.lookahead_hits(ev, cap, h)
+            assert seq <= got <= bel, (f, h, seq, got, bel)
+
+
+def test_rank_eviction_is_worse_than_no_lookahead_when_the_predictor_is_wrong():
+    # A NEGATIVE result, asserted so it cannot quietly come back. Ranking victims
+    # by a predicted next-use discards recency, which is itself information. With
+    # a uniformly wrong predictor the rule therefore scores BELOW the
+    # no-lookahead rule. Any change that makes this test fail has either fixed
+    # the policy or broken the noise model, and both need saying out loud.
+    tr, E, L, k = _synthetic_trace(T=2500)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    for f in (0.1, 0.25):
+        cap = max(1, int(round(f * L * E)))
+        base = cache_sim.lookahead_hits(ev, cap, 0, mode="rank")
+        blind = cache_sim.lookahead_hits(
+            ev, cap, 4, ev_hat=cache_sim.corrupt_routing(ev, 0.0, E, seed=1),
+            mode="rank")
+        assert blind < base, (f, blind, base)
+
+
+def test_protect_eviction_degrades_gracefully_when_the_predictor_is_wrong():
+    # The property that makes a CHEAP predictor shippable: if the predictor may
+    # only veto a candidate and recency still ranks, then a wrong prediction
+    # removes the veto's value without removing the ranking signal underneath.
+    # So protect must stay near the no-lookahead rule where rank collapses, and
+    # it must never beat rank when the lookahead is exact.
+    tr, E, L, k = _synthetic_trace(T=2500)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    for f in (0.1, 0.25):
+        cap = max(1, int(round(f * L * E)))
+        base = cache_sim.lookahead_hits(ev, cap, 0, mode="rank")
+        hat0 = cache_sim.corrupt_routing(ev, 0.0, E, seed=1)
+        blind_rank = cache_sim.lookahead_hits(ev, cap, 4, ev_hat=hat0, mode="rank")
+        blind_prot = cache_sim.lookahead_hits(ev, cap, 4, ev_hat=hat0, mode="protect")
+        assert blind_prot > blind_rank, (f, blind_prot, blind_rank)
+        assert blind_prot >= 0.7 * base, (f, blind_prot, base)
+        exact_rank = cache_sim.lookahead_hits(ev, cap, 4, mode="rank")
+        exact_prot = cache_sim.lookahead_hits(ev, cap, 4, mode="protect")
+        assert exact_prot <= exact_rank, (f, exact_prot, exact_rank)
+
+
+def test_protect_mode_is_still_bounded_by_belady():
+    # Whatever the mode, no online rule may beat the offline optimum.
+    tr, E, L, k = _synthetic_trace()
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    for f in (0.05, 0.2):
+        cap = max(1, int(round(f * L * E)))
+        bel = cache_sim.belady_hits_scoped(ev, cap, "per_layer")
+        for h in (0, 4, None):
+            assert cache_sim.lookahead_hits(ev, cap, h, mode="protect") <= bel
+
+
+def test_corrupt_routing_keeps_every_expert_inside_its_own_layer():
+    # A corrupted id that escaped its layer would be a key no layer ever
+    # requests, which would silently inflate the measured miss count.
+    tr, E, L, k = _synthetic_trace()
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    for acc in (0.0, 0.5, 1.0):
+        hat = cache_sim.corrupt_routing(ev, acc, E, seed=2)
+        assert hat.shape == ev.shape
+        for l in range(L):
+            lo, hi = l * E, (l + 1) * E - 1
+            assert hat[:, l, :].min() >= lo and hat[:, l, :].max() <= hi
+        if acc >= 1.0:
+            assert np.array_equal(hat, ev)
+
+
+def test_unbounded_lookahead_is_belady_under_global_scope_too():
+    # The same identity must hold for the shared-pool machine, or the two scopes
+    # are not being compared on equal terms. This caught a real defect: the
+    # global branch originally built L independent full-size caches instead of
+    # one pool, which silently made "global" mean "L times the memory".
+    tr, E, L, k = _synthetic_trace()
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    for f in (0.05, 0.2, 0.5):
+        cap = max(1, int(round(f * L * E)))
+        assert (cache_sim.lookahead_hits(ev, cap, None, scope="global")
+                == cache_sim.belady_hits_scoped(ev, cap, "global"))
+
+
+def test_lookahead_rejects_an_unknown_scope():
+    # An unrecognised scope must fail loudly rather than fall through to a
+    # default, because silently simulating the other machine is exactly the
+    # defect this module was rewritten to remove.
+    tr, E, L, k = _synthetic_trace(T=200)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    with pytest.raises(ValueError):
+        cache_sim.lookahead_hits(ev, 16, 4, scope="per-layer")   # note the hyphen
+
+
+def test_lookahead_is_monotone_in_horizon():
+    # Monotonicity gate (CLAUDE.md 9.2): strictly more future information must
+    # not produce a worse cache. A non-monotone curve means the eviction rule is
+    # mis-ranking victims, not that longer lookahead is unhelpful.
+    for seed in range(3):
+        tr, E, L, k = _synthetic_trace(seed=seed)
+        ev, T, _, _ = cache_sim.event_stream(tr, E)
+        for f in (0.05, 0.2):
+            cap = max(1, int(round(f * L * E)))
+            xs = [cache_sim.lookahead_hits(ev, cap, h) for h in (0, 1, 2, 4, 8, None)]
+            assert all(a <= b for a, b in zip(xs, xs[1:])), (seed, f, xs)
+
+
+def test_window_verification_never_increases_fetches_per_verified_token():
+    # Unioning W tokens' expert sets fetches each distinct expert once, so the
+    # fetch count per VERIFIED token is non-increasing in W. (Per ACCEPTED token
+    # it can increase -- that depends on the acceptance rate and is priced by
+    # the caller, not here.)
+    tr, E, L, k = _synthetic_trace(T=1200)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    for f in (0.05, 0.2):
+        cap = max(1, int(round(f * L * E)))
+        prev = None
+        for W in (1, 2, 4, 8):
+            fetch, nwin = cache_sim.window_fetches(ev, cap, W)
+            per_tok = fetch / (nwin * W)
+            if prev is not None:
+                assert per_tok <= prev + 1e-9, (f, W, per_tok, prev)
+            prev = per_tok
+
+
+def test_shuffle_control_preserves_expert_popularity_exactly():
+    # The control must isolate ONE factor. Shuffling token order has to leave
+    # every layer's expert-frequency histogram bit-identical, or the real-minus-
+    # shuffled gap conflates recency with popularity.
+    tr, E, L, k = _synthetic_trace()
+    sh = cache_sim.shuffle_control(tr, seed=3)
+    for l in tr:
+        a = np.bincount(tr[l].ravel().astype(np.int64), minlength=E)
+        b = np.bincount(sh[l].ravel().astype(np.int64), minlength=E)
+        assert np.array_equal(a, b)
+
+
+def test_static_pinning_is_scored_only_on_held_out_tokens():
+    # A policy fitted on a warmup slice and scored on the same slice reports its
+    # own training fit. Scoring on the remainder must give a DIFFERENT number;
+    # equality would mean the split is not being applied.
+    import expert_policy   # gates/ is already on sys.path (see the header)
+    tr, E, L, k = _synthetic_trace(T=2000)
+    caps = cache_sim.split_capacity(max(1, int(round(0.2 * L * E))), L)
+    oracle, _ = expert_policy.static_hits(tr, caps)
+    heldout, _ = expert_policy.static_hits(tr, caps, warmup_frac=0.25)
+    assert heldout != oracle
+    assert heldout <= oracle + 1e-9      # no-peeking cannot beat whole-trace fit
+
+
 def test_request_stream_is_token_major_and_layer_offset():
     traces = {3: np.array([[0, 1], [2, 3]]), 7: np.array([[1, 0], [3, 2]])}
     seq, T, L, k = cache_sim.request_stream(traces, num_experts=4)
@@ -276,6 +561,31 @@ def test_absent_power_rail_reports_no_energy_rather_than_zero():
 
 
 # ---- Kaggle notebook is a copy, so prove it is the SAME copy ---------------
+
+def test_every_documented_number_matches_its_artifact():
+    """CLAUDE.md 7.1: one claim, one script, one artifact. gates/claims_check.py
+    holds the map; this asserts every entry still agrees with the artifact it
+    names. The expected values are what the DOCUMENTS say, so re-running a gate
+    and forgetting to update the prose fails here instead of surviving into a
+    paper. It caught a hand-typed 0.490 where the artifact said 0.5015."""
+    import claims_check
+    _, out, bad = claims_check.check()
+    assert out, "the claims map is empty"
+    assert not bad, "documents disagree with their artifacts: " + repr(bad)
+
+
+def test_claims_markdown_is_regenerable():
+    """CLAIMS.md is generated, not written. If it drifts from what the checker
+    emits, it is being edited by hand and has stopped being evidence."""
+    import claims_check
+    _, out, _ = claims_check.check()
+    path = os.path.join(os.path.dirname(HERE), "CLAIMS.md")
+    with open(path, encoding="utf-8") as f:
+        current = f.read()
+    assert current == claims_check.emit_markdown(out), (
+        "moe-phone/CLAIMS.md is out of date; regenerate with "
+        "python moe-phone/gates/claims_check.py --emit")
+
 
 def test_kaggle_notebook_is_regenerable_and_matches_the_gate_scripts():
     """The notebook embeds gates/traces_sparsity.py and gates/cache_sim.py in
