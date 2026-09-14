@@ -36,6 +36,7 @@ does.
 | `gates/engine_sim.py` | how many **seconds per token** does the proposed loop take, priced per *accepted* token? | `traces_*.npz` | `engine_sim_*.json` |
 | `gates/byte_budget.py` | the flash roofline across candidate checkpoints | HF configs | `byte_budget*.json` |
 | `gates/engine_target.py` | per model: what does the measured policy deliver, and what would it need? | `byte_budget_measured.json`, `cache_fcrit_*.json` | `engine_target.json` |
+| `gates/predictor.py` | can a cheap cross-token predictor supply the lookahead? (**no** — S12) | `traces_*.npz` | `predictor_*.json` |
 | `gates/claims_check.py` | does every number in the prose still match its artifact? | all of the above | `CLAIMS.md` |
 
 ### The device track
@@ -75,6 +76,9 @@ $P moe-phone/gates/expert_policy.py $T --fractions 0.05,0.10,0.20,0.30,0.50
 # the decode loop, priced per accepted token
 $P moe-phone/gates/engine_sim.py $T --bulk-gbps 2.806 --expert-mb 3.54
 
+# S12: can a cheap cross-token predictor supply the lookahead? (answer: no)
+$P moe-phone/gates/predictor.py $T --max-tokens 16384
+
 # per-model verdicts on the measured 15R numbers
 $P moe-phone/gates/engine_target.py --bulk-gbps 2.806 --ram-gb 4.85 --target-tps 5
 
@@ -98,15 +102,18 @@ benefit was measured before it was put on the list.
    (§2.1) and do not build static pinning (§2.3); both were measured and both lose.
 2. **Cache warming at load.** Buys time-to-first-token, not throughput. Do not count it in the
    byte budget.
-3. **A next-token, same-layer expert predictor, used in `protect` mode.** The predictor may only
-   veto an eviction candidate; recency still ranks. Measure its accuracy *first* (**S12**) — it
-   is the cheapest open measurement in the project and it is the input to this step.
-4. **Only then**, if a drafter with α ≥ 0.9 exists, multi-token verification (§4). It is a
-   regression below α ≈ 0.85, so measure α before writing any of it.
+3. **Do not build a cross-token expert predictor.** Measured and closed (**S12**): persistence,
+   fitted Markov and frozen popularity all land at or below plain LRU, and even an exact one-step
+   oracle gives only 1.16×. The cause is horizon, not prediction quality — one step is the wrong
+   unit, and the lever needs about four.
+4. **The only route to the remaining ~2.2× is multi-token verification** (`ARCHITECTURE.md` §4),
+   and it is conditional: a regression below α ≈ 0.85, worth 1.13–1.28× at α = 0.9. **Measure α
+   for a specific drafter before writing any of it** (**S10**).
 
 **What not to build:** expert *prefetch*. Three independent published negatives, including a
-trace-driven oracle prefetching perfectly one token ahead that gained ~8%. See
-[`LEADS.md`](LEADS.md) §8. Prediction used for *eviction* is a different thing and is step 3.
+trace-driven oracle prefetching perfectly one token ahead that gained ~8%
+([`LEADS.md`](LEADS.md) §8). Prediction used for *eviction* is a different mechanism and was worth
+testing separately — which is step 3, and it also came back negative.
 
 ---
 
@@ -158,11 +165,49 @@ script rather than by hand:
 
 ---
 
-## 8. Where the open work is
+## 8. Closing S9 — the assumption that gates every per-model tok/s figure
+
+`engine_target.py` reads each candidate model's hit rate off a curve measured on **OLMoE's
+64-expert top-8 routing**, and applies it at equal `rho = per-layer slots / top_k`. That the hit
+rate depends on geometry *only* through `rho` is an assumption, not a measurement. It is the
+largest single piece of load-bearing uncertainty in the project: **every tok/s number in
+`ARCHITECTURE.md` §1 goes through it**, and four of ten models sit outside the measured `rho`
+range entirely (flagged `curve_extrapolated` in the artifact).
+
+One external check exists and is consistent: an independently reported 512-expert top-10 model
+reaches 0.693 where our curve interpolates 0.669 — 3.5% apart, on the target's actual geometry.
+One point is not a validation.
+
+**To close it:** open `kaggle/g2_g3_olmoe.ipynb` on a 2×T4 session, set `RUN_S9 = True` in the
+`s9-geometry` cell, run. It collects **Qwen3-30B-A3B** — `E=128`, double OLMoE's, same top-8, and
+a model already in the candidate table rather than a proxy — then runs the `f_crit` sweep on it.
+`--densities 1.0 --no-floor` skips the fidelity sweep, because S9 needs only traces; that makes it
+much cheaper than the G3 cell.
+
+**Then compare the two curves at equal `rho`, not at equal cache fraction.** `rho = cache_fraction
+× E / k`, and `E` differs by 2× between the models, so equal fractions are *not* comparable — that
+confusion is the whole thing being tested.
+
+| outcome | what it means |
+|---|---|
+| curves coincide at equal `rho` | `at_rho` is validated; every per-model tok/s stands as measured, and S9 closes |
+| curves diverge | the transfer is invalid; the table becomes per-model, each needing its own trace, and the models outside the measured range lose their figures entirely |
+
+`--load-in-4bit` quantises the router as well as the experts, so routing may differ slightly from
+the 16-bit model. That is a confound for a *fidelity* number and not for a *routing trace* — the
+deployed engine runs quantised anyway. The flag is recorded in the artifact either way.
+
+---
+
+## 9. Where the open work is
 
 The four ranked open measurements are in [`ARCHITECTURE.md`](ARCHITECTURE.md) §6; the full stub
 registry with removal conditions is in [`POSITION.md`](POSITION.md) §11; external work that bears
 on each failure mode, with provenance marks, is in [`LEADS.md`](LEADS.md).
 
-Shortest path to the next real result: **measure the cross-token, same-layer predictor's accuracy
-(S12)**. No GPU, the traces are already committed, and it is the input to the primary design.
+Shortest path to the next real result: **measure a drafter's acceptance rate α on the target model
+(S10)**. With S12 closed negative, verification is the only remaining supplier of the lookahead, and
+α decides whether it pays at all.
+
+Second: **collect routing traces for a second expert count** to close **S9**, which currently gates
+every per-model tok/s figure. Procedure in §8 above.

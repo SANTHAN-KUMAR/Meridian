@@ -4,8 +4,8 @@
 what they imply. Every number is produced by a named script into `results/<date>/` and checked
 against the artifact by `gates/claims_check.py`; nothing here is typed by hand (`CLAUDE.md` §7.1).
 Assumptions the design leans on are named inline and registered in [`POSITION.md`](POSITION.md)
-§11 — **S9** (geometry transfer), **S10** (acceptance rate), **S11** (compute term), **S12**
-(predictor accuracy).
+§11 — **S9** (geometry transfer), **S10** (acceptance rate), **S11** (compute term). **S12**
+(predictor accuracy) is closed, negative — see §3.1.
 
 Read [`POSITION.md`](POSITION.md) §3c first: it has the corrected G2 and the two simulator defects
 that produced the previous, wrong version of this design.
@@ -101,77 +101,86 @@ Four tokens is a remarkably short horizon, and it is the load-bearing result of 
 
 ---
 
-## 3. The design: per-layer LRU, with a predictor that may only veto
-
-**The primary recommendation is not speculative decoding.** It is the cheapest thing that
-delivers most of the lookahead benefit with no acceptance risk:
+## 3. The design, and the lever that turned out not to exist
 
 ```
-  per-layer LRU cache
-    + a next-token, same-layer expert predictor
-    + eviction in PROTECT mode: the predictor may VETO a candidate for
-      eviction, never propose one; recency still does the ranking
+  per-layer expert cache
+    + LRU eviction
+    + event-atomic fetch (a layer's whole top-k decided before any eviction)
 ```
 
-Measured on OLMoE at a 10% cache (`results/<date>/cache_pred_OLMoE-1B-7B-0924.json`):
+That is the whole deployable design, and it is already worth **double digits of tok/s on three
+candidate models** (§1). Everything below is about the 2.2× that §2.4 says is still on the table,
+and whether it can be reached.
 
-| accuracy | h | tok/s | vs plain LRU |
+### 3.1 A cheap predictor was the primary recommendation. It is not.
+
+An earlier version of this document proposed a **next-token, same-layer expert predictor** used in
+`protect` mode — the predictor may veto an eviction candidate, never propose one — on the strength
+of an abstract accuracy sweep. Measured with real predictors (`gates/predictor.py`, closing
+**S12**), the lever is not there:
+
+| predictor (10% cache, held out) | slot accuracy | h | vs plain LRU |
 |---|---|---|---|
-| — (plain LRU) | 0.284 | 8.6 | 1.00× |
-| 0.9 | 0.383 | 10.0 | **1.16×** |
-| 0.7 | 0.365 | 9.7 | 1.13× |
-| 0.5 | 0.342 | 9.4 | 1.09× |
-| 0.3 | 0.311 | 8.9 | 1.04× |
+| plain LRU | — | 0.287 | 1.00× |
+| persistence ("t+1 wants what t wants") | 0.387 | 0.284 | **1.00×** |
+| first-order Markov, fitted | 0.338 | 0.262 | 0.97× |
+| frozen popularity | 0.218 | 0.237 | 0.93× |
+| *exact one-step oracle* | 1.000 | 0.383 | *1.16×* |
+| *Belady* | — | 0.455 | *1.36×* |
 
-**The shape of that column is the point.** It is monotone, it is never below 1.00×, and it
-degrades gracefully. A design whose worst case is "no worse than the baseline" can be shipped and
-tuned in the field; one whose worst case is a regression cannot.
+**Persistence is not weak — it is informationally empty**, and that is the finding. The eviction
+rule already knows the expert set of the token it is *executing*, for free, because the engine is
+running that layer right now. Persistence asserts the next token wants that same set, so it
+contributes nothing the rule did not already have. It reproduces the horizon-0 column to three
+decimals at every cache fraction, which `tests/test_gates.py` asserts as a property rather than a
+measurement.
 
-### 3.1 Why `protect` and not `rank`
+Its slot accuracy of 0.387 against 0.125 under independence is genuinely 3× chance. **Good
+prediction, useless information** — the two are not the same thing, and that gap is the result.
 
-The obvious way to spend a lookahead is to evict the expert whose predicted next use is farthest —
-call it `rank`. With an *exact* lookahead that is optimal: it reaches Belady. With a wrong one it
-is a disaster, and an earlier version of this document asserted the opposite.
+### 3.2 Why the sweep looked better, and what the real constraint is
 
-**The claim that was wrong:** that a bad predictor is harmless here because a wrong *eviction*
-spends no bandwidth, unlike a wrong *prefetch*. The first half is true, and it is why the
-published prefetch negatives do not transfer. The second half does not follow, and the measurement
-refutes it: ranking victims by a wrong prediction **discards recency, which is itself real
-information.** At accuracy 0, `rank` scores 0.097 against LRU's 0.284. Break-even is accuracy
-≈ 0.70 — published expert-routing predictors report 86–91%, so they clear it, but not by much, and
-on their models rather than ours.
+Two explanations were considered. One was tested and **rejected**: that the abstract sweep flatters
+a predictor because `corrupt_routing()` replaces a wrong guess with a *uniformly random* expert —
+rarely resident, so a wrong veto rarely fires — whereas a real predictor errs toward *plausible*
+experts that often are resident. Corrupting from the trace's own routing at matched accuracy scores
+the same to within 0.2%. The noise model is sound.
 
-`protect` keeps recency as the ranking signal and lets the predictor only remove candidates. It
-gives up the peak (0.390 vs 0.451 with an exact lookahead) and buys the entire robustness column
-above.
+The supported explanation is **horizon**:
 
-> **Rule: a lookahead that is exact should rank. A lookahead that is predicted should only veto.**
+| predictor accuracy | protect, horizon 1 | protect, horizon 4 |
+|---|---|---|
+| 1.00 | 0.383 | 0.394 |
+| 0.50 | 0.286 *(= LRU)* | 0.347 |
+| 0.35 | 0.257 | 0.324 |
 
-### 3.2 What predictor, and what we do *not* know about it (S12)
+At horizon 4 even a 35%-accurate predictor beats LRU. At horizon 1, accuracy ≈ 0.5 is needed merely
+to break even. **A one-step predictor can only honestly supply horizon 1** — standing at token *t*
+it cannot form token *t+2*'s prediction from token *t+1*'s routing, which it does not have.
 
-The cache is per-layer, so the useful prediction is **cross-token, same-layer**: *which experts
-will token t+1 want at layer l?* That is **not** the quantity G2 measured. G2's 0.88 recall is
-**cross-layer** lookahead (layer *l+1* from layer *l*'s input, the Fate / Mixtral-offloading
-trick), which a per-layer cache cannot use at all — §2.1 is why.
+And the agreement is close once both are matched: uniform corruption at accuracy 0.35, horizon 1
+scores 0.257; the measured Markov predictor at slot accuracy 0.338 scores 0.262. The abstract sweep
+predicts the real predictor correctly — it was being read at the wrong horizon.
 
-So the accuracy of the predictor this design needs is **unmeasured**, and that is stub **S12**. It
-is also the cheapest open measurement in the project, because it is a property of traces already
-committed and needs no GPU.
+> **The lookahead lever is real, and it is not reachable by prediction.** It needs a horizon of
+> about four tokens, and a horizon of four needs the next four tokens' routing. Only a multi-token
+> verification pass actually has that.
 
-What *is* known: the measured adjacent-token expert overlap on this trace is **0.366**, so even
-the trivial "token t+1 will want what token t wanted" persistence predictor lands near the bottom
-of the table above — around 1.04–1.09×, still positive. **That is the floor, not the estimate.**
+### 3.3 What survives of `protect`
 
-One caveat on the noise model itself: corruption replaces a wrong prediction with a *uniformly
-random* expert. A real predictor's errors are not uniform — they are plausible experts — so these
-figures are a conservative reading of a given accuracy, not a calibrated one.
+The `rank` / `protect` distinction still holds and still matters, because §4's lookahead is exact
+over its window but the window ends: `rank` collapses below LRU when its lookahead is wrong
+(0.097 vs 0.284 at accuracy 0), `protect` degrades gracefully. **A lookahead that is exact should
+rank; anything uncertain should only veto.** That is a rule about how to spend a lookahead, and it
+is unaffected by S12 — what S12 removes is the claim that a cheap predictor can *supply* one.
 
 ---
 
-## 4. Speculative decoding: a second option, conditional rather than free
+## 4. Multi-token verification: the only supplier of the lookahead, and it is conditional
 
-If a drafter is available, verifying W tokens in one pass supplies an **exact** lookahead over its
-own window — and the exactness is worth being precise about, because the obvious explanation is
+§3 leaves exactly one way to obtain a horizon of four. Verifying W tokens in one pass supplies an
+**exact** lookahead over its own window — and the exactness is worth being precise about, because the obvious explanation is
 wrong. It is *not* that the draft model routed those tokens: a self-draft restricted to
 cache-resident experts is a different model, so its routing would only be a prediction. The
 exactness comes from the shape of the verification pass. Layer *l* routes all W positions in one
@@ -193,9 +202,9 @@ not be multiplied.** `engine_sim.py` replays the whole loop in one pass and pric
 | 16, α=0.8 | 0.714 | 6.6 | **0.76×** |
 | 16, α=0.95 | 0.714 | 15.1 | 1.76× |
 
-> **Read against §3: at α = 0.9, speculation with W=4 delivers 1.13×, which a predictor in protect
-> mode matches at 1.16× — with no drafter, no verification compute, and no downside risk.**
-> Speculation only clearly wins above α ≈ 0.95, and it goes *negative* at α ≤ 0.8.
+> **Read against §3: this is the only route to the lookahead lever, and it is not free.** It is
+> a regression at α ≤ 0.8, roughly 1.13–1.28× at α = 0.9, and clearly worth it only above
+> α ≈ 0.95. There is no cheaper substitute — S12 closed that door.
 
 `alpha` is swept, not measured (**S10**), and the sign of the effect flips inside the plausible
 range of published drafters. So **the number to measure next is `alpha` for a specific drafter —
@@ -221,7 +230,7 @@ Three external facts that sharpen this:
   independently reported 512-expert top-10 model reaches 0.693 where our curve interpolates 0.669
   at the same `rho`), but one point is not a validation.
 - **It does not include a compute term** (**S11**). Valid only while the device is flash-bound.
-- **Its predictor's accuracy is unmeasured** (**S12**), and it is not the quantity G2 measured.
+- **It does not include a predictor.** S12 is closed, negative: no cheap cross-token, same-layer predictor reaches the lookahead lever, because one step is the wrong horizon (§3.2).
 - **It is not novel in its parts.** Union-of-experts loading exists in llama.cpp PR #25294 for
   *prefill*; self-speculative MoE decode exists (S2-MoE, DraftExpert — the latter on this exact
   SoC class). What is *not found* in the literature — not found, not verified absent, per
@@ -240,7 +249,7 @@ stacking them owes a fidelity check per row.
 
 | lever | multiplier | status | what it would cost to find out |
 |---|---|---|---|
-| **raise `h`** via lookahead (§3) | 1.16× with a predictor at accuracy 0.9; up to ~2.2× with an exact lookahead | **measured** | done |
+| **raise `h`** via lookahead | up to ~2.2×, but ONLY from an exact 4-token window (§3, §4) | **measured, and its cheap route is closed** (S12) | done; what remains is α, below |
 | **deeper I/O queue** | 1.25–1.5× (est.) | **untested.** G1 stopped at 8 threads; at 1 MB the 1→8 scaling was ×1.81 and still rising | one afternoon: extend `ufsbench` to 16/32/64. **Cheapest lever, and it scales every figure linearly** |
 | **lower precision**, 4.5 → ~3.0 bpw | ~1.5× | **untested against our margin** | rerun G3's harness at Q3_K/IQ3 against the same pre-registered Q4_0 Tier-A margin |
 | **whole-expert skipping** (ACE, arXiv 2609.05228: 50%, training-free *and* calibration-free) | up to 2× | **untested, and a different axis from G3** — G3 killed intra-expert *neuron* sparsity on a gate-first criterion; this drops whole experts, so S8 does not gate it | same harness. ACE's headline is measured against other skipping methods, not against the full model, so our margin is the real test |
@@ -253,14 +262,14 @@ it should be run early rather than assumed.
 
 ## 6. The next four measurements, in order of how much they move the answer
 
-1. **The cross-token, same-layer predictor's accuracy** (**S12**). It is the input to the
-   *primary* design and it is currently a blank. Cheap: a property of traces already committed,
-   no GPU needed. Build the predictor, score it on held-out tokens, read the tok/s off §3.
+1. **A drafter's acceptance rate `alpha`** (**S10**). S12's closure makes this the *only*
+   remaining route to the 2.2×, and the sign of the effect flips inside the plausible range of
+   published drafters, so it decides whether §4 gets built at all.
 2. **Routing traces for a second expert count** (Qwen3-30B-A3B, `E`=128; Qwen3-Next-80B-A3B,
    `E`=512). Closes **S9**, which gates *every* per-model tok/s figure. The Kaggle notebook
    already runs the full sweep; it needs a second model argument.
-3. **A drafter's acceptance rate `alpha`** (**S10**). Decides whether §4 is worth building at all,
-   since the sign flips inside the plausible range.
+3. **Whole-expert skipping at the pre-registered fidelity margin** (§5b row four). The largest
+   untested multiplier, and S8 does not gate it.
 4. **Extend the G1 thread sweep past 8.** The bandwidth constant in §1 is a measurement limit, not
    a device limit. Cheapest of the four, and it scales everything.
 

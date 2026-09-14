@@ -562,6 +562,71 @@ def test_absent_power_rail_reports_no_energy_rather_than_zero():
 
 # ---- Kaggle notebook is a copy, so prove it is the SAME copy ---------------
 
+def test_a_persistence_predictor_adds_nothing_to_what_the_engine_knows():
+    """S12's mechanism, as a property rather than a measurement.
+
+    The eviction rule already knows the expert set of the token it is executing.
+    A persistence predictor asserts the next token wants that same set, so it
+    supplies no information the rule did not have, and must reproduce the
+    horizon-0 result exactly. This holds for any trace: it is a statement about
+    what the two rules can see, not about how much locality a trace has.
+
+    If this ever fails, either the horizon-0 branch has stopped using the current
+    token's true routing, or persistence has stopped being persistence."""
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "gates"))
+    import predictor
+    tr, E, L, k = _synthetic_trace(T=1200)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    hat = predictor.predict_persistence(ev, E, split=0)
+    for f in (0.05, 0.1, 0.3):
+        cap = max(1, int(round(f * L * E)))
+        empty = cache_sim.lookahead_hits(ev, cap, 1, ev_hat=hat, mode="protect")
+        knows_now = cache_sim.lookahead_hits(ev, cap, 0, mode="protect")
+        assert empty == knows_now, (f, empty, knows_now)
+
+
+def test_uniform_corruption_is_not_a_flattering_noise_model():
+    """A REJECTED hypothesis, kept as a test so it cannot be re-adopted.
+
+    It was proposed that the abstract accuracy sweep flatters a predictor,
+    because corrupt_routing() replaces a wrong guess with a uniformly random
+    expert -- rarely resident, so a wrong veto rarely fires -- whereas a real
+    predictor's errors are plausible experts that often ARE resident. If that
+    held, corrupting from the trace's own routing would score materially worse
+    at matched accuracy. It does not: the two agree closely, so the noise model
+    is not what makes measured predictors underperform. (Horizon is; see
+    test_horizon_not_accuracy_is_what_a_one_step_predictor_lacks.)"""
+    tr, E, L, k = _synthetic_trace(T=1500)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    rng = np.random.default_rng(5)
+    uniform = cache_sim.corrupt_routing(ev, 0.5, E, seed=5)
+    plausible = ev.copy()                      # same accuracy, plausible errors
+    flip = rng.random(ev.shape) >= 0.5
+    donor = ev[rng.permutation(T)]
+    plausible[flip] = donor[flip]
+    cap = max(1, int(round(0.1 * L * E)))
+    u = cache_sim.lookahead_hits(ev, cap, 4, ev_hat=uniform, mode="protect")
+    pl = cache_sim.lookahead_hits(ev, cap, 4, ev_hat=plausible, mode="protect")
+    assert abs(pl - u) / max(1, u) < 0.05, (pl, u)
+
+
+def test_horizon_not_accuracy_is_what_a_one_step_predictor_lacks():
+    """The supported explanation, as a property.
+
+    A longer horizon must be worth more than a shorter one at the SAME
+    predictor accuracy -- more future is more information, whatever its quality.
+    That is why a one-step predictor cannot reach the lookahead lever: the lever
+    needs horizon ~4, and one step supplies one."""
+    tr, E, L, k = _synthetic_trace(T=1500)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    cap = max(1, int(round(0.1 * L * E)))
+    for acc in (1.0, 0.5, 0.3):
+        hat = None if acc >= 1.0 else cache_sim.corrupt_routing(ev, acc, E, seed=11)
+        h1 = cache_sim.lookahead_hits(ev, cap, 1, ev_hat=hat, mode="protect")
+        h4 = cache_sim.lookahead_hits(ev, cap, 4, ev_hat=hat, mode="protect")
+        assert h4 >= h1, (acc, h1, h4)
+
+
 def test_every_documented_number_matches_its_artifact():
     """CLAUDE.md 7.1: one claim, one script, one artifact. gates/claims_check.py
     holds the map; this asserts every entry still agrees with the artifact it

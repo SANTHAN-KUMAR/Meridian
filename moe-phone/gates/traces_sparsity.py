@@ -533,6 +533,15 @@ def main():
     p.add_argument("--densities", default=",".join(str(d) for d in DENSITIES))
     p.add_argument("--dtype", default="auto", choices=["auto", "bfloat16", "float16"])
     p.add_argument("--trust-remote-code", action="store_true")
+    p.add_argument("--load-in-4bit", action="store_true",
+                   help="load the checkpoint with bitsandbytes NF4. Needed to reach a "
+                        "30B-class MoE on 2x16GB, which is what closing S9 requires: the "
+                        "transfer assumption is about EXPERT COUNT, and every model with a "
+                        "materially different E is too large for these GPUs at 16-bit. "
+                        "NOTE this quantises the ROUTER too, so routing may differ slightly "
+                        "from the 16-bit model -- which is a confound for a fidelity number "
+                        "and NOT one for a routing trace, since the engine itself runs "
+                        "quantised. The artifact records the flag either way.")
     p.add_argument("--no-floor", action="store_true")
     p.add_argument("--out-dir", default=None)
     a = p.parse_args()
@@ -558,9 +567,20 @@ def main():
         dtype = getattr(torch, a.dtype)
     t0 = time.time()
     tok = AutoTokenizer.from_pretrained(a.model, trust_remote_code=a.trust_remote_code)
+    load_kw = {}
+    if a.load_in_4bit:
+        if not cuda:
+            raise SystemExit("--load-in-4bit needs a CUDA device")
+        try:
+            from transformers import BitsAndBytesConfig
+        except ImportError as exc:
+            raise SystemExit(f"--load-in-4bit needs bitsandbytes: {exc}")
+        load_kw["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=dtype)
     model = AutoModelForCausalLM.from_pretrained(
         a.model, torch_dtype=dtype, device_map="auto" if cuda else None,
-        trust_remote_code=a.trust_remote_code).eval()
+        trust_remote_code=a.trust_remote_code, **load_kw).eval()
     device = next(model.parameters()).device
     calib = windows_from_text(tok, "train", a.calib_windows, a.seq_len)
     evalw = windows_from_text(tok, "test", a.windows, a.seq_len)
@@ -571,6 +591,7 @@ def main():
     res, traces, floor_store, _ = run(model, calib, evalw, dens, a.floor_tokens, device)
     res["floor"] = None if a.no_floor else format_floor(model, floor_store, device)
     res.update({"model": a.model, "dtype": str(dtype), "bf16_native": native_bf16,
+                "load_in_4bit": bool(a.load_in_4bit),
                 "n_cuda_devices": torch.cuda.device_count() if cuda else 0,
                 "seq_len": a.seq_len,
                 "calib_windows": len(calib), "eval_windows": len(evalw),

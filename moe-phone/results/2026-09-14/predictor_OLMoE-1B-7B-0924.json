@@ -1,0 +1,177 @@
+{
+ "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\traces_OLMoE-1B-7B-0924.npz",
+ "inputs": {
+  "npz": "../results/2026-09-14/traces_OLMoE-1B-7B-0924.npz",
+  "fractions": "0.05,0.1,0.2,0.3",
+  "warmup_frac": 0.25,
+  "max_tokens": 16384,
+  "out_name": null,
+  "out_dir": null
+ },
+ "tokens": 16384,
+ "layers": 16,
+ "top_k": 8,
+ "num_experts": 64,
+ "warmup_tokens": 4096,
+ "independence_slot_accuracy": 0.125,
+ "quality": {
+  "persistence": {
+   "slot_accuracy": 0.38725916544596356,
+   "recall_h1": 0.3872798740538781,
+   "recall_h4": 0.8539486862706055
+  },
+  "markov": {
+   "slot_accuracy": 0.33818689982096356,
+   "recall_h1": 0.3382048862619028,
+   "recall_h4": 0.4309734056261474
+  },
+  "popularity": {
+   "slot_accuracy": 0.21844037373860678,
+   "recall_h1": 0.21844543521608203,
+   "recall_h4": 0.18948609303487304
+  },
+  "oracle": {
+   "slot_accuracy": 1.0,
+   "recall_h1": 1.0,
+   "recall_h4": 1.0
+  }
+ },
+ "rows": [
+  {
+   "cache_fraction": 0.05,
+   "cache_experts": 51,
+   "lru": 0.12215550740559895,
+   "belady": 0.23758888244628906,
+   "h0_current_token_only": 0.11709912618001302,
+   "horizon": 1,
+   "predictors": {
+    "persistence": {
+     "protect": 0.11709912618001302,
+     "rank": 0.037106831868489586,
+     "protect_gain_vs_lru": -0.0050563812255859375,
+     "protect_tok_s_ratio": 0.99427299102819
+    },
+    "markov": {
+     "protect": 0.13852628072102866,
+     "rank": 0.04189618428548177,
+     "protect_gain_vs_lru": 0.0163707733154297,
+     "protect_tok_s_ratio": 1.0190032184953146
+    },
+    "popularity": {
+     "protect": 0.1351470947265625,
+     "rank": 0.05247179667154948,
+     "protect_gain_vs_lru": 0.012991587320963546,
+     "protect_tok_s_ratio": 1.0150217305645242
+    },
+    "oracle": {
+     "protect": 0.20058250427246094,
+     "rank": 0.2167816162109375,
+     "protect_gain_vs_lru": 0.07842699686686198,
+     "protect_tok_s_ratio": 1.0981051794412964
+    }
+   }
+  },
+  {
+   "cache_fraction": 0.1,
+   "cache_experts": 102,
+   "lru": 0.286715825398763,
+   "belady": 0.4550482432047526,
+   "h0_current_token_only": 0.2836354573567708,
+   "horizon": 1,
+   "predictors": {
+    "persistence": {
+     "protect": 0.2836354573567708,
+     "rank": 0.08812014261881511,
+     "protect_gain_vs_lru": -0.0030803680419921875,
+     "protect_tok_s_ratio": 0.9956999992899895
+    },
+    "markov": {
+     "protect": 0.26151402791341144,
+     "rank": 0.10896492004394531,
+     "protect_gain_vs_lru": -0.025201797485351562,
+     "protect_tok_s_ratio": 0.9658736950491503
+    },
+    "popularity": {
+     "protect": 0.2365239461263021,
+     "rank": 0.13968594868977866,
+     "protect_gain_vs_lru": -0.05019187927246091,
+     "protect_tok_s_ratio": 0.9342587380209254
+    },
+    "oracle": {
+     "protect": 0.3828868865966797,
+     "rank": 0.3858604431152344,
+     "protect_gain_vs_lru": 0.09617106119791669,
+     "protect_tok_s_ratio": 1.1558402489092194
+    }
+   }
+  },
+  {
+   "cache_fraction": 0.2,
+   "cache_experts": 205,
+   "lru": 0.4789161682128906,
+   "belady": 0.6635392506917318,
+   "h0_current_token_only": 0.4827760060628255,
+   "horizon": 1,
+   "predictors": {
+    "persistence": {
+     "protect": 0.4827760060628255,
+     "rank": 0.18700599670410156,
+     "protect_gain_vs_lru": 0.0038598378499348773,
+     "protect_tok_s_ratio": 1.0074626040075079
+    },
+    "markov": {
+     "protect": 0.4008216857910156,
+     "rank": 0.2719891866048177,
+     "protect_gain_vs_lru": -0.078094482421875,
+     "protect_tok_s_ratio": 0.8696640372825029
+    },
+    "popularity": {
+     "protect": 0.43562952677408856,
+     "rank": 0.41149648030598956,
+     "protect_gain_vs_lru": -0.043286641438802065,
+     "protect_tok_s_ratio": 0.9233010168101498
+    },
+    "oracle": {
+     "protect": 0.5201956431070963,
+     "rank": 0.5201956431070963,
+     "protect_gain_vs_lru": 0.04127947489420569,
+     "protect_tok_s_ratio": 1.0860339725998354
+    }
+   }
+  },
+  {
+   "cache_fraction": 0.3,
+   "cache_experts": 307,
+   "lru": 0.5988928476969401,
+   "belady": 0.7745952606201172,
+   "h0_current_token_only": 0.6001771291097006,
+   "horizon": 1,
+   "predictors": {
+    "persistence": {
+     "protect": 0.6001771291097006,
+     "rank": 0.284732182820638,
+     "protect_gain_vs_lru": 0.0012842814127604907,
+     "protect_tok_s_ratio": 1.0032121259344187
+    },
+    "markov": {
+     "protect": 0.5300852457682291,
+     "rank": 0.46121660868326825,
+     "protect_gain_vs_lru": -0.06880760192871094,
+     "protect_tok_s_ratio": 0.8535742891469764
+    },
+    "popularity": {
+     "protect": 0.5872758229573568,
+     "rank": 0.5872758229573568,
+     "protect_gain_vs_lru": -0.01161702473958326,
+     "protect_tok_s_ratio": 0.9718528126391225
+    },
+    "oracle": {
+     "protect": 0.6268742879231771,
+     "rank": 0.6268742879231771,
+     "protect_gain_vs_lru": 0.027981440226237053,
+     "protect_tok_s_ratio": 1.0749919914939443
+    }
+   }
+  }
+ ]
+}

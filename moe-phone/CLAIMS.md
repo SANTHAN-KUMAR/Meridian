@@ -16,6 +16,11 @@ internally consistent and wrong. That is what the property tests are for.
 | `lru_10pct_global_seq` | the retracted configuration (shared pool, per-access replay) reports 0.000 | `cache_OLMoE-1B-7B-0924.json` | 0.0000 | ok |
 | `lru_10pct_perlayer_seq` | per-layer scope with per-access replay reports 0.123, so both defects contribute | `cache_OLMoE-1B-7B-0924.json` | 0.1227 | ok |
 | `belady_10pct` | the per-layer Belady optimum at a 10% cache is 0.447 | `cache_OLMoE-1B-7B-0924.json` | 0.4473 | ok |
+| `persistence_is_informationally_empty` | a persistence predictor reproduces the horizon-0 rule exactly: it re-states the current token's set, which the engine already knows | `predictor_OLMoE-1B-7B-0924.json` | 0.0000 | ok |
+| `no_real_predictor_beats_lru` | the best real predictor's throughput ratio over plain LRU at a 10% cache is 1.00x -- the predictor lever does not exist | `predictor_OLMoE-1B-7B-0924.json` | 0.9957 | ok |
+| `statistical_predictors_are_worse_than_lru` | a fitted first-order Markov predictor scores 0.262 against LRU's 0.287, because its errors are plausible experts that get wrongly protected | `predictor_OLMoE-1B-7B-0924.json` | 0.2615 | ok |
+| `one_step_oracle_ceiling` | even an EXACT one-step oracle reaches only 0.383 against LRU's 0.287 (1.16x), so the lookahead lever needs a horizon of 4, not 1 | `predictor_OLMoE-1B-7B-0924.json` | 0.3829 | ok |
+| `persistence_slot_accuracy` | persistence names 0.387 of the next token's experts, against 0.125 under independence -- good prediction, useless information | `predictor_OLMoE-1B-7B-0924.json` | 0.3873 | ok |
 | `scope_global_lru_is_zero` | a shared pool gets NO hits at a 10% cache, where per-layer gets 0.272 (8000-token sub-sample) | `scope_compare_OLMoE-1B-7B-0924.json` | 0.0000 | ok |
 | `scope_per_layer_lru` | per-layer LRU on the same sub-sample is 0.272 | `scope_compare_OLMoE-1B-7B-0924.json` | 0.2720 | ok |
 | `scope_global_belady_is_higher` | the shared pool's OFFLINE optimum is higher, 0.490 vs per-layer's 0.437 | `scope_compare_OLMoE-1B-7B-0924.json` | 0.4902 | ok |
@@ -43,4 +48,4 @@ internally consistent and wrong. That is what the property tests are for.
 | `qwen3_next_80b_h_lru` | the curve interpolates h = 0.669 for Qwen3-Next-80B-A3B, against an independently reported 0.693 for a 512-expert top-10 model at the same rho | `engine_target.json` | 0.6685 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-30 claims checked.
+35 claims checked.

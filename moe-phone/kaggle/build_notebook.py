@@ -167,6 +167,45 @@ print("Download it from the Output panel, then unpack into moe-phone/results/<to
 """
 
 
+S9_CELL = """\
+# S9 -- the geometry-transfer assumption, which currently gates EVERY per-model
+# tok/s figure in ARCHITECTURE.md.
+#
+# engine_target.py reads each model's hit rate off a curve measured on OLMoE's
+# 64-expert top-8 routing and applies it at equal rho = per-layer slots / top_k.
+# That the hit rate depends on geometry ONLY through rho is an assumption. To test
+# it, collect a trace at a materially different EXPERT COUNT and compare the two
+# curves at equal rho.
+#
+# Qwen3-30B-A3B is the right target: E=128 (double OLMoE) at the same top-8, and it
+# is a model already in the candidate table rather than a proxy. It needs 4-bit to
+# fit 2x T4. --densities 1.0 --no-floor skips the fidelity sweep, because traces
+# are all that S9 needs; that makes this far cheaper than the G3 cell above.
+#
+# SET THIS TO True TO RUN IT. It is off by default so the notebook's default path
+# stays the OLMoE reproduction.
+RUN_S9 = False
+S9_MODEL = "Qwen/Qwen3-30B-A3B"
+
+if RUN_S9:
+    import subprocess, sys as _sys
+    subprocess.run([_sys.executable, "-m", "pip", "install", "-q", "bitsandbytes"],
+                   check=False)
+    run("traces_sparsity.py", "--model", S9_MODEL, "--load-in-4bit",
+        "--densities", "1.0", "--no-floor",
+        "--windows", "64", "--calib-windows", "4", "--seq-len", "512",
+        "--out-dir", "/kaggle/working/out", label="S9 traces: " + S9_MODEL)
+    tag = S9_MODEL.split("/")[-1]
+    run("cache_sim.py", f"/kaggle/working/out/traces_{tag}.npz",
+        "--controls", "--lookahead", "0,1,2,4,8",
+        "--fractions-around-crit",
+        "--out-dir", "/kaggle/working/out", label="S9 cache curve: " + tag)
+    print("Compare this curve against the OLMoE one AT EQUAL RHO, not at equal cache")
+    print("fraction: rho = cache_fraction * E / k, and E differs between them.")
+else:
+    print("S9 cell skipped. Set RUN_S9 = True to collect the second-geometry trace.")
+"""
+
 def _cell(kind, source, cell_id):
     # nbformat >= 4.5 requires a unique `id` per cell. Without it Kaggle logs
     # "MissingIDFieldWarning: ... this will become a hard error in future
@@ -190,7 +229,8 @@ def build():
         cells.append(_cell("code", f"%%writefile {name}\n{body}",
                            "write-" + name.replace(".", "-")))
     for tag, src in (("env", ENV_CELL), ("runner", RUN_HELPER), ("selftest", SELFTEST_CELL),
-                     ("g3-model", MODEL_CELL), ("g2-cache", CACHE_CELL), ("pack", ZIP_CELL)):
+                     ("g3-model", MODEL_CELL), ("g2-cache", CACHE_CELL),
+                     ("s9-geometry", S9_CELL), ("pack", ZIP_CELL)):
         cells.append(_cell("code", src, tag))
     return {
         "cells": cells,

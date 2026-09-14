@@ -94,6 +94,34 @@ CLAIMS = [
          text="the per-layer Belady optimum at a 10% cache is 0.447",
          artifact="cache_OLMoE-1B-7B-0924.json", expected=0.447, tol=0.001,
          value=lambda A: row(A["cache"], 0.10)["belady_hit__per_layer"]),
+    # ---------------------------------------------------------- S12 predictor
+    dict(id="persistence_is_informationally_empty",
+         text="a persistence predictor reproduces the horizon-0 rule exactly: it re-states the "
+              "current token's set, which the engine already knows",
+         artifact="predictor_OLMoE-1B-7B-0924.json", expected=0.0, tol=0.0005,
+         value=lambda A: abs(row(A["predictor"], 0.10)["predictors"]["persistence"]["protect"]
+                             - row(A["predictor"], 0.10)["h0_current_token_only"])),
+    dict(id="no_real_predictor_beats_lru",
+         text="the best real predictor's throughput ratio over plain LRU at a 10% cache is "
+              "1.00x -- the predictor lever does not exist",
+         artifact="predictor_OLMoE-1B-7B-0924.json", expected=1.00, tol=0.02,
+         value=lambda A: max(v["protect_tok_s_ratio"] for kk, v in
+                             row(A["predictor"], 0.10)["predictors"].items() if kk != "oracle")),
+    dict(id="statistical_predictors_are_worse_than_lru",
+         text="a fitted first-order Markov predictor scores 0.262 against LRU's 0.287, because "
+              "its errors are plausible experts that get wrongly protected",
+         artifact="predictor_OLMoE-1B-7B-0924.json", expected=0.262, tol=0.004,
+         value=lambda A: row(A["predictor"], 0.10)["predictors"]["markov"]["protect"]),
+    dict(id="one_step_oracle_ceiling",
+         text="even an EXACT one-step oracle reaches only 0.383 against LRU's 0.287 (1.16x), so "
+              "the lookahead lever needs a horizon of 4, not 1",
+         artifact="predictor_OLMoE-1B-7B-0924.json", expected=0.383, tol=0.004,
+         value=lambda A: row(A["predictor"], 0.10)["predictors"]["oracle"]["protect"]),
+    dict(id="persistence_slot_accuracy",
+         text="persistence names 0.387 of the next token's experts, against 0.125 under "
+              "independence -- good prediction, useless information",
+         artifact="predictor_OLMoE-1B-7B-0924.json", expected=0.387, tol=0.005,
+         value=lambda A: A["predictor"]["quality"]["persistence"]["slot_accuracy"]),
     # ------------------------------------------------------------ cache scope
     # These come from scope_compare.py on an 8000-token SUB-SAMPLE, declared in
     # that artifact's `inputs`, because the shared-pool lookahead scans the whole
@@ -242,6 +270,7 @@ def load_all():
         "target": load("engine_target.json"),
         "scope": load("scope_compare_OLMoE-1B-7B-0924.json"),
         "policy": load("expert_policy_OLMoE-1B-7B-0924.json"),
+        "predictor": load("predictor_OLMoE-1B-7B-0924.json"),
     }
 
 
