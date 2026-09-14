@@ -1,0 +1,66 @@
+{
+ "npz": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\traces_OLMoE-1B-7B-0924.npz",
+ "tokens": 32768,
+ "layers": 16,
+ "top_k": 8,
+ "num_experts": 64,
+ "warmup_frac": 0.25,
+ "rows": [
+  {
+   "cache_fraction": 0.05,
+   "cap_total": 51,
+   "cap_per_layer": 3,
+   "floor": 0.05,
+   "lru": 0.0,
+   "static_warmup": 0.09400081634521484,
+   "static_oracle": 0.1293928623199463,
+   "belady": 0.3228795528411865
+  },
+  {
+   "cache_fraction": 0.1,
+   "cap_total": 102,
+   "cap_per_layer": 6,
+   "floor": 0.1,
+   "lru": 0.0,
+   "static_warmup": 0.17065906524658203,
+   "static_oracle": 0.22214889526367188,
+   "belady": 0.5014684200286865
+  },
+  {
+   "cache_fraction": 0.2,
+   "cap_total": 205,
+   "cap_per_layer": 12,
+   "floor": 0.2,
+   "lru": 0.4134087562561035,
+   "static_warmup": 0.3059358596801758,
+   "static_oracle": 0.3722517490386963,
+   "belady": 0.6817793846130371
+  },
+  {
+   "cache_fraction": 0.3,
+   "cap_total": 307,
+   "cap_per_layer": 19,
+   "floor": 0.3,
+   "lru": 0.5536296367645264,
+   "static_warmup": 0.4291683832804362,
+   "static_oracle": 0.5170731544494629,
+   "belady": 0.7864558696746826
+  },
+  {
+   "cache_fraction": 0.5,
+   "cap_total": 512,
+   "cap_per_layer": 32,
+   "floor": 0.5,
+   "lru": 0.7583329677581787,
+   "static_warmup": 0.6312354405721029,
+   "static_oracle": 0.7268309593200684,
+   "belady": 0.9080493450164795
+  }
+ ],
+ "working_set_drift": {
+  "top_n_per_layer": 6,
+  "n_segments": 8,
+  "mean_jaccard": 0.5064355287569573,
+  "min_jaccard": 0.0
+ }
+}
