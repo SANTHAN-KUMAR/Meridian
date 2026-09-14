@@ -1,0 +1,2546 @@
+{
+ "props": {
+  "ro.product.manufacturer": "OnePlus",
+  "ro.product.model": "CPH2767",
+  "ro.soc.manufacturer": "QTI",
+  "ro.soc.model": "SM8845",
+  "ro.board.platform": "canoe",
+  "ro.build.version.release": "16",
+  "ro.build.version.sdk": "36",
+  "ro.build.fingerprint": "OnePlus/CPH2767IN/OP612DL1:16/BP2A.250605.015/B.R4T3.266e8a6-136672-136670:user/release-keys",
+  "dalvik.vm.heapgrowthlimit": "256m",
+  "ro.boot.verifiedbootstate": "green",
+  "ro.boot.flash.locked": "1",
+  "ro.secure": ""
+ },
+ "kernel": "Linux localhost 6.12.38-android16-5-g844001fb8721-ab14552068-4k #1 SMP PREEMPT Fri Dec  5 02:15:49 UTC 2025 aarch64 Android",
+ "process_context": "uid=10432(u0_a432) gid=10432(u0_a432) groups=10432(u0_a432),3003(inet),9997(everybody),20432(u0_a432_cache),50432(all_a432) context=u:r:untrusted_app_27:s0:c176,c257,c512,c768",
+ "selinux_domain": "u:r:untrusted_app_27:s0:c176,c257,c512,c768",
+ "probe_epoch_s": 1789389687,
+ "memory": {
+  "MemTotal_kB": 11366296,
+  "MemAvailable_kB": 3360048,
+  "Cached_kB": 3168840,
+  "SwapTotal_kB": 12582908,
+  "SwapFree_kB": 8598332,
+  "oom_score_adj": "50",
+  "zram0_disksize_bytes": "DENIED_OR_ABSENT",
+  "MemTotal_GiB": 10.84,
+  "SwapTotal_GiB": 12.0
+ },
+ "storage": {
+  "queue_params": {
+   "/sys/block/dm-79/queue/scheduler": "DENIED_OR_ABSENT",
+   "/sys/block/dm-79/queue/nr_requests": "DENIED_OR_ABSENT",
+   "/sys/block/dm-79/queue/read_ahead_kb": "DENIED_OR_ABSENT",
+   "/sys/block/dm-79/queue/max_sectors_kb": "DENIED_OR_ABSENT",
+   "/sys/block/dm-79/queue/rotational": "DENIED_OR_ABSENT",
+   "/sys/block/dm-79/queue/logical_block_size": "DENIED_OR_ABSENT",
+   "/sys/block/dm-0/queue/scheduler": "DENIED_OR_ABSENT",
+   "/sys/block/dm-0/queue/nr_requests": "DENIED_OR_ABSENT",
+   "/sys/block/dm-0/queue/read_ahead_kb": "DENIED_OR_ABSENT",
+   "/sys/block/dm-0/queue/max_sectors_kb": "DENIED_OR_ABSENT",
+   "/sys/block/dm-0/queue/rotational": "DENIED_OR_ABSENT",
+   "/sys/block/dm-0/queue/logical_block_size": "DENIED_OR_ABSENT"
+  },
+  "mounts": [
+   {
+    "device": "/dev/block/dm-79",
+    "mount": "/data",
+    "fs": "f2fs",
+    "options": [
+     "rw",
+     "lazytime",
+     "seclabel",
+     "nosuid",
+     "nodev",
+     "noatime",
+     "background_gc=on",
+     "nogc_merge",
+     "discard",
+     "discard_unit=block",
+     "user_xattr",
+     "inline_xattr",
+     "acl",
+     "inline_data",
+     "inline_dentry",
+     "flush_merge",
+     "barrier",
+     "extent_cache",
+     "mode=adaptive",
+     "active_logs=6",
+     "reserve_root=32768",
+     "resuid=0",
+     "resgid=1065",
+     "inlinecrypt",
+     "alloc_mode=default",
+     "checkpoint_merge",
+     "fsync_mode=nobarrier",
+     "memory=normal",
+     "errors=continue",
+     "lookup_mode=perf"
+    ]
+   },
+   {
+    "device": "/dev/block/dm-79",
+    "mount": "/data/user/0",
+    "fs": "f2fs",
+    "options": [
+     "rw",
+     "lazytime",
+     "seclabel",
+     "nosuid",
+     "nodev",
+     "noatime",
+     "background_gc=on",
+     "nogc_merge",
+     "discard",
+     "discard_unit=block",
+     "user_xattr",
+     "inline_xattr",
+     "acl",
+     "inline_data",
+     "inline_dentry",
+     "flush_merge",
+     "barrier",
+     "extent_cache",
+     "mode=adaptive",
+     "active_logs=6",
+     "reserve_root=32768",
+     "resuid=0",
+     "resgid=1065",
+     "inlinecrypt",
+     "alloc_mode=default",
+     "checkpoint_merge",
+     "fsync_mode=nobarrier",
+     "memory=normal",
+     "errors=continue",
+     "lookup_mode=perf"
+    ]
+   }
+  ],
+  "data_mount": "/data/user/0",
+  "data_device": "/dev/block/dm-79",
+  "queue_params_readable": 0,
+  "queue_params_denied": 12,
+  "data_fs": "f2fs"
+ },
+ "npu": {
+  "libs_present": [
+   "/vendor/lib64/libcdsprpc.so",
+   "/vendor/lib64/libadsprpc.so"
+  ],
+  "libs_absent": [
+   "/system/lib64/libcdsprpc.so"
+  ],
+  "fastrpc_dev_nodes_listable": false
+ },
+ "thermal": {
+  "n_zones_total": 89,
+  "n_zones_sensor": 75,
+  "n_zones_excluded": 14,
+  "excluded_by_reason": {
+   "not_millidegrees": [
+    "socd"
+   ],
+   "outside_physical_band": [
+    "mmw_ific0",
+    "sdr0",
+    "sdr0_pa"
+   ],
+   "threshold_or_level_name": [
+    "cpu-hw-trip-0",
+    "cpu-hw-trip-1",
+    "pm7550ba-bcl-lvl0",
+    "pm7550ba-bcl-lvl1",
+    "pm7550ba-bcl-lvl2",
+    "pm7550ba-ibat-lvl0",
+    "pm7550ba-ibat-lvl1",
+    "pm8550-bcl-lvl0",
+    "pm8550-bcl-lvl1",
+    "pm8550-bcl-lvl2"
+   ]
+  },
+  "max_sensor_c": 43.2,
+  "max_sensor_zone": "cpullc-0-1",
+  "nsp_zones": [
+   "nsphmx-0",
+   "nsphmx-1",
+   "nsphvx-0",
+   "nsphvx-1",
+   "nsphvx-2"
+  ],
+  "zones": [
+   {
+    "zone": "thermal_zone0",
+    "type": "cpullc-0-0",
+    "raw": 42800,
+    "temp_c": 42.8
+   },
+   {
+    "zone": "thermal_zone1",
+    "type": "cpullc-0-1",
+    "raw": 43200,
+    "temp_c": 43.2
+   },
+   {
+    "zone": "thermal_zone10",
+    "type": "cpu-0-2-1",
+    "raw": 41800,
+    "temp_c": 41.8
+   },
+   {
+    "zone": "thermal_zone11",
+    "type": "cpu-0-3-0",
+    "raw": 41800,
+    "temp_c": 41.8
+   },
+   {
+    "zone": "thermal_zone12",
+    "type": "cpu-0-3-1",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone13",
+    "type": "cpu-0-4-0",
+    "raw": 41100,
+    "temp_c": 41.1
+   },
+   {
+    "zone": "thermal_zone14",
+    "type": "cpu-0-4-1",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone15",
+    "type": "cpu-0-5-0",
+    "raw": 41100,
+    "temp_c": 41.1
+   },
+   {
+    "zone": "thermal_zone16",
+    "type": "cpu-0-5-1",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone17",
+    "type": "cpullc-1-0",
+    "raw": 42000,
+    "temp_c": 42.0
+   },
+   {
+    "zone": "thermal_zone18",
+    "type": "cpullc-1-1",
+    "raw": 42000,
+    "temp_c": 42.0
+   },
+   {
+    "zone": "thermal_zone19",
+    "type": "qmx-1-0",
+    "raw": 42000,
+    "temp_c": 42.0
+   },
+   {
+    "zone": "thermal_zone2",
+    "type": "qmx-0-0",
+    "raw": 41700,
+    "temp_c": 41.7
+   },
+   {
+    "zone": "thermal_zone20",
+    "type": "qmx-1-1",
+    "raw": 42000,
+    "temp_c": 42.0
+   },
+   {
+    "zone": "thermal_zone21",
+    "type": "qmx-1-2",
+    "raw": 42000,
+    "temp_c": 42.0
+   },
+   {
+    "zone": "thermal_zone22",
+    "type": "qmx-1-3",
+    "raw": 41700,
+    "temp_c": 41.7
+   },
+   {
+    "zone": "thermal_zone23",
+    "type": "qmx-1-4",
+    "raw": 42400,
+    "temp_c": 42.4
+   },
+   {
+    "zone": "thermal_zone24",
+    "type": "cpu-1-0-0",
+    "raw": 39500,
+    "temp_c": 39.5
+   },
+   {
+    "zone": "thermal_zone25",
+    "type": "cpu-1-0-1",
+    "raw": 39100,
+    "temp_c": 39.1
+   },
+   {
+    "zone": "thermal_zone26",
+    "type": "cpu-1-1-0",
+    "raw": 39500,
+    "temp_c": 39.5
+   },
+   {
+    "zone": "thermal_zone27",
+    "type": "cpu-1-1-1",
+    "raw": 39100,
+    "temp_c": 39.1
+   },
+   {
+    "zone": "thermal_zone28",
+    "type": "nsphvx-0",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone29",
+    "type": "nsphvx-1",
+    "raw": 41100,
+    "temp_c": 41.1
+   },
+   {
+    "zone": "thermal_zone3",
+    "type": "qmx-0-1",
+    "raw": 41700,
+    "temp_c": 41.7
+   },
+   {
+    "zone": "thermal_zone30",
+    "type": "nsphvx-2",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone31",
+    "type": "nsphmx-0",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone32",
+    "type": "nsphmx-1",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone33",
+    "type": "gpuss-0",
+    "raw": 41300,
+    "temp_c": 41.3
+   },
+   {
+    "zone": "thermal_zone34",
+    "type": "gpuss-1",
+    "raw": 41300,
+    "temp_c": 41.3
+   },
+   {
+    "zone": "thermal_zone35",
+    "type": "gpuss-2",
+    "raw": 40900,
+    "temp_c": 40.9
+   },
+   {
+    "zone": "thermal_zone36",
+    "type": "gpuss-3",
+    "raw": 41300,
+    "temp_c": 41.3
+   },
+   {
+    "zone": "thermal_zone37",
+    "type": "gpuss-4",
+    "raw": 40900,
+    "temp_c": 40.9
+   },
+   {
+    "zone": "thermal_zone38",
+    "type": "gpuss-5",
+    "raw": 41300,
+    "temp_c": 41.3
+   },
+   {
+    "zone": "thermal_zone39",
+    "type": "gpuss-6",
+    "raw": 41700,
+    "temp_c": 41.7
+   },
+   {
+    "zone": "thermal_zone4",
+    "type": "qmx-0-2",
+    "raw": 42000,
+    "temp_c": 42.0
+   },
+   {
+    "zone": "thermal_zone40",
+    "type": "gpuss-7",
+    "raw": 41300,
+    "temp_c": 41.3
+   },
+   {
+    "zone": "thermal_zone41",
+    "type": "ddr",
+    "raw": 42600,
+    "temp_c": 42.6
+   },
+   {
+    "zone": "thermal_zone42",
+    "type": "mdmss-0",
+    "raw": 41900,
+    "temp_c": 41.9
+   },
+   {
+    "zone": "thermal_zone43",
+    "type": "mdmss-1",
+    "raw": 41100,
+    "temp_c": 41.1
+   },
+   {
+    "zone": "thermal_zone44",
+    "type": "mdmss-2",
+    "raw": 40700,
+    "temp_c": 40.7
+   },
+   {
+    "zone": "thermal_zone45",
+    "type": "mdmss-3",
+    "raw": 41100,
+    "temp_c": 41.1
+   },
+   {
+    "zone": "thermal_zone46",
+    "type": "camera-0",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone47",
+    "type": "camera-1",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone48",
+    "type": "video",
+    "raw": 41900,
+    "temp_c": 41.9
+   },
+   {
+    "zone": "thermal_zone49",
+    "type": "pmr735d_tz",
+    "raw": 37000,
+    "temp_c": 37.0
+   },
+   {
+    "zone": "thermal_zone5",
+    "type": "cpu-0-0-0",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone50",
+    "type": "pm8010m_tz",
+    "raw": 37000,
+    "temp_c": 37.0
+   },
+   {
+    "zone": "thermal_zone52",
+    "type": "shell_front",
+    "raw": 37911,
+    "temp_c": 37.911
+   },
+   {
+    "zone": "thermal_zone54",
+    "type": "sys-therm-0",
+    "raw": 40157,
+    "temp_c": 40.157
+   },
+   {
+    "zone": "thermal_zone56",
+    "type": "shell_frame",
+    "raw": 37236,
+    "temp_c": 37.236
+   },
+   {
+    "zone": "thermal_zone57",
+    "type": "sys-therm-2",
+    "raw": 40228,
+    "temp_c": 40.228
+   },
+   {
+    "zone": "thermal_zone59",
+    "type": "shell_back",
+    "raw": 37929,
+    "temp_c": 37.929
+   },
+   {
+    "zone": "thermal_zone6",
+    "type": "cpu-0-0-1",
+    "raw": 41800,
+    "temp_c": 41.8
+   },
+   {
+    "zone": "thermal_zone60",
+    "type": "sys-therm-3",
+    "raw": 40737,
+    "temp_c": 40.737
+   },
+   {
+    "zone": "thermal_zone62",
+    "type": "sys-therm-5",
+    "raw": 41136,
+    "temp_c": 41.136
+   },
+   {
+    "zone": "thermal_zone63",
+    "type": "vbat",
+    "raw": 3836,
+    "temp_c": 3.836
+   },
+   {
+    "zone": "thermal_zone64",
+    "type": "sys-therm-6",
+    "raw": 39616,
+    "temp_c": 39.616
+   },
+   {
+    "zone": "thermal_zone66",
+    "type": "sys-therm-12",
+    "raw": 41631,
+    "temp_c": 41.631
+   },
+   {
+    "zone": "thermal_zone68",
+    "type": "sys-therm-8",
+    "raw": 41825,
+    "temp_c": 41.825
+   },
+   {
+    "zone": "thermal_zone7",
+    "type": "cpu-0-1-0",
+    "raw": 43000,
+    "temp_c": 43.0
+   },
+   {
+    "zone": "thermal_zone70",
+    "type": "oled_ntc_usr",
+    "raw": 38687,
+    "temp_c": 38.687
+   },
+   {
+    "zone": "thermal_zone72",
+    "type": "board_ntc_usr",
+    "raw": 40144,
+    "temp_c": 40.144
+   },
+   {
+    "zone": "thermal_zone74",
+    "type": "wlan_ntc_usr",
+    "raw": 41149,
+    "temp_c": 41.149
+   },
+   {
+    "zone": "thermal_zone75",
+    "type": "slave_cp_ntc",
+    "raw": 41017,
+    "temp_c": 41.017
+   },
+   {
+    "zone": "thermal_zone76",
+    "type": "svooc_mos_btb_usr",
+    "raw": 41922,
+    "temp_c": 41.922
+   },
+   {
+    "zone": "thermal_zone77",
+    "type": "pm7550ba_tz",
+    "raw": 37639,
+    "temp_c": 37.639
+   },
+   {
+    "zone": "thermal_zone78",
+    "type": "pm8550_tz",
+    "raw": 43106,
+    "temp_c": 43.106
+   },
+   {
+    "zone": "thermal_zone79",
+    "type": "pm8550ve_d_tz",
+    "raw": 38074,
+    "temp_c": 38.074
+   },
+   {
+    "zone": "thermal_zone8",
+    "type": "cpu-0-1-1",
+    "raw": 41500,
+    "temp_c": 41.5
+   },
+   {
+    "zone": "thermal_zone80",
+    "type": "pm8550ve_f_tz",
+    "raw": 38341,
+    "temp_c": 38.341
+   },
+   {
+    "zone": "thermal_zone81",
+    "type": "pm8550ve_g_tz",
+    "raw": 38609,
+    "temp_c": 38.609
+   },
+   {
+    "zone": "thermal_zone82",
+    "type": "pm8550ve_i_tz",
+    "raw": 39277,
+    "temp_c": 39.277
+   },
+   {
+    "zone": "thermal_zone83",
+    "type": "usb",
+    "raw": 3700,
+    "temp_c": 3.7
+   },
+   {
+    "zone": "thermal_zone84",
+    "type": "battery",
+    "raw": 38400,
+    "temp_c": 38.4
+   },
+   {
+    "zone": "thermal_zone9",
+    "type": "cpu-0-2-0",
+    "raw": 42200,
+    "temp_c": 42.2
+   }
+  ]
+ },
+ "cpu": {
+  "max_khz": {
+   "cpu0": 3321600,
+   "cpu1": 3321600,
+   "cpu2": 3321600,
+   "cpu3": 3321600,
+   "cpu4": 3321600,
+   "cpu5": 3321600,
+   "cpu6": 3801600,
+   "cpu7": 3801600
+  },
+  "n_cores": 8,
+  "clusters": [
+   {
+    "max_khz": 3801600,
+    "n": 2
+   },
+   {
+    "max_khz": 3321600,
+    "n": 6
+   }
+  ]
+ },
+ "power": {
+  "battery/current_now": "DENIED_OR_ABSENT",
+  "battery/voltage_now": "DENIED_OR_ABSENT",
+  "battery/charge_counter": "DENIED_OR_ABSENT",
+  "battery/status": "DENIED_OR_ABSENT",
+  "battery/capacity": "DENIED_OR_ABSENT",
+  "any_rail_readable": false,
+  "dumpsys_powerstats_available": false
+ },
+ "gpu_model": "Adreno829",
+ "root": {
+  "rooted": false,
+  "evidence": "NOT_ROOT: su at /data/data/com.termux/files/usr/bin/su exists but 'su -c id -u' gave '<nothing>'",
+  "verifiedbootstate": "green",
+  "bootloader_locked": "1"
+ },
+ "probe_outcomes": {
+  "n_failed": 6,
+  "n_empty": 0,
+  "n_denied_or_absent": 18,
+  "failed_commands": [
+   "FAILED rc=2: ls -d /sys/devices/platform/soc/*ufs* /sys/class/scsi_host/* 2>/dev/null",
+   "FAILED rc=2: ls /vendor/lib/rfsa/adsp /vendor/dsp /vendor/dsp/cdsp 2>/dev/null",
+   "FAILED rc=2: ls -l /dev/fastrpc-cdsp /dev/fastrpc-adsp /dev/adsprpc-smd 2>/dev/null",
+   "FAILED rc=2: ls /sys/class/kgsl/kgsl-3d0/",
+   "FAILED rc=2: ls /sys/bus/iio/devices/ 2>/dev/null",
+   "FAILED rc=127: dumpsys powerstats"
+  ],
+  "denied_keys": [
+   "zram0_disksize_bytes",
+   "/sys/block/dm-79/queue/scheduler",
+   "/sys/block/dm-79/queue/nr_requests",
+   "/sys/block/dm-79/queue/read_ahead_kb",
+   "/sys/block/dm-79/queue/max_sectors_kb",
+   "/sys/block/dm-79/queue/rotational",
+   "/sys/block/dm-79/queue/logical_block_size",
+   "/sys/block/dm-0/queue/scheduler",
+   "/sys/block/dm-0/queue/nr_requests",
+   "/sys/block/dm-0/queue/read_ahead_kb",
+   "/sys/block/dm-0/queue/max_sectors_kb",
+   "/sys/block/dm-0/queue/rotational",
+   "/sys/block/dm-0/queue/logical_block_size",
+   "battery/current_now",
+   "battery/voltage_now",
+   "battery/charge_counter",
+   "battery/status",
+   "battery/capacity"
+  ]
+ },
+ "source_probe_txt": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\g0_15r.txt",
+ "memprobe_runs": [
+  {
+   "mode": "anonymous",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 11,
+   "max_VmRSS_MB": 1956,
+   "resident_GiB": 1.91,
+   "resident_GB_decimal": 2.051,
+   "last_held_MB": 2816,
+   "VmSwap_MB_at_stop": 863,
+   "MemAvailable_MB_at_stop": 1749,
+   "SwapFree_MB_at_stop": 6195,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.227,
+   "last_chunk_s": 1.335,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.227",
+     "fill_MBps": "1126",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "3208",
+     "SwapFree_MB": "8052",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.215",
+     "fill_MBps": "1189",
+     "VmRSS_MB": "515",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2941",
+     "SwapFree_MB": "8059",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.208",
+     "fill_MBps": "1228",
+     "VmRSS_MB": "771",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2690",
+     "SwapFree_MB": "8058",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.740",
+     "fill_MBps": "346",
+     "VmRSS_MB": "1027",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2506",
+     "SwapFree_MB": "7973",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.771",
+     "fill_MBps": "332",
+     "VmRSS_MB": "1283",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2389",
+     "SwapFree_MB": "7894",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "1.394",
+     "fill_MBps": "184",
+     "VmRSS_MB": "1539",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2246",
+     "SwapFree_MB": "7727",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "1.624",
+     "fill_MBps": "158",
+     "VmRSS_MB": "1728",
+     "VmSwap_MB": "67",
+     "MemAvailable_MB": "2111",
+     "SwapFree_MB": "7420",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "1.933",
+     "fill_MBps": "132",
+     "VmRSS_MB": "1803",
+     "VmSwap_MB": "247",
+     "MemAvailable_MB": "2011",
+     "SwapFree_MB": "7033",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2304",
+     "chunk_s": "1.562",
+     "fill_MBps": "164",
+     "VmRSS_MB": "1896",
+     "VmSwap_MB": "411",
+     "MemAvailable_MB": "1945",
+     "SwapFree_MB": "6821",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2560",
+     "chunk_s": "1.549",
+     "fill_MBps": "165",
+     "VmRSS_MB": "1947",
+     "VmSwap_MB": "616",
+     "MemAvailable_MB": "1889",
+     "SwapFree_MB": "6558",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2816",
+     "chunk_s": "1.335",
+     "fill_MBps": "192",
+     "VmRSS_MB": "1956",
+     "VmSwap_MB": "863",
+     "MemAvailable_MB": "1749",
+     "SwapFree_MB": "6195",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r.csv"
+  },
+  {
+   "mode": "anonymous",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 12,
+   "max_VmRSS_MB": 2451,
+   "resident_GiB": 2.394,
+   "resident_GB_decimal": 2.57,
+   "last_held_MB": 3072,
+   "VmSwap_MB_at_stop": 1108,
+   "MemAvailable_MB_at_stop": 1688,
+   "SwapFree_MB_at_stop": 5820,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.238,
+   "last_chunk_s": 2.5,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.238",
+     "fill_MBps": "1075",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "4112",
+     "SwapFree_MB": "7140",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.206",
+     "fill_MBps": "1240",
+     "VmRSS_MB": "515",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "3856",
+     "SwapFree_MB": "7140",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.201",
+     "fill_MBps": "1273",
+     "VmRSS_MB": "771",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "3599",
+     "SwapFree_MB": "7140",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.198",
+     "fill_MBps": "1292",
+     "VmRSS_MB": "1027",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "3343",
+     "SwapFree_MB": "7140",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.199",
+     "fill_MBps": "1285",
+     "VmRSS_MB": "1283",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "3087",
+     "SwapFree_MB": "7140",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.213",
+     "fill_MBps": "1204",
+     "VmRSS_MB": "1539",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2830",
+     "SwapFree_MB": "7140",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "0.207",
+     "fill_MBps": "1237",
+     "VmRSS_MB": "1795",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2573",
+     "SwapFree_MB": "7140",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "0.202",
+     "fill_MBps": "1269",
+     "VmRSS_MB": "2051",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2317",
+     "SwapFree_MB": "7140",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2304",
+     "chunk_s": "0.458",
+     "fill_MBps": "559",
+     "VmRSS_MB": "2307",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2139",
+     "SwapFree_MB": "7112",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2560",
+     "chunk_s": "0.946",
+     "fill_MBps": "271",
+     "VmRSS_MB": "2451",
+     "VmSwap_MB": "112",
+     "MemAvailable_MB": "1967",
+     "SwapFree_MB": "7047",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2816",
+     "chunk_s": "1.474",
+     "fill_MBps": "174",
+     "VmRSS_MB": "2381",
+     "VmSwap_MB": "437",
+     "MemAvailable_MB": "1849",
+     "SwapFree_MB": "6629",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3072",
+     "chunk_s": "2.500",
+     "fill_MBps": "102",
+     "VmRSS_MB": "1967",
+     "VmSwap_MB": "1108",
+     "MemAvailable_MB": "1688",
+     "SwapFree_MB": "5820",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_r2.csv"
+  },
+  {
+   "mode": "anonymous",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 12,
+   "max_VmRSS_MB": 2504,
+   "resident_GiB": 2.445,
+   "resident_GB_decimal": 2.626,
+   "last_held_MB": 3072,
+   "VmSwap_MB_at_stop": 911,
+   "MemAvailable_MB_at_stop": 1659,
+   "SwapFree_MB_at_stop": 5559,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.226,
+   "last_chunk_s": 1.699,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.226",
+     "fill_MBps": "1134",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "3796",
+     "SwapFree_MB": "7154",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.202",
+     "fill_MBps": "1266",
+     "VmRSS_MB": "515",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "3541",
+     "SwapFree_MB": "7154",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.213",
+     "fill_MBps": "1202",
+     "VmRSS_MB": "771",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "3284",
+     "SwapFree_MB": "7154",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.204",
+     "fill_MBps": "1256",
+     "VmRSS_MB": "1027",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "3028",
+     "SwapFree_MB": "7154",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.201",
+     "fill_MBps": "1275",
+     "VmRSS_MB": "1283",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2770",
+     "SwapFree_MB": "7154",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.246",
+     "fill_MBps": "1039",
+     "VmRSS_MB": "1539",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2647",
+     "SwapFree_MB": "7142",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "0.232",
+     "fill_MBps": "1103",
+     "VmRSS_MB": "1795",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2405",
+     "SwapFree_MB": "7129",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "0.892",
+     "fill_MBps": "287",
+     "VmRSS_MB": "2051",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2210",
+     "SwapFree_MB": "7048",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2304",
+     "chunk_s": "1.064",
+     "fill_MBps": "241",
+     "VmRSS_MB": "2307",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2041",
+     "SwapFree_MB": "6943",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2560",
+     "chunk_s": "1.386",
+     "fill_MBps": "185",
+     "VmRSS_MB": "2504",
+     "VmSwap_MB": "59",
+     "MemAvailable_MB": "1931",
+     "SwapFree_MB": "6755",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2816",
+     "chunk_s": "1.535",
+     "fill_MBps": "167",
+     "VmRSS_MB": "2438",
+     "VmSwap_MB": "381",
+     "MemAvailable_MB": "1803",
+     "SwapFree_MB": "6249",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3072",
+     "chunk_s": "1.699",
+     "fill_MBps": "151",
+     "VmRSS_MB": "2163",
+     "VmSwap_MB": "911",
+     "MemAvailable_MB": "1659",
+     "SwapFree_MB": "5559",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_r3.csv"
+  },
+  {
+   "mode": "file_backed",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 20,
+   "max_VmRSS_MB": 4487,
+   "resident_GiB": 4.382,
+   "resident_GB_decimal": 4.705,
+   "last_held_MB": 5120,
+   "VmSwap_MB_at_stop": 0,
+   "MemAvailable_MB_at_stop": 5177,
+   "SwapFree_MB_at_stop": 6124,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.133,
+   "last_chunk_s": 0.295,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.133",
+     "fill_MBps": "1918",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5044",
+     "SwapFree_MB": "6200",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.144",
+     "fill_MBps": "1777",
+     "VmRSS_MB": "515",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5044",
+     "SwapFree_MB": "6200",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.145",
+     "fill_MBps": "1767",
+     "VmRSS_MB": "771",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5044",
+     "SwapFree_MB": "6201",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.136",
+     "fill_MBps": "1883",
+     "VmRSS_MB": "1027",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5043",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.137",
+     "fill_MBps": "1874",
+     "VmRSS_MB": "1283",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5043",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.139",
+     "fill_MBps": "1848",
+     "VmRSS_MB": "1539",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5043",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "0.132",
+     "fill_MBps": "1937",
+     "VmRSS_MB": "1795",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5043",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "0.130",
+     "fill_MBps": "1973",
+     "VmRSS_MB": "2051",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5043",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2304",
+     "chunk_s": "0.129",
+     "fill_MBps": "1981",
+     "VmRSS_MB": "2307",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5043",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2560",
+     "chunk_s": "0.129",
+     "fill_MBps": "1992",
+     "VmRSS_MB": "2563",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5043",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2816",
+     "chunk_s": "0.127",
+     "fill_MBps": "2015",
+     "VmRSS_MB": "2819",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5043",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3072",
+     "chunk_s": "0.130",
+     "fill_MBps": "1966",
+     "VmRSS_MB": "3075",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5043",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3328",
+     "chunk_s": "0.143",
+     "fill_MBps": "1793",
+     "VmRSS_MB": "3331",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5044",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3584",
+     "chunk_s": "0.134",
+     "fill_MBps": "1908",
+     "VmRSS_MB": "3587",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5050",
+     "SwapFree_MB": "6202",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3840",
+     "chunk_s": "0.137",
+     "fill_MBps": "1873",
+     "VmRSS_MB": "3843",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5087",
+     "SwapFree_MB": "6201",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4096",
+     "chunk_s": "0.248",
+     "fill_MBps": "1033",
+     "VmRSS_MB": "4099",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5118",
+     "SwapFree_MB": "6192",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4352",
+     "chunk_s": "0.906",
+     "fill_MBps": "282",
+     "VmRSS_MB": "4344",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5163",
+     "SwapFree_MB": "6146",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4608",
+     "chunk_s": "0.235",
+     "fill_MBps": "1091",
+     "VmRSS_MB": "4440",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5168",
+     "SwapFree_MB": "6138",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4864",
+     "chunk_s": "0.235",
+     "fill_MBps": "1088",
+     "VmRSS_MB": "4481",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5173",
+     "SwapFree_MB": "6133",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "5120",
+     "chunk_s": "0.295",
+     "fill_MBps": "866",
+     "VmRSS_MB": "4487",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5177",
+     "SwapFree_MB": "6124",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_file_r1.csv"
+  },
+  {
+   "mode": "file_backed",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 21,
+   "max_VmRSS_MB": 4639,
+   "resident_GiB": 4.53,
+   "resident_GB_decimal": 4.864,
+   "last_held_MB": 5376,
+   "VmSwap_MB_at_stop": 0,
+   "MemAvailable_MB_at_stop": 5260,
+   "SwapFree_MB_at_stop": 5994,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.144,
+   "last_chunk_s": 0.288,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.144",
+     "fill_MBps": "1779",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5111",
+     "SwapFree_MB": "6125",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.146",
+     "fill_MBps": "1750",
+     "VmRSS_MB": "515",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5110",
+     "SwapFree_MB": "6125",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.146",
+     "fill_MBps": "1759",
+     "VmRSS_MB": "771",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5109",
+     "SwapFree_MB": "6125",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.135",
+     "fill_MBps": "1903",
+     "VmRSS_MB": "1027",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5109",
+     "SwapFree_MB": "6125",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.138",
+     "fill_MBps": "1858",
+     "VmRSS_MB": "1283",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5107",
+     "SwapFree_MB": "6125",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.135",
+     "fill_MBps": "1890",
+     "VmRSS_MB": "1539",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5107",
+     "SwapFree_MB": "6126",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "0.131",
+     "fill_MBps": "1949",
+     "VmRSS_MB": "1795",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5106",
+     "SwapFree_MB": "6126",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "0.129",
+     "fill_MBps": "1983",
+     "VmRSS_MB": "2051",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5105",
+     "SwapFree_MB": "6126",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2304",
+     "chunk_s": "0.127",
+     "fill_MBps": "2022",
+     "VmRSS_MB": "2307",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5105",
+     "SwapFree_MB": "6126",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2560",
+     "chunk_s": "0.128",
+     "fill_MBps": "2005",
+     "VmRSS_MB": "2563",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5105",
+     "SwapFree_MB": "6126",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2816",
+     "chunk_s": "0.128",
+     "fill_MBps": "2004",
+     "VmRSS_MB": "2819",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5104",
+     "SwapFree_MB": "6127",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3072",
+     "chunk_s": "0.123",
+     "fill_MBps": "2083",
+     "VmRSS_MB": "3075",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5102",
+     "SwapFree_MB": "6127",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3328",
+     "chunk_s": "0.140",
+     "fill_MBps": "1827",
+     "VmRSS_MB": "3331",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5101",
+     "SwapFree_MB": "6127",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3584",
+     "chunk_s": "0.143",
+     "fill_MBps": "1787",
+     "VmRSS_MB": "3587",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5100",
+     "SwapFree_MB": "6127",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3840",
+     "chunk_s": "0.142",
+     "fill_MBps": "1800",
+     "VmRSS_MB": "3843",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5099",
+     "SwapFree_MB": "6127",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4096",
+     "chunk_s": "0.127",
+     "fill_MBps": "2015",
+     "VmRSS_MB": "4099",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5117",
+     "SwapFree_MB": "6125",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4352",
+     "chunk_s": "1.028",
+     "fill_MBps": "249",
+     "VmRSS_MB": "4355",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5217",
+     "SwapFree_MB": "6058",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4608",
+     "chunk_s": "0.542",
+     "fill_MBps": "473",
+     "VmRSS_MB": "4453",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5243",
+     "SwapFree_MB": "6023",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4864",
+     "chunk_s": "0.223",
+     "fill_MBps": "1149",
+     "VmRSS_MB": "4572",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5245",
+     "SwapFree_MB": "6018",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "5120",
+     "chunk_s": "0.337",
+     "fill_MBps": "760",
+     "VmRSS_MB": "4591",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5252",
+     "SwapFree_MB": "6007",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "5376",
+     "chunk_s": "0.288",
+     "fill_MBps": "888",
+     "VmRSS_MB": "4639",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5260",
+     "SwapFree_MB": "5994",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_file_r2.csv"
+  },
+  {
+   "mode": "file_backed",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 20,
+   "max_VmRSS_MB": 4623,
+   "resident_GiB": 4.515,
+   "resident_GB_decimal": 4.848,
+   "last_held_MB": 5120,
+   "VmSwap_MB_at_stop": 0,
+   "MemAvailable_MB_at_stop": 5287,
+   "SwapFree_MB_at_stop": 5954,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.145,
+   "last_chunk_s": 0.284,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.145",
+     "fill_MBps": "1760",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5223",
+     "SwapFree_MB": "6030",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.147",
+     "fill_MBps": "1736",
+     "VmRSS_MB": "515",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5220",
+     "SwapFree_MB": "6031",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.141",
+     "fill_MBps": "1810",
+     "VmRSS_MB": "771",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5220",
+     "SwapFree_MB": "6031",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.136",
+     "fill_MBps": "1887",
+     "VmRSS_MB": "1027",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5220",
+     "SwapFree_MB": "6031",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.138",
+     "fill_MBps": "1859",
+     "VmRSS_MB": "1283",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5224",
+     "SwapFree_MB": "6031",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.139",
+     "fill_MBps": "1848",
+     "VmRSS_MB": "1539",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5224",
+     "SwapFree_MB": "6031",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "0.134",
+     "fill_MBps": "1914",
+     "VmRSS_MB": "1795",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5224",
+     "SwapFree_MB": "6031",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "0.128",
+     "fill_MBps": "1997",
+     "VmRSS_MB": "2051",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5225",
+     "SwapFree_MB": "6032",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2304",
+     "chunk_s": "0.129",
+     "fill_MBps": "1984",
+     "VmRSS_MB": "2307",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5223",
+     "SwapFree_MB": "6033",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2560",
+     "chunk_s": "0.130",
+     "fill_MBps": "1974",
+     "VmRSS_MB": "2563",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5223",
+     "SwapFree_MB": "6033",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2816",
+     "chunk_s": "0.131",
+     "fill_MBps": "1955",
+     "VmRSS_MB": "2819",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5223",
+     "SwapFree_MB": "6033",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3072",
+     "chunk_s": "0.124",
+     "fill_MBps": "2059",
+     "VmRSS_MB": "3075",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5219",
+     "SwapFree_MB": "6036",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3328",
+     "chunk_s": "0.138",
+     "fill_MBps": "1853",
+     "VmRSS_MB": "3331",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5218",
+     "SwapFree_MB": "6036",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3584",
+     "chunk_s": "0.142",
+     "fill_MBps": "1807",
+     "VmRSS_MB": "3587",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5216",
+     "SwapFree_MB": "6036",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3840",
+     "chunk_s": "0.136",
+     "fill_MBps": "1876",
+     "VmRSS_MB": "3843",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5216",
+     "SwapFree_MB": "6036",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4096",
+     "chunk_s": "0.129",
+     "fill_MBps": "1977",
+     "VmRSS_MB": "4099",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5216",
+     "SwapFree_MB": "6036",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4352",
+     "chunk_s": "0.523",
+     "fill_MBps": "490",
+     "VmRSS_MB": "4355",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5247",
+     "SwapFree_MB": "6006",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4608",
+     "chunk_s": "0.614",
+     "fill_MBps": "417",
+     "VmRSS_MB": "4534",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5275",
+     "SwapFree_MB": "5970",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "4864",
+     "chunk_s": "0.214",
+     "fill_MBps": "1198",
+     "VmRSS_MB": "4594",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5280",
+     "SwapFree_MB": "5964",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "5120",
+     "chunk_s": "0.284",
+     "fill_MBps": "901",
+     "VmRSS_MB": "4623",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "5287",
+     "SwapFree_MB": "5954",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_file_r3.csv"
+  },
+  {
+   "mode": "file_backed",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 15,
+   "max_VmRSS_MB": 1796,
+   "resident_GiB": 1.754,
+   "resident_GB_decimal": 1.883,
+   "last_held_MB": 3840,
+   "VmSwap_MB_at_stop": 0,
+   "MemAvailable_MB_at_stop": 2603,
+   "SwapFree_MB_at_stop": 7120,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.233,
+   "last_chunk_s": 0.463,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.233",
+     "fill_MBps": "1100",
+     "VmRSS_MB": "258",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2101",
+     "SwapFree_MB": "7709",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.448",
+     "fill_MBps": "572",
+     "VmRSS_MB": "514",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2163",
+     "SwapFree_MB": "7657",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.680",
+     "fill_MBps": "376",
+     "VmRSS_MB": "747",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2210",
+     "SwapFree_MB": "7591",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.564",
+     "fill_MBps": "454",
+     "VmRSS_MB": "915",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2267",
+     "SwapFree_MB": "7534",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.476",
+     "fill_MBps": "538",
+     "VmRSS_MB": "1055",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2319",
+     "SwapFree_MB": "7461",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.389",
+     "fill_MBps": "658",
+     "VmRSS_MB": "1149",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2353",
+     "SwapFree_MB": "7420",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "0.470",
+     "fill_MBps": "545",
+     "VmRSS_MB": "1286",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2390",
+     "SwapFree_MB": "7378",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "0.129",
+     "fill_MBps": "1988",
+     "VmRSS_MB": "1343",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2395",
+     "SwapFree_MB": "7368",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2304",
+     "chunk_s": "0.651",
+     "fill_MBps": "394",
+     "VmRSS_MB": "1461",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2461",
+     "SwapFree_MB": "7284",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2560",
+     "chunk_s": "0.394",
+     "fill_MBps": "650",
+     "VmRSS_MB": "1516",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2484",
+     "SwapFree_MB": "7254",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2816",
+     "chunk_s": "0.166",
+     "fill_MBps": "1544",
+     "VmRSS_MB": "1589",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2491",
+     "SwapFree_MB": "7244",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3072",
+     "chunk_s": "0.495",
+     "fill_MBps": "517",
+     "VmRSS_MB": "1633",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2523",
+     "SwapFree_MB": "7219",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3328",
+     "chunk_s": "0.451",
+     "fill_MBps": "567",
+     "VmRSS_MB": "1702",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2557",
+     "SwapFree_MB": "7174",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3584",
+     "chunk_s": "0.264",
+     "fill_MBps": "969",
+     "VmRSS_MB": "1753",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2571",
+     "SwapFree_MB": "7157",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3840",
+     "chunk_s": "0.463",
+     "fill_MBps": "553",
+     "VmRSS_MB": "1796",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2603",
+     "SwapFree_MB": "7120",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_file_lowpressure_r1.csv"
+  },
+  {
+   "mode": "file_backed",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 6,
+   "max_VmRSS_MB": 1028,
+   "resident_GiB": 1.004,
+   "resident_GB_decimal": 1.078,
+   "last_held_MB": 1536,
+   "VmSwap_MB_at_stop": 0,
+   "MemAvailable_MB_at_stop": 2034,
+   "SwapFree_MB_at_stop": 7510,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.122,
+   "last_chunk_s": 0.307,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.122",
+     "fill_MBps": "2102",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2288",
+     "SwapFree_MB": "7394",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.256",
+     "fill_MBps": "999",
+     "VmRSS_MB": "515",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2192",
+     "SwapFree_MB": "7505",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.358",
+     "fill_MBps": "715",
+     "VmRSS_MB": "770",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2013",
+     "SwapFree_MB": "7492",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.431",
+     "fill_MBps": "595",
+     "VmRSS_MB": "971",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2074",
+     "SwapFree_MB": "7458",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.453",
+     "fill_MBps": "566",
+     "VmRSS_MB": "983",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2013",
+     "SwapFree_MB": "7501",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.307",
+     "fill_MBps": "835",
+     "VmRSS_MB": "1028",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2034",
+     "SwapFree_MB": "7510",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_file_lowpressure_r2.csv"
+  },
+  {
+   "mode": "file_backed",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 13,
+   "max_VmRSS_MB": 1568,
+   "resident_GiB": 1.531,
+   "resident_GB_decimal": 1.644,
+   "last_held_MB": 3328,
+   "VmSwap_MB_at_stop": 0,
+   "MemAvailable_MB_at_stop": 2307,
+   "SwapFree_MB_at_stop": 7238,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.147,
+   "last_chunk_s": 0.643,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.147",
+     "fill_MBps": "1736",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "1999",
+     "SwapFree_MB": "7676",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.408",
+     "fill_MBps": "627",
+     "VmRSS_MB": "515",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2009",
+     "SwapFree_MB": "7661",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.496",
+     "fill_MBps": "516",
+     "VmRSS_MB": "761",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2056",
+     "SwapFree_MB": "7640",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.661",
+     "fill_MBps": "387",
+     "VmRSS_MB": "930",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2117",
+     "SwapFree_MB": "7645",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.731",
+     "fill_MBps": "350",
+     "VmRSS_MB": "1034",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2142",
+     "SwapFree_MB": "7601",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.569",
+     "fill_MBps": "450",
+     "VmRSS_MB": "1143",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2207",
+     "SwapFree_MB": "7516",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "0.506",
+     "fill_MBps": "506",
+     "VmRSS_MB": "1238",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2267",
+     "SwapFree_MB": "7434",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "0.434",
+     "fill_MBps": "589",
+     "VmRSS_MB": "1337",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2295",
+     "SwapFree_MB": "7383",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2304",
+     "chunk_s": "0.328",
+     "fill_MBps": "781",
+     "VmRSS_MB": "1439",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2322",
+     "SwapFree_MB": "7339",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2560",
+     "chunk_s": "0.323",
+     "fill_MBps": "794",
+     "VmRSS_MB": "1502",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2338",
+     "SwapFree_MB": "7309",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2816",
+     "chunk_s": "0.528",
+     "fill_MBps": "485",
+     "VmRSS_MB": "1568",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2365",
+     "SwapFree_MB": "7253",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3072",
+     "chunk_s": "0.549",
+     "fill_MBps": "466",
+     "VmRSS_MB": "1550",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2378",
+     "SwapFree_MB": "7223",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "3328",
+     "chunk_s": "0.643",
+     "fill_MBps": "398",
+     "VmRSS_MB": "1418",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2307",
+     "SwapFree_MB": "7238",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_file_lowpressure_r3.csv"
+  },
+  {
+   "mode": "file_backed",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 10,
+   "max_VmRSS_MB": 2003,
+   "resident_GiB": 1.956,
+   "resident_GB_decimal": 2.1,
+   "last_held_MB": 2560,
+   "VmSwap_MB_at_stop": 0,
+   "MemAvailable_MB_at_stop": 2929,
+   "SwapFree_MB_at_stop": 8767,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.131,
+   "last_chunk_s": 0.177,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.131",
+     "fill_MBps": "1951",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2848",
+     "SwapFree_MB": "8861",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.116",
+     "fill_MBps": "2209",
+     "VmRSS_MB": "515",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2847",
+     "SwapFree_MB": "8861",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.095",
+     "fill_MBps": "2708",
+     "VmRSS_MB": "771",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2848",
+     "SwapFree_MB": "8861",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.100",
+     "fill_MBps": "2572",
+     "VmRSS_MB": "1027",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2848",
+     "SwapFree_MB": "8861",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.105",
+     "fill_MBps": "2443",
+     "VmRSS_MB": "1283",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2848",
+     "SwapFree_MB": "8861",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.095",
+     "fill_MBps": "2690",
+     "VmRSS_MB": "1539",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2854",
+     "SwapFree_MB": "8861",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "0.304",
+     "fill_MBps": "843",
+     "VmRSS_MB": "1795",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2870",
+     "SwapFree_MB": "8842",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "0.668",
+     "fill_MBps": "383",
+     "VmRSS_MB": "1948",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2918",
+     "SwapFree_MB": "8782",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2304",
+     "chunk_s": "0.176",
+     "fill_MBps": "1453",
+     "VmRSS_MB": "1959",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2921",
+     "SwapFree_MB": "8777",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2560",
+     "chunk_s": "0.177",
+     "fill_MBps": "1445",
+     "VmRSS_MB": "2003",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2929",
+     "SwapFree_MB": "8767",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_file_killall_r1.csv"
+  },
+  {
+   "mode": "file_backed",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 8,
+   "max_VmRSS_MB": 983,
+   "resident_GiB": 0.96,
+   "resident_GB_decimal": 1.031,
+   "last_held_MB": 2048,
+   "VmSwap_MB_at_stop": 0,
+   "MemAvailable_MB_at_stop": 2481,
+   "SwapFree_MB_at_stop": 8437,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.378,
+   "last_chunk_s": 0.312,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.378",
+     "fill_MBps": "676",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2329",
+     "SwapFree_MB": "8733",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.326",
+     "fill_MBps": "784",
+     "VmRSS_MB": "498",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2270",
+     "SwapFree_MB": "8740",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.687",
+     "fill_MBps": "372",
+     "VmRSS_MB": "641",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2193",
+     "SwapFree_MB": "8775",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.675",
+     "fill_MBps": "379",
+     "VmRSS_MB": "738",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2178",
+     "SwapFree_MB": "8701",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.545",
+     "fill_MBps": "469",
+     "VmRSS_MB": "822",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2192",
+     "SwapFree_MB": "8621",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.465",
+     "fill_MBps": "551",
+     "VmRSS_MB": "928",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2253",
+     "SwapFree_MB": "8530",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "0.905",
+     "fill_MBps": "283",
+     "VmRSS_MB": "940",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2414",
+     "SwapFree_MB": "8450",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "0.312",
+     "fill_MBps": "820",
+     "VmRSS_MB": "983",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2481",
+     "SwapFree_MB": "8437",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_file_killall_r2.csv"
+  },
+  {
+   "mode": "file_backed",
+   "oom_score_adj": "50",
+   "MemTotal_MB": "11099",
+   "SwapTotal_MB": "12287",
+   "n_chunks": 8,
+   "max_VmRSS_MB": 1452,
+   "resident_GiB": 1.418,
+   "resident_GB_decimal": 1.523,
+   "last_held_MB": 2048,
+   "VmSwap_MB_at_stop": 0,
+   "MemAvailable_MB_at_stop": 2596,
+   "SwapFree_MB_at_stop": 8257,
+   "stop_reason": "rss_plateau",
+   "first_chunk_s": 0.109,
+   "last_chunk_s": 0.264,
+   "rows": [
+    {
+     "held_MB": "256",
+     "chunk_s": "0.109",
+     "fill_MBps": "2342",
+     "VmRSS_MB": "259",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2445",
+     "SwapFree_MB": "8421",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "512",
+     "chunk_s": "0.095",
+     "fill_MBps": "2695",
+     "VmRSS_MB": "515",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2445",
+     "SwapFree_MB": "8421",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "768",
+     "chunk_s": "0.088",
+     "fill_MBps": "2911",
+     "VmRSS_MB": "771",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2446",
+     "SwapFree_MB": "8421",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1024",
+     "chunk_s": "0.225",
+     "fill_MBps": "1137",
+     "VmRSS_MB": "1027",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2525",
+     "SwapFree_MB": "8400",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1280",
+     "chunk_s": "0.174",
+     "fill_MBps": "1472",
+     "VmRSS_MB": "1283",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2536",
+     "SwapFree_MB": "8383",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1536",
+     "chunk_s": "0.412",
+     "fill_MBps": "622",
+     "VmRSS_MB": "1389",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2563",
+     "SwapFree_MB": "8335",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "1792",
+     "chunk_s": "0.246",
+     "fill_MBps": "1041",
+     "VmRSS_MB": "1403",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2585",
+     "SwapFree_MB": "8289",
+     "stop_reason": ""
+    },
+    {
+     "held_MB": "2048",
+     "chunk_s": "0.264",
+     "fill_MBps": "969",
+     "VmRSS_MB": "1452",
+     "VmSwap_MB": "0",
+     "MemAvailable_MB": "2596",
+     "SwapFree_MB": "8257",
+     "stop_reason": "rss_plateau"
+    }
+   ],
+   "source": "D:\\identifying-variation\\moe-phone\\results\\2026-09-14\\memprobe_15r_file_killall_r3.csv"
+  }
+ ],
+ "memprobe": {
+  "n_runs": 12,
+  "n_usable": 12,
+  "errors": [],
+  "by_mode": {
+   "anonymous": {
+    "n": 3,
+    "max_VmRSS_MB_median": 2451,
+    "max_VmRSS_MB_min": 1956,
+    "max_VmRSS_MB_max": 2504,
+    "max_VmRSS_MB_all": [
+     1956,
+     2451,
+     2504
+    ],
+    "rel_spread": 0.22358221134230927,
+    "resident_GB_decimal_median": 2.57,
+    "stop_reasons": [
+     "rss_plateau"
+    ]
+   },
+   "file_backed": {
+    "n": 9,
+    "max_VmRSS_MB_median": 1796,
+    "max_VmRSS_MB_min": 983,
+    "max_VmRSS_MB_max": 4639,
+    "max_VmRSS_MB_all": [
+     983,
+     1028,
+     1452,
+     1568,
+     1796,
+     2003,
+     4487,
+     4623,
+     4639
+    ],
+    "rel_spread": 2.035634743875278,
+    "resident_GB_decimal_median": 1.883,
+    "stop_reasons": [
+     "rss_plateau"
+    ]
+   }
+  }
+ }
+}

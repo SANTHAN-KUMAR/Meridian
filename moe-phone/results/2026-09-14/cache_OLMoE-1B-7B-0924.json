@@ -1,0 +1,55 @@
+{
+ "tokens": 32768,
+ "moe_layers": 16,
+ "top_k": 8,
+ "num_experts": 64,
+ "requests": 4194304,
+ "rows": [
+  {
+   "cache_fraction": 0.05,
+   "cache_experts": 51,
+   "floor_hit": 0.0498046875,
+   "lru_hit": 0.0,
+   "lru_misses_per_token": 128.0,
+   "belady_hit": 0.3228795528411865,
+   "belady_misses_per_token": 86.67141723632812
+  },
+  {
+   "cache_fraction": 0.1,
+   "cache_experts": 102,
+   "floor_hit": 0.099609375,
+   "lru_hit": 0.0,
+   "lru_misses_per_token": 128.0,
+   "belady_hit": 0.5014684200286865,
+   "belady_misses_per_token": 63.812042236328125
+  },
+  {
+   "cache_fraction": 0.2,
+   "cache_experts": 204,
+   "floor_hit": 0.19921875,
+   "lru_hit": 0.4117903709411621,
+   "lru_misses_per_token": 75.29083251953125,
+   "belady_hit": 0.6805009841918945,
+   "belady_misses_per_token": 40.8958740234375
+  },
+  {
+   "cache_fraction": 0.3,
+   "cache_experts": 307,
+   "floor_hit": 0.2998046875,
+   "lru_hit": 0.5536296367645264,
+   "lru_misses_per_token": 57.135406494140625,
+   "belady_hit": 0.7864558696746826,
+   "belady_misses_per_token": 27.333648681640625
+  },
+  {
+   "cache_fraction": 0.5,
+   "cache_experts": 512,
+   "floor_hit": 0.5,
+   "lru_hit": 0.7583329677581787,
+   "lru_misses_per_token": 30.933380126953125,
+   "belady_hit": 0.9080493450164795,
+   "belady_misses_per_token": 11.769683837890625
+  }
+ ],
+ "source": "/kaggle/working/out/traces_OLMoE-1B-7B-0924.npz"
+}

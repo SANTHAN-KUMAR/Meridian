@@ -1,0 +1,11 @@
+mode=file_backed file=/data/data/com.termux/files/home/moe/ufs.bin oom_score_adj=50 MemTotal_MB=11099 SwapTotal_MB=12287
+held_MB,chunk_s,fill_MBps,VmRSS_MB,VmSwap_MB,MemAvailable_MB,SwapFree_MB,stop_reason
+256,0.109,2342,259,0,2445,8421,
+512,0.095,2695,515,0,2445,8421,
+768,0.088,2911,771,0,2446,8421,
+1024,0.225,1137,1027,0,2525,8400,
+1280,0.174,1472,1283,0,2536,8383,
+1536,0.412,622,1389,0,2563,8335,
+1792,0.246,1041,1403,0,2585,8289,
+2048,0.264,969,1452,0,2596,8257,rss_plateau
+max_VmRSS_MB=1452 chunks=8 mode=file_backed

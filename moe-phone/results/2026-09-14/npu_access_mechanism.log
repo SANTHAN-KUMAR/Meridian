@@ -1,0 +1,58 @@
+# How Hexagon NPU access actually works on the OnePlus 15R (CPH2767, ColorOS 16, UNROOTED).
+# Captured from logcat 2026-09-14 while the device owner used OEM AI features.
+# Three independent apps reached the NPU. The enabling mechanism is Qualcomm UNSIGNED PD.
+
+## 1. The mechanism: unsigned process domain on CDSP (domain 3)
+  remote_session_control Unsigned PD enable 1 request for domain 3
+
+## 2. Google AICore (Gemini Nano) - bundles its OWN skel in the APK, like any third-party app could
+  Error 0x2: apps_std_fopen_fd failed for /data/app/~~GGIU77yewKLPZ4K2ODkm7w==/com.google.android.aicore-ubTZyH-1uxgL9XkNGvOqdQ==/lib/arm64/cdsp/./libQnnHtpV81Skel.so (No such file or directory)
+  Successfully opened file /data/app/~~GGIU77yewKLPZ4K2ODkm7w==/com.google.android.aicore-ubTZyH-1uxgL9XkNGvOqdQ==/lib/arm64/./libQnnHtpV81Skel.so
+  WARNING: get_handle_priority_from_uri: libQnnHtpV81Skel.so lib opened handle without priority token
+  apps_std_fopen_fd done for /data/app/~~GGIU77yewKLPZ4K2ODkm7w==/com.google.android.aicore-ubTZyH-1uxgL9XkNGvOqdQ==/lib/arm64/./libQnnHtpV81Skel.so with fsize:12322384       fopen:684us, fstat:1us, read:10610us,       rpc_alloc:1015us, mmap:1002us fd 0x8f 
+
+## 3. OnePlus Gallery (AI Eraser) - SoC-specific precompiled model, FastRPC domain 3
+  List of open handles on domain 3:
+  close_device_node: closed dev 185 on domain 3
+  domain_deinit: closed device 185 on domain 3 (kill time 2096 us)
+  remote_handle64_close: closed handle 0xb40000700916c2c0 remote handle 0x2ce9f0 name libQnnHtpV81Skel.so, refs 0, domain 3, open_refs 0, non-domain handle list is empty
+    "modelPath": "keep_multi_clean_add_v3_noFrozen_check_distill_checkpoint_8500_sm8845_2.34.0.250424.bin",
+
+## 4. OEM on-device LLM runtime present at /odm/lib64/libaiboost_llm.so
+##    22/22 entry points resolved. NOT observed creating a session in this window,
+##    so no claim is made that the text writer ran locally.
+  successfully loaded AiboostLlmCompressPromptWithCallBack
+  successfully loaded AiboostLlmCreateSession
+  successfully loaded AiboostLlmDeleteSession
+  successfully loaded AiboostLlmGetMaxContextLen
+  successfully loaded AiboostLlmGetTokenSize
+  successfully loaded AiboostLlmGetTokenSizeFromModelDir
+  successfully loaded AiboostLlmReleaseCompressPrompt
+  successfully loaded AiboostLlmResetSession
+  successfully loaded AiboostLlmResumeSession
+  successfully loaded AiboostLlmRollbackSession
+  successfully loaded AiboostLlmSessionBatchingPredict
+  successfully loaded AiboostLlmSessionBatchingPredictMultimodal
+  successfully loaded AiboostLlmSessionBatchingPredictMultimodalWithCallBack
+  successfully loaded AiboostLlmSessionBatchingPredictWithCallBack
+
+## 5. EXISTENCE PROOF: an LLM running on the NPU of this unrooted retail phone.
+##    Google AICore (Gemini Nano) at 19:48:23. Cloud Gemini app (com.google.android.apps.bard)
+##    is a SEPARATE thing and went to bard.google.com - not this.
+  JNI RuntimeModelLoaderWrapper CreateModel LLM
+  RuntimeModelLoader::CreateLargeLanguageModel Using Runtime V2.
+  RuntimeModelLoader::CreateLargeLanguageModel from package: files/file_group_store/shared/aicore-models/symlinks/c78b2b6a002a740a141fb8585a125fa35e912b37/20260118_165919_459679623
+
+##    ...and the DSP session it set up (note libdspqueue = ASYNC submission, not sync RPC):
+  Error 0x2: apps_std_fopen_fd failed for /data/app/~~GGIU77yewKLPZ4K2ODkm7w==/com.google.android.aicore-ubTZyH-1uxgL9XkNGvOqdQ==/lib/arm64/cdsp/./libQnnHtpV81Skel.so (No such file or directory)
+  Successfully opened file /data/app/~~GGIU77yewKLPZ4K2ODkm7w==/com.google.android.aicore-ubTZyH-1uxgL9XkNGvOqdQ==/lib/arm64/./libQnnHtpV81Skel.so
+  WARNING: get_handle_priority_from_uri: libQnnHtpV81Skel.so lib opened handle without priority token
+  WARNING: get_handle_priority_from_uri: libdspqueue_rpc_skel.so lib opened handle without priority token
+  apps_std_fopen_fd done for /data/app/~~GGIU77yewKLPZ4K2ODkm7w==/com.google.android.aicore-ubTZyH-1uxgL9XkNGvOqdQ==/lib/arm64/./libQnnHtpV81Skel.so with fsize:12322384       fopen:684us, fstat:1us, read:10610us,       rpc_alloc:1015us, mmap:1002us fd 0x8f 
+  fastrpc_latency_thread_handler started for QoS with activity window 100 ms
+  remote_handle64_open: opened handle 0xb400007154471d00 (remote 0x2ce9f0) for file:///libQnnHtpV81Skel.so?qnn_skel_handle_invoke&_modver=1.0&_dom=cdsp on domain 3 (spawn time 28974 us, load time 55009 us), refs 1
+  remote_handle64_open: opened handle 0xb400007154471f00 (remote 0x2cf640) for file:///libdspqueue_rpc_skel.so?dspqueue_rpc_skel_handle_invoke&_modver=1.0&_dom=cdsp&_session=0 on domain 3 (spawn time 0 us, load time 314 us), refs 2
+  remote_handle_control_domain: requested QOS 1, latency 100 for domain 3 handle 0xb400007154471d00
+  remote_handle_control_domain: requested QOS 3, latency 9999 for domain 3 handle 0xb400007154471d00
+  remote_session_control DSP info request for domain 3, thread priority -1, stack size 17408
+  remote_session_control Unsigned PD enable 1 request for domain 3

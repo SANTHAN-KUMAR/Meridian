@@ -1,0 +1,267 @@
+
+== identity ==
+ro.product.manufacturer=OnePlus
+ro.product.model=CPH2767
+ro.soc.manufacturer=QTI
+ro.soc.model=SM8845
+ro.board.platform=canoe
+ro.build.version.release=16
+ro.build.version.sdk=36
+ro.build.fingerprint=OnePlus/CPH2767IN/OP612DL1:16/BP2A.250605.015/B.R4T3.266e8a6-136672-136670:user/release-keys
+Linux localhost 6.12.38-android16-5-g844001fb8721-ab14552068-4k #1 SMP PREEMPT Fri Dec  5 02:15:49 UTC 2025 aarch64 Toybox
+context: uid=2000(shell) gid=2000(shell) groups=2000(shell),1004(input),1007(log),1011(adb),1015(sdcard_rw),1028(sdcard_r),1078(ext_data_rw),1079(ext_obb_rw),3001(net_bt_admin),3002(net_bt),3003(inet),3006(net_bw_stats),3009(readproc),3011(uhid),3012(readtracefs) context=u:r:shell:s0
+probe_epoch_s: 1789392753
+
+== memory ==
+MemTotal:       11366296 kB
+MemAvailable:    5285552 kB
+Cached:          5275160 kB
+SwapTotal:      12582908 kB
+SwapFree:        6182252 kB
+oom_score_adj=-1000
+zram0_disksize_bytes=DENIED_OR_ABSENT
+ro.lmk.use_minfree_levels=
+ro.config.low_ram=
+dalvik.vm.heapgrowthlimit=256m
+
+== storage ==
+/dev/block/dm-79 /data f2fs rw,lazytime,seclabel,nosuid,nodev,noatime,background_gc=on,nogc_merge,discard,discard_unit=block,user_xattr,inline_xattr,acl,inline_data,inline_dentry,flush_merge,barrier,extent_cache,mode=adaptive,active_logs=6,reserve_root=32768,resuid=0,resgid=1065,inlinecrypt,alloc_mode=default,checkpoint_merge,fsync_mode=nobarrier,memory=normal,errors=continue,lookup_mode=perf 0 0
+/dev/block/dm-79 /data/user/0 f2fs rw,lazytime,seclabel,nosuid,nodev,noatime,background_gc=on,nogc_merge,discard,discard_unit=block,user_xattr,inline_xattr,acl,inline_data,inline_dentry,flush_merge,barrier,extent_cache,mode=adaptive,active_logs=6,reserve_root=32768,resuid=0,resgid=1065,inlinecrypt,alloc_mode=default,checkpoint_merge,fsync_mode=nobarrier,memory=normal,errors=continue,lookup_mode=perf 0 0
+data_mount=/data/user/0
+data_device=/dev/block/dm-79
+Filesystem       Size Used Avail Use% Mounted on
+/dev/block/dm-79 219G  93G  125G  43% /data/user/0
+/sys/block/dm-79/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/dm-79/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/dm-79/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/dm-79/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/dm-79/queue/rotational=DENIED_OR_ABSENT
+/sys/block/dm-79/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sda/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sda/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sda/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sda/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sda/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sda/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sdb/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sdb/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sdb/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sdb/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sdb/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sdb/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sdc/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sdc/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sdc/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sdc/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sdc/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sdc/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sdd/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sdd/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sdd/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sdd/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sdd/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sdd/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sde/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sde/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sde/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sde/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sde/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sde/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sdf/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sdf/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sdf/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sdf/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sdf/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sdf/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/rotational=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/class/scsi_host/host0
+/sys/devices/platform/soc/1d80000.ufsphy_mem
+/sys/devices/platform/soc/1d84000.ufshc
+
+== npu (Hexagon) presence ==
+present: /vendor/lib64/libcdsprpc.so
+absent: /system/lib64/libcdsprpc.so
+present: /vendor/lib64/libadsprpc.so
+FAILED rc=1: ls /vendor/lib/rfsa/adsp /vendor/dsp /vendor/dsp/cdsp 2>/dev/null
+  msg: chre_qsh_shim.so
+libadsp_jpege_skel.so
+libdsp_streamer_binning.so
+libhme_dsp_skel.so
+libmctfengine_skel.so
+libmlawbpostproc_dsp_skel.so
+nearby.napp_header
+nearby.so
+FAILED rc=1: ls -l /dev/fastrpc-cdsp /dev/fastrpc-adsp /dev/adsprpc-smd 2>/dev/null
+  msg: crw-rw-r-- 1 system system 10,  89 2026-09-13 11:16 /dev/fastrpc-cdsp
+/sys/class/thermal/thermal_zone28/type
+/sys/class/thermal/thermal_zone29/type
+/sys/class/thermal/thermal_zone30/type
+/sys/class/thermal/thermal_zone31/type
+/sys/class/thermal/thermal_zone32/type
+
+== gpu ==
+FAILED rc=1: ls /sys/class/kgsl/kgsl-3d0/
+  msg: ls: /sys/class/kgsl/kgsl-3d0/: Permission denied
+gpu_model=Adreno829
+
+== power measurement ==
+battery/current_now=DENIED_OR_ABSENT
+battery/voltage_now=DENIED_OR_ABSENT
+battery/charge_counter=DENIED_OR_ABSENT
+battery/status=DENIED_OR_ABSENT
+battery/capacity=DENIED_OR_ABSENT
+iio:device0
+PowerStatsService dumpsys: available PowerEntities
+  PowerEntityId: 0, PowerEntityName: adsp
+    StateId: 0, StateName: adsp
+  PowerEntityId: 1, PowerEntityName: adsp_island
+    StateId: 0, StateName: adsp_island
+  PowerEntityId: 2, PowerEntityName: apss
+    StateId: 0, StateName: apss
+  PowerEntityId: 3, PowerEntityName: cdsp
+    StateId: 0, StateName: cdsp
+  PowerEntityId: 4, PowerEntityName: mpss
+    StateId: 0, StateName: mpss
+  PowerEntityId: 5, PowerEntityName: vlow
+    StateId: 0, StateName: vlow
+  PowerEntityId: 6, PowerEntityName: vmin
+    StateId: 0, StateName: vmin
+  PowerEntityId: 7, PowerEntityName: wpss
+    StateId: 0, StateName: wpss
+PowerStatsService dumpsys: available Channels
+PowerStatsService dumpsys: available EnergyConsumers
+PowerStatsService dumpsys: PowerStatsLogger stats
+  PowerStats Meter Data:
+    Failed to parse earliest data time!!!
+    # files : 0
+    Total data size (B) : 0
+  PowerStats Model Data:
+    Failed to parse earliest data time!!!
+    # files : 0
+    Total data size (B) : 0
+  PowerStats State Residency Data:
+    Earliest data time : Sat Sep 12 17:12:30 GMT+05:30 2026
+    # files : 9
+    Total data size (B) : 28268
+
+== thermal zones ==
+thermal_zone0 cpullc-0-0 48600
+thermal_zone1 cpullc-0-1 48600
+thermal_zone10 cpu-0-2-1 48000
+thermal_zone11 cpu-0-3-0 47700
+thermal_zone12 cpu-0-3-1 47300
+thermal_zone13 cpu-0-4-0 47700
+thermal_zone14 cpu-0-4-1 47700
+thermal_zone15 cpu-0-5-0 46900
+thermal_zone16 cpu-0-5-1 47700
+thermal_zone17 cpullc-1-0 48200
+thermal_zone18 cpullc-1-1 48200
+thermal_zone19 qmx-1-0 48200
+thermal_zone2 qmx-0-0 47500
+thermal_zone20 qmx-1-1 48200
+thermal_zone21 qmx-1-2 47800
+thermal_zone22 qmx-1-3 47800
+thermal_zone23 qmx-1-4 48200
+thermal_zone24 cpu-1-0-0 45300
+thermal_zone25 cpu-1-0-1 45700
+thermal_zone26 cpu-1-1-0 45700
+thermal_zone27 cpu-1-1-1 45300
+thermal_zone28 nsphvx-0 46900
+thermal_zone29 nsphvx-1 46900
+thermal_zone3 qmx-0-1 47800
+thermal_zone30 nsphvx-2 46900
+thermal_zone31 nsphmx-0 47300
+thermal_zone32 nsphmx-1 47700
+thermal_zone33 gpuss-0 47500
+thermal_zone34 gpuss-1 47500
+thermal_zone35 gpuss-2 47100
+thermal_zone36 gpuss-3 47100
+thermal_zone37 gpuss-4 46700
+thermal_zone38 gpuss-5 47100
+thermal_zone39 gpuss-6 47500
+thermal_zone4 qmx-0-2 48200
+thermal_zone40 gpuss-7 47500
+thermal_zone41 ddr 48400
+thermal_zone42 mdmss-0 47600
+thermal_zone43 mdmss-1 46900
+thermal_zone44 mdmss-2 46100
+thermal_zone45 mdmss-3 47300
+thermal_zone46 camera-0 47300
+thermal_zone47 camera-1 47300
+thermal_zone48 video 48000
+thermal_zone49 pmr735d_tz 37000
+thermal_zone5 cpu-0-0-0 47700
+thermal_zone50 pm8010m_tz 37000
+thermal_zone51 cpu-hw-trip-0 95000
+thermal_zone52 shell_front 42872
+thermal_zone53 cpu-hw-trip-1 95000
+thermal_zone54 sys-therm-0 45895
+thermal_zone55 pm8550-bcl-lvl0 0
+thermal_zone56 shell_frame 42184
+thermal_zone57 sys-therm-2 46000
+thermal_zone58 pm8550-bcl-lvl1 0
+thermal_zone59 shell_back 43299
+thermal_zone6 cpu-0-0-1 49600
+thermal_zone60 sys-therm-3 46581
+thermal_zone61 pm8550-bcl-lvl2 0
+thermal_zone62 sys-therm-5 46762
+thermal_zone63 vbat 3836
+thermal_zone64 sys-therm-6 45036
+thermal_zone65 pm7550ba-ibat-lvl0 -1031
+thermal_zone66 sys-therm-12 47392
+thermal_zone67 pm7550ba-ibat-lvl1 -937
+thermal_zone68 sys-therm-8 47496
+thermal_zone69 pm7550ba-bcl-lvl0 0
+thermal_zone7 cpu-0-1-0 48000
+thermal_zone70 oled_ntc_usr 43397
+thermal_zone71 pm7550ba-bcl-lvl1 0
+thermal_zone72 board_ntc_usr 45839
+thermal_zone73 pm7550ba-bcl-lvl2 0
+thermal_zone74 wlan_ntc_usr 46740
+thermal_zone75 slave_cp_ntc 46819
+thermal_zone76 svooc_mos_btb_usr 47422
+thermal_zone77 pm7550ba_tz 42971
+thermal_zone78 pm8550_tz 49123
+thermal_zone79 pm8550ve_d_tz 43745
+thermal_zone8 cpu-0-1-1 48400
+thermal_zone80 pm8550ve_f_tz 43778
+thermal_zone81 pm8550ve_g_tz 43913
+thermal_zone82 pm8550ve_i_tz 44652
+thermal_zone83 usb 4200
+thermal_zone84 battery 43500
+thermal_zone85 socd 66
+thermal_zone86 sdr0_pa -273000
+thermal_zone87 sdr0 -273000
+thermal_zone88 mmw_ific0 -273000
+thermal_zone9 cpu-0-2-0 48000
+
+== cpu ==
+processor	: 0	CPU part	: 0x002
+processor	: 1	CPU part	: 0x002
+processor	: 2	CPU part	: 0x002
+processor	: 3	CPU part	: 0x002
+processor	: 4	CPU part	: 0x002
+processor	: 5	CPU part	: 0x002
+processor	: 6	CPU part	: 0x002
+processor	: 7	CPU part	: 0x002
+cpu0 max_khz=3321600
+cpu1 max_khz=3321600
+cpu2 max_khz=3321600
+cpu3 max_khz=3321600
+cpu4 max_khz=3321600
+cpu5 max_khz=3321600
+cpu6 max_khz=3801600
+cpu7 max_khz=3801600
+
+== root ==
+NOT_ROOT: no su on PATH
+ro.boot.verifiedbootstate=green
+ro.boot.flash.locked=1
+ro.secure=1
+
+== done ==
