@@ -43,8 +43,11 @@ Validation points, in order of importance:
    stock fine-grained MoEs.
 3. **The scale frontier.** The largest total-parameter model the 15R serves at a decode rate derived
    from human reading speed (`ESTIMAND.md` §4), at pre-registered fidelity. Candidate models range
-   from 7B to 235B total. No ≥60B-total model was found reported on an Android phone (search
-   2026-09-14, §9).
+   from 7B to 235B total. ~~No ≥60B-total model was found reported on an Android phone~~ —
+   **RETRACTED 2026-09-14**: [BigMoeOnEdge](https://github.com/Helldez/BigMoeOnEdge) reports a 284B
+   model at 0.94 tok/s and a 125B at 3.48 tok/s on a 12 GB phone, losslessly, on stock llama.cpp.
+   Deleted rather than annotated per `CLAUDE.md` §7.6; the novelty record in §9 is stale and is
+   being re-audited.
 
 ## 1. What PowerInfer-2 actually claims — the baseline, sourced
 
@@ -96,12 +99,15 @@ still assumed (stub S1). The measurement **confirms 1 and 3 below and refutes 2*
   at its own budgets. A same-model training-free win at phone budgets is not reachable here, and
   the reason is now specific: their budget is 7–19 GB with root and `mlock`; ours is what an
   unprivileged app can hold.
-- **REFUTED (2).** The claim that fine-grained 80B–120B models land "in the range PowerInfer-2
-  reports for 47B" is **false at this operating point**. With the measured budget, every model
-  above ~16B total sits below the reading-speed threshold *as an upper bound*, before any engine
-  cost is charged. The frontier at the measured unprivileged operating point is an order of
-  magnitude smaller in total parameters than §0 assumed. This claim is rewritten rather than
-  annotated (`CLAUDE.md` §7.6); the earlier wording is gone.
+- **REFUTED (2), and the first rewrite of this bullet was itself wrong.** The original claim —
+  that fine-grained 80B–120B models land "in the range PowerInfer-2 reports for 47B" — is false at
+  this operating point. But the replacement text said every model above ~16B "sits below the
+  reading-speed threshold **as an upper bound**", and that is not what the artifact says. Those
+  figures are the bound **at `h_floor`, the no-locality hit rate** — a pessimistic assumption about
+  the cache, not an upper bound over hit rates. G-ROOF is an upper bound *given* a hit rate; quoting
+  the `h=floor` column as "the" bound understates what a real cache achieves. Correct statement:
+  **at the no-locality floor** the frontier is ~16B; with a realistic cache it is materially higher
+  (Qwen3-30B-A3B: 3.64 tok/s at `h_floor`=0.244, 5.51 tok/s at h=0.5). Confirmed by G-VALID-2 below.
 - **Confirmed and quantified (3).** Charging scattered reads at bulk bandwidth
   (`--tag measured_bundled_ideal`) raises the gate-first bounds by roughly the same factor across
   every fine-grained model, and that factor is the difference between sitting below and above the
