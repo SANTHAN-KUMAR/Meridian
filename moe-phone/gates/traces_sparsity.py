@@ -220,6 +220,23 @@ def token_kl(logp_ref, logp):
     return (logp_ref.exp() * (logp_ref - logp)).sum(-1)
 
 
+def nll_sum(logp, labels):
+    """Summed teacher-forced negative log-likelihood of the true next token.
+
+    Perplexity = exp(sum(nll) / n_tokens). Reported because the activation-
+    sparsity literature justifies its sparsity levels with PERPLEXITY curves
+    (TEAL, arXiv 2408.14690, reports perplexity vs sparsity; it never reports
+    KL divergence or top-1 flip rate). ESTIMAND.md §3 sets our Tier-A margin in
+    KL and flip rate instead, which is a far stricter bar: a model can change
+    its argmax on a quarter of tokens while perplexity moves very little,
+    because perplexity only scores the probability mass on the TRUE token.
+    Without perplexity in our own artifact we cannot tell whether we DISAGREE
+    with the published results or merely MEASURE something else — so both are
+    reported, and any comparison to published sparsity levels must use this one.
+    """
+    return float(-logp[:-1].gather(-1, labels.unsqueeze(-1)).sum()), labels.numel()
+
+
 class Calib:
     def __init__(self):
         self.conf, self.correct = [], []
@@ -286,7 +303,9 @@ def run(model, calib_windows, eval_windows, densities, floor_tokens, device, log
 
     traces = {l: [] for l in layers}
     look_recall, look_n = {}, {}
-    acc = {d: {"kl": [], "flip": 0, "n": 0, "calib": Calib()} for d in densities}
+    acc = {d: {"kl": [], "flip": 0, "n": 0, "calib": Calib(), "nll": 0.0, "nll_n": 0}
+           for d in densities}
+    ref_nll, ref_nll_n = 0.0, 0
     ref_calib = Calib()
     floor_store = []
     stored = 0
@@ -298,6 +317,8 @@ def run(model, calib_windows, eval_windows, densities, floor_tokens, device, log
         logp_ref = F.log_softmax(ref, -1)
         labels = w[1:].to(device)
         ref_calib.add(logp_ref, labels)
+        _s, _n = nll_sum(logp_ref, labels)
+        ref_nll += _s; ref_nll_n += _n
         for l in layers:
             traces[l].append(S.cur[l].numpy())
         if lookahead_supported(model):
@@ -320,19 +341,24 @@ def run(model, calib_windows, eval_windows, densities, floor_tokens, device, log
             a["flip"] += int((lp.argmax(-1) != logp_ref.argmax(-1)).sum())
             a["n"] += kl.numel()
             a["calib"].add(lp, labels)
+            _s, _n = nll_sum(lp, labels)
+            a["nll"] += _s; a["nll_n"] += _n
         S.mode = "off"
         log(f"  window {wi + 1}/{len(eval_windows)}")
 
     realized = {}
     # kept/total were accumulated across all densities; recompute per density cleanly.
     results = {"top_k": top_k, "num_experts": E, "moe_layers": layers,
-               "ref_ece": ref_calib.ece(), "densities": {}}
+               "ref_ece": ref_calib.ece(),
+               "ref_perplexity": math.exp(ref_nll / ref_nll_n), "densities": {}}
     for d in densities:
         a = acc[d]
         kl = torch.cat(a["kl"])
         results["densities"][str(d)] = {
             "kl_mean": float(kl.mean()), "kl_p99": float(torch.quantile(kl, 0.99)),
             "flip_rate": a["flip"] / a["n"], "ece": a["calib"].ece(), "tokens": a["n"],
+            "perplexity": math.exp(a["nll"] / a["nll_n"]),
+            "perplexity_ratio_vs_dense": math.exp(a["nll"] / a["nll_n"]) / math.exp(ref_nll / ref_nll_n),
             "thresholds": {str(l): thresholds[d][l] for l in layers}}
     # Realized density on eval data, one clean pass per density on the first window.
     for d in densities:
