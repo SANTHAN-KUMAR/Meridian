@@ -55,3 +55,7 @@ vaers/results/**/*.zip
 # COMPLETED rating files (kappa_ratings_*.csv, no narrative column) are
 # results and ARE committed.
 vaers/results/**/kappa_worksheet_*.csv
+
+# moe-phone: HF config/API cache and model weights are re-downloadable, never committed
+moe-phone/cache/
+moe-phone/models/
