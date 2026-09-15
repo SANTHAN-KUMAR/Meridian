@@ -17,6 +17,12 @@ bytes at fixed engine, format, threads and device. Under it, the same rate predi
 the RESIDENT decode rate of any other model in the same format — reported here for
 OLMoE as a prediction for the next clean resident OLMoE run to confirm or refute.
 
+TEST (added after the 2026-09-16 01:19 campaign, which produced the first
+flash-free steady-state OLMoE runs): the linear-in-bytes rule is scored at
+MATCHED thread count — the reference model's rate at T threads predicts the
+target's rate at T threads — against the observed marginal rate. A comparison
+across thread counts would test something else.
+
 Run:
   python moe-phone/gates/s11_nonflash.py
 """
@@ -61,6 +67,36 @@ def main():
           f"= {eff:.1f} GB/s effective ({100 * eff / dram_gbps:.0f}% of the {dram_gbps:.1f} GB/s DRAM probe)")
     print(f"predicted resident {PRED_MODEL}: {out['prediction']['resident_tok_s_predicted']:.1f} tok/s "
           f"(DRAM-only bound {out['prediction']['resident_tok_s_dram_only_bound']:.1f})")
+    # ---- the test: matched-thread predictions against observed OLMoE runs ----------
+    obs_groups = []
+    for name in ("decode_15r.json", "decode_15r_cpu.json"):
+        try:
+            obs_groups += [dict(g, _artifact=name)
+                           for g in json.load(open(read_path(name), encoding="utf-8"))["groups"]]
+        except FileNotFoundError:
+            pass
+    ref_rate = {}
+    for g in obs_groups:
+        if g["model"] == REF_MODEL and g["marginal_tok_s_median"] and \
+                (g["marginal_flash_MB_per_tok_median"] or 0) < 1.0:
+            ref_rate.setdefault(g["threads"], []).extend(x for x in g["marginal_tok_s_all"] if x)
+    tests = []
+    for g in obs_groups:
+        if g["model"] != PRED_MODEL or g["mode"] != "warm" or g["threads"] not in ref_rate:
+            continue
+        rr = sorted(ref_rate[g["threads"]])
+        ref_med = rr[len(rr) // 2] if len(rr) % 2 else 0.5 * (rr[len(rr) // 2 - 1] + rr[len(rr) // 2])
+        pred = ref_med * ab / pa
+        obs = g["marginal_tok_s_median"]
+        tests.append({"threads": g["threads"], "artifact": g["_artifact"],
+                      "reference_marginal_tok_s": ref_med, "n_reference_pairs": len(rr),
+                      "predicted_tok_s": pred, "observed_marginal_tok_s": obs,
+                      "observed_all": g["marginal_tok_s_all"],
+                      "observed_marginal_flash_MB_per_tok": g["marginal_flash_MB_per_tok_median"],
+                      "ratio_observed_over_predicted": obs / pred if obs else None})
+        print(f"TEST {g['threads']} threads: predicted {pred:.1f} tok/s from {REF_MODEL} at "
+              f"{ref_med:.1f}; observed {obs:.1f} ({g['_artifact']}); ratio {obs / pred:.2f}")
+    out["matched_thread_tests"] = tests
     path = write_path("s11_nonflash_15r.json")
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, indent=1)

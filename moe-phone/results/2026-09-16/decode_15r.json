@@ -23,7 +23,9 @@
      "anon_MB_at_peak_est": 680.37890625,
      "memavail_MB_start": 5422.1953125,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 320,
@@ -37,7 +39,9 @@
      "anon_MB_at_peak_est": 692.62109375,
      "memavail_MB_start": 5299.46875,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 64,
@@ -51,7 +55,9 @@
      "anon_MB_at_peak_est": 680.6875,
      "memavail_MB_start": 5305.76171875,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 320,
@@ -65,7 +71,9 @@
      "anon_MB_at_peak_est": 692.62109375,
      "memavail_MB_start": 5263.5625,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     }
    ],
    "pairs": [
@@ -95,6 +103,11 @@
     "320": 73.70432149999999
    },
    "marginal_tok_s_median": 73.08815448458289,
+   "marginal_tok_s_all": [
+    66.19605409458795,
+    79.98025487457782
+   ],
+   "cpu_share_median": null,
    "marginal_flash_MB_per_tok_median": 0.0,
    "n_failed_runs": 0
   },
@@ -120,7 +133,9 @@
      "anon_MB_at_peak_est": 681.10546875,
      "memavail_MB_start": 5436.9921875,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 320,
@@ -134,7 +149,9 @@
      "anon_MB_at_peak_est": 692.72265625,
      "memavail_MB_start": 5435.0234375,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 64,
@@ -148,7 +165,9 @@
      "anon_MB_at_peak_est": 680.6640625,
      "memavail_MB_start": 5429.1328125,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 320,
@@ -162,7 +181,9 @@
      "anon_MB_at_peak_est": 692.7109375,
      "memavail_MB_start": 5403.83203125,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 64,
@@ -176,7 +197,9 @@
      "anon_MB_at_peak_est": 680.7578125,
      "memavail_MB_start": 5443.9140625,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 320,
@@ -190,7 +213,9 @@
      "anon_MB_at_peak_est": 692.6015625,
      "memavail_MB_start": 5424.5390625,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     }
    ],
    "pairs": [
@@ -230,6 +255,12 @@
     "320": 99.691678
    },
    "marginal_tok_s_median": 107.15601245688647,
+   "marginal_tok_s_all": [
+    136.74410157522797,
+    93.76018634837034,
+    107.15601245688647
+   ],
+   "cpu_share_median": null,
    "marginal_flash_MB_per_tok_median": 0.0,
    "n_failed_runs": 0
   },
@@ -255,7 +286,9 @@
      "anon_MB_at_peak_est": 1350.48046875,
      "memavail_MB_start": 4315.11328125,
      "resident_after_drop": 0.0,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 320,
@@ -269,7 +302,9 @@
      "anon_MB_at_peak_est": 1366.0078125,
      "memavail_MB_start": 5647.796875,
      "resident_after_drop": 0.0,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 64,
@@ -283,7 +318,9 @@
      "anon_MB_at_peak_est": 1413.42578125,
      "memavail_MB_start": 5522.23046875,
      "resident_after_drop": 0.0,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 320,
@@ -297,7 +334,9 @@
      "anon_MB_at_peak_est": 1662.52734375,
      "memavail_MB_start": 5582.96875,
      "resident_after_drop": 0.0,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 64,
@@ -311,7 +350,9 @@
      "anon_MB_at_peak_est": 1418.0625,
      "memavail_MB_start": 5416.4140625,
      "resident_after_drop": 0.0,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 320,
@@ -325,7 +366,9 @@
      "anon_MB_at_peak_est": 1397.55859375,
      "memavail_MB_start": 5532.6015625,
      "resident_after_drop": 0.0,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     }
    ],
    "pairs": [
@@ -365,6 +408,12 @@
     "320": 3.164271
    },
    "marginal_tok_s_median": 2.7537837634327635,
+   "marginal_tok_s_all": [
+    2.2564767935464767,
+    2.7537837634327635,
+    10.544004744802136
+   ],
+   "cpu_share_median": null,
    "marginal_flash_MB_per_tok_median": 1.950048,
    "n_failed_runs": 0
   },
@@ -390,7 +439,9 @@
      "anon_MB_at_peak_est": 1572.921875,
      "memavail_MB_start": 5522.16796875,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 320,
@@ -404,7 +455,9 @@
      "anon_MB_at_peak_est": 1494.3671875,
      "memavail_MB_start": 5462.9296875,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 64,
@@ -418,7 +471,9 @@
      "anon_MB_at_peak_est": 1456.875,
      "memavail_MB_start": 5521.2109375,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     },
     {
      "n_gen": 320,
@@ -432,7 +487,9 @@
      "anon_MB_at_peak_est": 1512.421875,
      "memavail_MB_start": 5776.75390625,
      "resident_after_drop": null,
-     "exit": 0
+     "exit": 0,
+     "cpu_share": null,
+     "memavail_min_MB": null
     }
    ],
    "pairs": [
@@ -462,6 +519,11 @@
     "320": 4.5526765000000005
    },
    "marginal_tok_s_median": 4.546339025067024,
+   "marginal_tok_s_all": [
+    2.0912367378013914,
+    7.001441312332656
+   ],
+   "cpu_share_median": null,
    "marginal_flash_MB_per_tok_median": 3.772976,
    "n_failed_runs": 0
   }

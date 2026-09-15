@@ -390,6 +390,22 @@ CLAIMS = [
                              if t["mode"] == "direct" and t["size_kb"] == 1024 and t["threads"] in (16, 32))
                         / next(t["MBps_median"] for t in A["g1qd"]["table"]
                                if t["mode"] == "direct" and t["size_kb"] == 1024 and t["threads"] == 8)),
+    dict(id="olmoe_t2_warm_marginal",
+         text="campaign 2: warm OLMoE Q4_0 decodes at 30.1 tok/s steady state with 2 threads",
+         artifact="decode_15r_cpu.json", expected=30.1, tol=0.1,
+         value=lambda A: next(g["marginal_tok_s_median"] for g in A["dec2"]["groups"]
+                              if g["model"].startswith("olmoe") and g["threads"] == 2)),
+    dict(id="olmoe_t4_warm_marginal",
+         text="and at 8.0 tok/s with 4 threads, in the same memory state",
+         artifact="decode_15r_cpu.json", expected=8.0, tol=0.05,
+         value=lambda A: next(g["marginal_tok_s_median"] for g in A["dec2"]["groups"]
+                              if g["model"].startswith("olmoe") and g["threads"] == 4
+                              and g["mode"] == "warm")),
+    dict(id="s11_matched_t2_ratio",
+         text="at matched thread count (2) the linear-in-bytes rule under-predicts OLMoE by 1.33x",
+         artifact="s11_nonflash_15r.json", expected=1.33, tol=0.01,
+         value=lambda A: next(t["ratio_observed_over_predicted"]
+                              for t in A["s11"]["matched_thread_tests"] if t["threads"] == 2)),
     # ------------------------------------------------------ instrument agreement
     dict(id="roofline_inputs_agree",
          text="the bandwidth constant used here is the one the engine_sim artifact was run with",
@@ -415,6 +431,7 @@ def load_all():
         "s11": load("s11_nonflash_15r.json"),
         "dec": load("decode_15r.json"),
         "g1qd": load("g1_storage_qd.json"),
+        "dec2": load("decode_15r_cpu.json"),
     }
 
 

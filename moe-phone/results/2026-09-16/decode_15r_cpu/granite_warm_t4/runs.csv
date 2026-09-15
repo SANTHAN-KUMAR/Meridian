@@ -1,0 +1,5 @@
+tag,model,threads,n_gen,rep,mode,resident_after_drop,t_wall_s,read_bytes,rchar,max_vmrss_kb,max_rssfile_kb,tg_tok_s,memavail_kb_start,batt_level,batt_temp_dC,exit,cpu_s,memavail_kb_min
+granite-3.1-1b-a400m-instruct-Q4_0_t4_n64_r1_warm,granite-3.1-1b-a400m-instruct-Q4_0.gguf,4,64,1,warm,NA,247.039,845516800,2020909,1453356,758208,0.260609,4333000,,,0,722.32,3509052
+granite-3.1-1b-a400m-instruct-Q4_0_t4_n320_r1_warm,granite-3.1-1b-a400m-instruct-Q4_0.gguf,4,320,1,warm,NA,19.9197,364544,2020909,1467692,758212,16.833084,4484616,,,0,59.97,3722100
+granite-3.1-1b-a400m-instruct-Q4_0_t4_n64_r2_warm,granite-3.1-1b-a400m-instruct-Q4_0.gguf,4,64,2,warm,NA,1.48254,0,2020909,1455448,758484,115.127013,4377876,,,0,2.53,3663696
+granite-3.1-1b-a400m-instruct-Q4_0_t4_n320_r2_warm,granite-3.1-1b-a400m-instruct-Q4_0.gguf,4,320,2,warm,NA,4.04817,0,2020909,1467916,758584,102.111946,4343884,,,0,12.67,3604744

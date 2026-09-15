@@ -284,9 +284,12 @@ it should be run early rather than assumed.
 
 ## 6. The next measurements, in order of how much they move the answer
 
-0. **Done 2026-09-16 (S11):** a resident MoE's non-flash rate is 23.2 GB/s on the 15R. Next is a
-   clean *resident* OLMoE run to test the linear-in-bytes assumption it rests on (predicted
-   33.3 tok/s), and the S9 trace, which now decides whether Qwen3-30B-A3B clears 5 tok/s.
+0. **Done 2026-09-16 (S11):** a resident MoE's non-flash rate is 23.2 GB/s on the 15R. Its
+   linear-in-bytes transfer to other models was tested at matched thread count and **not
+   confirmed** (1.33x under-prediction at 2 threads), and stock llama.cpp OLMoE is ~4x slower at
+   4 threads than at 2 with no flash traffic to explain it (`README.md`, G6-baseline). **So the
+   thread count is a first-order engine parameter on this phone, not a detail** — the next
+   measurement is the thread sweep (campaign 3), then the S9 trace.
 
 1. **A drafter's acceptance rate `alpha`** (**S10**). S12's closure makes this the *only*
    remaining route to the 2.2×, and the sign of the effect flips inside the plausible range of

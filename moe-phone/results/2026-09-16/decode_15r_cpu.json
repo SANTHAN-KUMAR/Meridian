@@ -1,0 +1,531 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-16/decode_15r_cpu",
+ "groups": [
+  {
+   "model": "granite-3.1-1b-a400m-instruct-Q4_0.gguf",
+   "threads": 4,
+   "mode": "warm",
+   "dir": "granite_warm_t4",
+   "n_short_long": [
+    64,
+    320
+   ],
+   "runs": [
+    {
+     "n_gen": 64,
+     "rep": 1,
+     "tg_tok_s": 0.260609,
+     "t_wall_s": 247.039,
+     "read_GB": 0.8455168,
+     "file_fault_multiple": 1.0959863250586002,
+     "max_vmrss_MB": 1419.29296875,
+     "max_rssfile_MB": 740.4375,
+     "anon_MB_at_peak_est": 678.85546875,
+     "memavail_MB_start": 4231.4453125,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.7309776998773474,
+     "memavail_min_MB": 3426.80859375
+    },
+    {
+     "n_gen": 320,
+     "rep": 1,
+     "tg_tok_s": 16.833084,
+     "t_wall_s": 19.9197,
+     "read_GB": 0.000364544,
+     "file_fault_multiple": 0.0004725337673741815,
+     "max_vmrss_MB": 1433.29296875,
+     "max_rssfile_MB": 740.44140625,
+     "anon_MB_at_peak_est": 692.8515625,
+     "memavail_MB_start": 4379.5078125,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.7526468772120062,
+     "memavail_min_MB": 3634.86328125
+    },
+    {
+     "n_gen": 64,
+     "rep": 2,
+     "tg_tok_s": 115.127013,
+     "t_wall_s": 1.48254,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1421.3359375,
+     "max_rssfile_MB": 740.70703125,
+     "anon_MB_at_peak_est": 680.62890625,
+     "memavail_MB_start": 4275.26953125,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.4266326709566015,
+     "memavail_min_MB": 3577.828125
+    },
+    {
+     "n_gen": 320,
+     "rep": 2,
+     "tg_tok_s": 102.111946,
+     "t_wall_s": 4.04817,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1433.51171875,
+     "max_rssfile_MB": 740.8046875,
+     "anon_MB_at_peak_est": 692.70703125,
+     "memavail_MB_start": 4242.07421875,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.7824523179609553,
+     "memavail_min_MB": 3520.2578125
+    }
+   ],
+   "pairs": [
+    {
+     "rep": 1,
+     "marginal_s_per_tok": -0.8871847656249999,
+     "marginal_tok_s": null,
+     "marginal_flash_MB_per_tok": -3.301376,
+     "memavail_MB_start": [
+      4231.4453125,
+      4379.5078125
+     ]
+    },
+    {
+     "rep": 2,
+     "marginal_s_per_tok": 0.010021992187499999,
+     "marginal_tok_s": 99.78056071997912,
+     "marginal_flash_MB_per_tok": 0.0,
+     "memavail_MB_start": [
+      4275.26953125,
+      4242.07421875
+     ]
+    }
+   ],
+   "tg_tok_s_median_by_n": {
+    "64": 57.693811000000004,
+    "320": 59.472515
+   },
+   "marginal_tok_s_median": 99.78056071997912,
+   "marginal_tok_s_all": [
+    null,
+    99.78056071997912
+   ],
+   "cpu_share_median": 0.7418122885446767,
+   "marginal_flash_MB_per_tok_median": -1.650688,
+   "n_failed_runs": 0
+  },
+  {
+   "model": "olmoe-1b-7b-0924-q4_0.gguf",
+   "threads": 2,
+   "mode": "warm",
+   "dir": "olmoe_warm_t2",
+   "n_short_long": [
+    64,
+    320
+   ],
+   "runs": [
+    {
+     "n_gen": 64,
+     "rep": 1,
+     "tg_tok_s": 10.591676,
+     "t_wall_s": 21.1521,
+     "read_GB": 7.05746944,
+     "file_fault_multiple": 1.7966912001764872,
+     "max_vmrss_MB": 5134.86328125,
+     "max_rssfile_MB": 3750.671875,
+     "anon_MB_at_peak_est": 1384.19140625,
+     "memavail_MB_start": 5269.71875,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.48694928635927404,
+     "memavail_min_MB": 1977.13671875
+    },
+    {
+     "n_gen": 320,
+     "rep": 1,
+     "tg_tok_s": 20.028222,
+     "t_wall_s": 31.2307,
+     "read_GB": 6.580793344,
+     "file_fault_multiple": 1.6753389570957602,
+     "max_vmrss_MB": 5083.36328125,
+     "max_rssfile_MB": 3750.32421875,
+     "anon_MB_at_peak_est": 1333.0390625,
+     "memavail_MB_start": 5662.4609375,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.6066146452048785,
+     "memavail_min_MB": 1911.90625
+    },
+    {
+     "n_gen": 64,
+     "rep": 2,
+     "tg_tok_s": 9.503839,
+     "t_wall_s": 19.503,
+     "read_GB": 6.527782912,
+     "file_fault_multiple": 1.6618435565840501,
+     "max_vmrss_MB": 5341.69921875,
+     "max_rssfile_MB": 3750.4921875,
+     "anon_MB_at_peak_est": 1591.20703125,
+     "memavail_MB_start": 5665.98828125,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.48018253602009947,
+     "memavail_min_MB": 2025.5703125
+    },
+    {
+     "n_gen": 320,
+     "rep": 2,
+     "tg_tok_s": 23.003276,
+     "t_wall_s": 26.8664,
+     "read_GB": 7.281491968,
+     "file_fault_multiple": 1.8537228753570587,
+     "max_vmrss_MB": 5232.26171875,
+     "max_rssfile_MB": 3750.5234375,
+     "anon_MB_at_peak_est": 1481.73828125,
+     "memavail_MB_start": 5732.328125,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.6429964565405115,
+     "memavail_min_MB": 1946.6328125
+    }
+   ],
+   "pairs": [
+    {
+     "rep": 1,
+     "marginal_s_per_tok": 0.03936953124999999,
+     "marginal_tok_s": 25.400353223662023,
+     "marginal_flash_MB_per_tok": -1.862016,
+     "memavail_MB_start": [
+      5269.71875,
+      5662.4609375
+     ]
+    },
+    {
+     "rep": 2,
+     "marginal_s_per_tok": 0.028763281249999995,
+     "marginal_tok_s": 34.76654806203656,
+     "marginal_flash_MB_per_tok": 2.944176,
+     "memavail_MB_start": [
+      5665.98828125,
+      5732.328125
+     ]
+    }
+   ],
+   "tg_tok_s_median_by_n": {
+    "64": 10.0477575,
+    "320": 21.515749
+   },
+   "marginal_tok_s_median": 30.083450642849293,
+   "marginal_tok_s_all": [
+    25.400353223662023,
+    34.76654806203656
+   ],
+   "cpu_share_median": 0.5467819657820763,
+   "marginal_flash_MB_per_tok_median": 0.5410800000000001,
+   "n_failed_runs": 0
+  },
+  {
+   "model": "olmoe-1b-7b-0924-q4_0.gguf",
+   "threads": 4,
+   "mode": "cold",
+   "dir": "olmoe_cold",
+   "n_short_long": [
+    64,
+    320
+   ],
+   "runs": [
+    {
+     "n_gen": 64,
+     "rep": 1,
+     "tg_tok_s": 9.537821,
+     "t_wall_s": 28.8122,
+     "read_GB": 10.257944576,
+     "file_fault_multiple": 2.61146844606065,
+     "max_vmrss_MB": 4317.640625,
+     "max_rssfile_MB": 2236.5703125,
+     "anon_MB_at_peak_est": 2081.0703125,
+     "memavail_MB_start": 4082.7890625,
+     "resident_after_drop": 0.0,
+     "exit": 0,
+     "cpu_share": 0.32998174384462137,
+     "memavail_min_MB": 1851.65625
+    },
+    {
+     "n_gen": 320,
+     "rep": 1,
+     "tg_tok_s": 3.961415,
+     "t_wall_s": 92.5796,
+     "read_GB": 10.162946048,
+     "file_fault_multiple": 2.587283712320263,
+     "max_vmrss_MB": 5312.79296875,
+     "max_rssfile_MB": 3750.66015625,
+     "anon_MB_at_peak_est": 1562.1328125,
+     "memavail_MB_start": 5435.3203125,
+     "resident_after_drop": 0.0,
+     "exit": 0,
+     "cpu_share": 0.6912429952170889,
+     "memavail_min_MB": 1660.2265625
+    },
+    {
+     "n_gen": 64,
+     "rep": 2,
+     "tg_tok_s": 1.288269,
+     "t_wall_s": 67.1182,
+     "read_GB": 9.966362624,
+     "file_fault_multiple": 2.5372374866859704,
+     "max_vmrss_MB": 5042.9375,
+     "max_rssfile_MB": 3750.625,
+     "anon_MB_at_peak_est": 1292.3125,
+     "memavail_MB_start": 5260.1015625,
+     "resident_after_drop": 0.0,
+     "exit": 0,
+     "cpu_share": 0.5204624081098718,
+     "memavail_min_MB": 1865.8984375
+    },
+    {
+     "n_gen": 320,
+     "rep": 2,
+     "tg_tok_s": 1.650886,
+     "t_wall_s": 208.52,
+     "read_GB": 10.611900416,
+     "file_fault_multiple": 2.701578555411556,
+     "max_vmrss_MB": 5312.66015625,
+     "max_rssfile_MB": 3750.546875,
+     "anon_MB_at_peak_est": 1562.11328125,
+     "memavail_MB_start": 5453.01171875,
+     "resident_after_drop": 0.0,
+     "exit": 0,
+     "cpu_share": 0.6878476884711299,
+     "memavail_min_MB": 1669.88671875
+    },
+    {
+     "n_gen": 64,
+     "rep": 3,
+     "tg_tok_s": 2.833477,
+     "t_wall_s": 39.6218,
+     "read_GB": 9.767604224,
+     "file_fault_multiple": 2.4866375554674005,
+     "max_vmrss_MB": 5031.94921875,
+     "max_rssfile_MB": 3750.46484375,
+     "anon_MB_at_peak_est": 1281.484375,
+     "memavail_MB_start": 5240.28125,
+     "resident_after_drop": 0.0,
+     "exit": 0,
+     "cpu_share": 0.45921689574930974,
+     "memavail_min_MB": 1940.83203125
+    },
+    {
+     "n_gen": 320,
+     "rep": 3,
+     "tg_tok_s": 29.333282,
+     "t_wall_s": 25.5497,
+     "read_GB": 8.33671168,
+     "file_fault_multiple": 2.122360803855573,
+     "max_vmrss_MB": 5321.0546875,
+     "max_rssfile_MB": 3750.62890625,
+     "anon_MB_at_peak_est": 1570.42578125,
+     "memavail_MB_start": 5639.3046875,
+     "resident_after_drop": 0.0,
+     "exit": 0,
+     "cpu_share": 0.5016692955298888,
+     "memavail_min_MB": 1941.953125
+    }
+   ],
+   "pairs": [
+    {
+     "rep": 1,
+     "marginal_s_per_tok": 0.24909140624999998,
+     "marginal_tok_s": 4.014590527448195,
+     "marginal_flash_MB_per_tok": -0.371088,
+     "memavail_MB_start": [
+      4082.7890625,
+      5435.3203125
+     ]
+    },
+    {
+     "rep": 2,
+     "marginal_s_per_tok": 0.55235078125,
+     "marginal_tok_s": 1.810443714295009,
+     "marginal_flash_MB_per_tok": 2.521632,
+     "memavail_MB_start": [
+      5260.1015625,
+      5453.01171875
+     ]
+    },
+    {
+     "rep": 3,
+     "marginal_s_per_tok": -0.054969140624999996,
+     "marginal_tok_s": null,
+     "marginal_flash_MB_per_tok": -5.589424,
+     "memavail_MB_start": [
+      5240.28125,
+      5639.3046875
+     ]
+    }
+   ],
+   "tg_tok_s_median_by_n": {
+    "64": 2.833477,
+    "320": 3.961415
+   },
+   "marginal_tok_s_median": 2.912517120871602,
+   "marginal_tok_s_all": [
+    4.014590527448195,
+    1.810443714295009,
+    null
+   ],
+   "cpu_share_median": 0.5110658518198803,
+   "marginal_flash_MB_per_tok_median": -0.371088,
+   "n_failed_runs": 0
+  },
+  {
+   "model": "olmoe-1b-7b-0924-q4_0.gguf",
+   "threads": 4,
+   "mode": "warm",
+   "dir": "olmoe_warm",
+   "n_short_long": [
+    64,
+    320
+   ],
+   "runs": [
+    {
+     "n_gen": 64,
+     "rep": 1,
+     "tg_tok_s": 9.248205,
+     "t_wall_s": 19.1238,
+     "read_GB": 6.128648192,
+     "file_fault_multiple": 1.560231803928851,
+     "max_vmrss_MB": 5452.13671875,
+     "max_rssfile_MB": 3750.38671875,
+     "anon_MB_at_peak_est": 1701.75,
+     "memavail_MB_start": 5644.05859375,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.4051234587268221,
+     "memavail_min_MB": 2046.1796875
+    },
+    {
+     "n_gen": 320,
+     "rep": 1,
+     "tg_tok_s": 8.477287,
+     "t_wall_s": 50.9833,
+     "read_GB": 7.310393344,
+     "file_fault_multiple": 1.86108059023966,
+     "max_vmrss_MB": 5480.75,
+     "max_rssfile_MB": 3750.15234375,
+     "anon_MB_at_peak_est": 1730.59765625,
+     "memavail_MB_start": 5745.09765625,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.620742478419404,
+     "memavail_min_MB": 1883.12890625
+    },
+    {
+     "n_gen": 64,
+     "rep": 2,
+     "tg_tok_s": 7.071781,
+     "t_wall_s": 25.6108,
+     "read_GB": 7.133233152,
+     "file_fault_multiple": 1.8159791327421726,
+     "max_vmrss_MB": 5206.69921875,
+     "max_rssfile_MB": 3750.25,
+     "anon_MB_at_peak_est": 1456.44921875,
+     "memavail_MB_start": 5453.328125,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.35473315944835776,
+     "memavail_min_MB": 2057.44921875
+    },
+    {
+     "n_gen": 320,
+     "rep": 2,
+     "tg_tok_s": 7.533028,
+     "t_wall_s": 56.4291,
+     "read_GB": 7.177539584,
+     "file_fault_multiple": 1.8272586681567273,
+     "max_vmrss_MB": 5552.30859375,
+     "max_rssfile_MB": 3750.21875,
+     "anon_MB_at_peak_est": 1802.08984375,
+     "memavail_MB_start": 5478.4921875,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.5038623688841396,
+     "memavail_min_MB": 1822.0390625
+    },
+    {
+     "n_gen": 64,
+     "rep": 3,
+     "tg_tok_s": 8.194792,
+     "t_wall_s": 23.6663,
+     "read_GB": 6.639783936,
+     "file_fault_multiple": 1.6903567872742216,
+     "max_vmrss_MB": 5421.53125,
+     "max_rssfile_MB": 3750.23046875,
+     "anon_MB_at_peak_est": 1671.30078125,
+     "memavail_MB_start": 5593.62890625,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.4003583154105204,
+     "memavail_min_MB": 2029.42578125
+    },
+    {
+     "n_gen": 320,
+     "rep": 3,
+     "tg_tok_s": 4.641448,
+     "t_wall_s": 81.5656,
+     "read_GB": 7.821438976,
+     "file_fault_multiple": 1.9911826328640247,
+     "max_vmrss_MB": 5518.98046875,
+     "max_rssfile_MB": 3750.33203125,
+     "anon_MB_at_peak_est": 1768.6484375,
+     "memavail_MB_start": 5745.39453125,
+     "resident_after_drop": null,
+     "exit": 0,
+     "cpu_share": 0.5833954510234707,
+     "memavail_min_MB": 1698.671875
+    }
+   ],
+   "pairs": [
+    {
+     "rep": 1,
+     "marginal_s_per_tok": 0.124451171875,
+     "marginal_tok_s": 8.035279900814514,
+     "marginal_flash_MB_per_tok": 4.616192,
+     "memavail_MB_start": [
+      5644.05859375,
+      5745.09765625
+     ]
+    },
+    {
+     "rep": 2,
+     "marginal_s_per_tok": 0.12038398437499999,
+     "marginal_tok_s": 8.306752805962692,
+     "marginal_flash_MB_per_tok": 0.173072,
+     "memavail_MB_start": [
+      5453.328125,
+      5478.4921875
+     ]
+    },
+    {
+     "rep": 3,
+     "marginal_s_per_tok": 0.22616914062500001,
+     "marginal_tok_s": 4.4214696896162815,
+     "marginal_flash_MB_per_tok": 4.61584,
+     "memavail_MB_start": [
+      5593.62890625,
+      5745.39453125
+     ]
+    }
+   ],
+   "tg_tok_s_median_by_n": {
+    "64": 8.194792,
+    "320": 7.533028
+   },
+   "marginal_tok_s_median": 8.035279900814514,
+   "marginal_tok_s_all": [
+    8.035279900814514,
+    8.306752805962692,
+    4.4214696896162815
+   ],
+   "cpu_share_median": 0.45449291380548085,
+   "marginal_flash_MB_per_tok_median": 4.61584,
+   "n_failed_runs": 0
+  }
+ ]
+}

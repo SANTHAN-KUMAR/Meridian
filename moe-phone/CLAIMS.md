@@ -69,6 +69,9 @@ internally consistent and wrong. That is what the property tests are for.
 | `qwen3_30b_floor_additive_nonflash_tok_s` | and 4.2 tok/s under H_floor — either side of the 5 tok/s target, so S9 decides it | `engine_target.json` | 4.2448 | ok |
 | `nonflash_input_agrees` | the non-flash rate engine_target was run with is the one s11_nonflash derived | `engine_target.json` | 0.0001 | ok |
 | `queue_depth_plateau` | at 1 MB direct reads, 16 or 32 threads reach 0.99x of 8 threads: no queue-depth lever | `g1_storage_qd.json` | 0.9925 | ok |
+| `olmoe_t2_warm_marginal` | campaign 2: warm OLMoE Q4_0 decodes at 30.1 tok/s steady state with 2 threads | `decode_15r_cpu.json` | 30.0835 | ok |
+| `olmoe_t4_warm_marginal` | and at 8.0 tok/s with 4 threads, in the same memory state | `decode_15r_cpu.json` | 8.0353 | ok |
+| `s11_matched_t2_ratio` | at matched thread count (2) the linear-in-bytes rule under-predicts OLMoE by 1.33x | `s11_nonflash_15r.json` | 1.3261 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-58 claims checked.
+61 claims checked.

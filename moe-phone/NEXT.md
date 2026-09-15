@@ -19,7 +19,9 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
 
 0. **Done since this note was first written:** the phone campaign ran clean (G6-baseline, S11,
    G1-QD in `README.md`). A second, CPU-time-instrumented campaign (`device/phone_campaign_cpu.sh`,
-   tmux session `moe2`, output `~/moe/out2_*`) targets OLMoE's 4.7x steady-state variance.
+   tmux session `moe2`, output `~/moe/out2_*`) ran clean: 2 threads 30.1 tok/s vs 4 threads 8.0
+   for warm OLMoE, no flash traffic to explain it. Campaign 3 (`phone_campaign_threads.sh`, tmux
+   `moe3`, `~/moe/out3_*`) sweeps 1-4 threads interleaved; pull and run `decode_analyze.py` on it.
 1. **Phone campaign** (`device/phone_campaign.sh`, in Termux `tmux` session `moe`): OLMoE Q4_0
    cold/warm, granite-1b-a400m resident, pp512, ufsbench 16/32 threads. Output on the phone in
    `~/moe/out_<date>_<time>/`. Pull it, then:

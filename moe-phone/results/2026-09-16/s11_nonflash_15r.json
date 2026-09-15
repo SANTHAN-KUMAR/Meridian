@@ -16,5 +16,50 @@
   "resident_tok_s_predicted": 33.260216914378944,
   "resident_tok_s_dram_only_bound": 85.6608962185629,
   "note": "resident = every weight in DRAM; linear-in-active-bytes assumption"
- }
+ },
+ "matched_thread_tests": [
+  {
+   "threads": 4,
+   "artifact": "decode_15r.json",
+   "reference_marginal_tok_s": 103.46828658843279,
+   "n_reference_pairs": 4,
+   "predicted_tok_s": 32.11558154121326,
+   "observed_marginal_tok_s": 4.546339025067024,
+   "observed_all": [
+    2.0912367378013914,
+    7.001441312332656
+   ],
+   "observed_marginal_flash_MB_per_tok": 3.772976,
+   "ratio_observed_over_predicted": 0.14156178424584345
+  },
+  {
+   "threads": 2,
+   "artifact": "decode_15r_cpu.json",
+   "reference_marginal_tok_s": 73.08815448458289,
+   "n_reference_pairs": 2,
+   "predicted_tok_s": 22.68587470074937,
+   "observed_marginal_tok_s": 30.083450642849293,
+   "observed_all": [
+    25.400353223662023,
+    34.76654806203656
+   ],
+   "observed_marginal_flash_MB_per_tok": 0.5410800000000001,
+   "ratio_observed_over_predicted": 1.3260873137880622
+  },
+  {
+   "threads": 4,
+   "artifact": "decode_15r_cpu.json",
+   "reference_marginal_tok_s": 103.46828658843279,
+   "n_reference_pairs": 4,
+   "predicted_tok_s": 32.11558154121326,
+   "observed_marginal_tok_s": 8.035279900814514,
+   "observed_all": [
+    8.035279900814514,
+    8.306752805962692,
+    4.4214696896162815
+   ],
+   "observed_marginal_flash_MB_per_tok": 4.61584,
+   "ratio_observed_over_predicted": 0.25019879806638423
+  }
+ ]
 }

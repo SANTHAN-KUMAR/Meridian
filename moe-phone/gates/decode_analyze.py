@@ -14,6 +14,11 @@ ESTIMAND.md ยง1-2 quantities, each obtained two ways where possible (CLAUDE.md ย
                     excluded by definition of read_bytes.
   file_fault_multiple  read_bytes / checkpoint size for a whole run: >1 means
                     pages were evicted and faulted back in (thrash).
+  cpu_share         (probe >= 2026-09-16 01:19) process CPU seconds / (wall x threads).
+                    CAUTION: llama.cpp's worker threads busy-wait at barriers, so a
+                    stalled run can still burn CPU; a LOW share means threads were
+                    blocked or descheduled, a high share does not prove useful work.
+  memavail_min_MB   the lowest MemAvailable sampled during the run.
 
 Each run records the MemAvailable it started from, because on this phone the
 file-backed budget is bimodal (1.6 vs 4.8 GB, G-RAM-SWEEP) and decides whether a
@@ -88,12 +93,19 @@ def analyse(rows, model_bytes):
                  "anon_MB_at_peak_est": (fnum(r["max_vmrss_kb"]) - fnum(r["max_rssfile_kb"])) / 1024,
                  "memavail_MB_start": fnum(r["memavail_kb_start"]) / 1024,
                  "resident_after_drop": fnum(r["resident_after_drop"]),
-                 "exit": int(r["exit"])} for r in rs]
+                 "exit": int(r["exit"]),
+                 "cpu_share": ((fnum(r.get("cpu_s")) / (fnum(r["t_wall_s"]) * thr))
+                               if fnum(r.get("cpu_s")) is not None else None),
+                 "memavail_min_MB": (fnum(r.get("memavail_kb_min")) / 1024
+                                     if fnum(r.get("memavail_kb_min")) is not None else None)}
+                for r in rs]
         out.append({"model": model, "threads": thr, "mode": mode, "dir": gdir,
                     "n_short_long": ns, "runs": runs, "pairs": pairs,
                     "tg_tok_s_median_by_n": {str(n): med([x["tg_tok_s"] for x in runs if x["n_gen"] == n])
                                               for n in ns},
                     "marginal_tok_s_median": med([p["marginal_tok_s"] for p in pairs]),
+                    "marginal_tok_s_all": [p["marginal_tok_s"] for p in pairs],
+                    "cpu_share_median": med([x["cpu_share"] for x in runs]),
                     "marginal_flash_MB_per_tok_median": med([p["marginal_flash_MB_per_tok"] for p in pairs]),
                     "n_failed_runs": sum(1 for x in runs if x["exit"] != 0)})
     return out
