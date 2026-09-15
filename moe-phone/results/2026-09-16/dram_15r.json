@@ -1,0 +1,208 @@
+{
+ "runs": {
+  "app": {
+   "n_rows": 25,
+   "n_invalid_process_descheduled": 11,
+   "min_resident_frac": 1.0,
+   "buffer_mb": [
+    1024
+   ],
+   "table": [
+    {
+     "threads": 1,
+     "n": 5,
+     "n_clean": 4,
+     "GBps_median_clean": 40.262,
+     "GBps_q25_clean": 37.964,
+     "GBps_q75_clean": 40.45575,
+     "GBps_all_rows": [
+      40.328,
+      28.849,
+      40.196,
+      40.839,
+      31.268
+     ]
+    },
+    {
+     "threads": 2,
+     "n": 5,
+     "n_clean": 5,
+     "GBps_median_clean": 57.775,
+     "GBps_q25_clean": 57.717,
+     "GBps_q75_clean": 58.157,
+     "GBps_all_rows": [
+      58.239,
+      57.717,
+      57.775,
+      58.157,
+      46.37
+     ]
+    },
+    {
+     "threads": 4,
+     "n": 5,
+     "n_clean": 3,
+     "GBps_median_clean": 59.741,
+     "GBps_q25_clean": 59.0185,
+     "GBps_q75_clean": 59.9835,
+     "GBps_all_rows": [
+      59.741,
+      58.296,
+      60.714,
+      60.226,
+      45.612
+     ]
+    },
+    {
+     "threads": 6,
+     "n": 5,
+     "n_clean": 2,
+     "GBps_median_clean": 50.5945,
+     "GBps_q25_clean": 48.32625,
+     "GBps_q75_clean": 52.86275,
+     "GBps_all_rows": [
+      56.582,
+      57.579,
+      60.256,
+      55.131,
+      46.058
+     ]
+    },
+    {
+     "threads": 8,
+     "n": 5,
+     "n_clean": 0,
+     "GBps_median_clean": null,
+     "GBps_q25_clean": null,
+     "GBps_q75_clean": null,
+     "GBps_all_rows": [
+      54.492,
+      57.59,
+      58.848,
+      44.795,
+      45.123
+     ]
+    }
+   ],
+   "best": {
+    "threads": 4,
+    "n": 5,
+    "n_clean": 3,
+    "GBps_median_clean": 59.741,
+    "GBps_q25_clean": 59.0185,
+    "GBps_q75_clean": 59.9835,
+    "GBps_all_rows": [
+     59.741,
+     58.296,
+     60.714,
+     60.226,
+     45.612
+    ]
+   },
+   "min_clean_rows_for_eligibility": 3,
+   "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-16/dram_15r_app.csv"
+  },
+  "shell": {
+   "n_rows": 25,
+   "n_invalid_process_descheduled": 14,
+   "min_resident_frac": 1.0,
+   "buffer_mb": [
+    1024
+   ],
+   "table": [
+    {
+     "threads": 1,
+     "n": 5,
+     "n_clean": 4,
+     "GBps_median_clean": 41.1175,
+     "GBps_q25_clean": 37.9475,
+     "GBps_q75_clean": 41.16525,
+     "GBps_all_rows": [
+      41.071,
+      41.169,
+      41.164,
+      30.419,
+      28.577
+     ]
+    },
+    {
+     "threads": 2,
+     "n": 5,
+     "n_clean": 4,
+     "GBps_median_clean": 58.123,
+     "GBps_q25_clean": 54.22775,
+     "GBps_q75_clean": 58.605,
+     "GBps_all_rows": [
+      58.559,
+      57.687,
+      58.743,
+      44.036,
+      43.85
+     ]
+    },
+    {
+     "threads": 4,
+     "n": 5,
+     "n_clean": 2,
+     "GBps_median_clean": 60.5095,
+     "GBps_q25_clean": 60.23875,
+     "GBps_q75_clean": 60.78025,
+     "GBps_all_rows": [
+      59.968,
+      61.051,
+      54.958,
+      39.765,
+      44.645
+     ]
+    },
+    {
+     "threads": 6,
+     "n": 5,
+     "n_clean": 1,
+     "GBps_median_clean": 59.111,
+     "GBps_q25_clean": 59.111,
+     "GBps_q75_clean": 59.111,
+     "GBps_all_rows": [
+      59.433,
+      59.111,
+      40.445,
+      53.486,
+      34.543
+     ]
+    },
+    {
+     "threads": 8,
+     "n": 5,
+     "n_clean": 0,
+     "GBps_median_clean": null,
+     "GBps_q25_clean": null,
+     "GBps_q75_clean": null,
+     "GBps_all_rows": [
+      58.552,
+      59.299,
+      44.171,
+      52.826,
+      38.066
+     ]
+    }
+   ],
+   "best": {
+    "threads": 2,
+    "n": 5,
+    "n_clean": 4,
+    "GBps_median_clean": 58.123,
+    "GBps_q25_clean": 54.22775,
+    "GBps_q75_clean": 58.605,
+    "GBps_all_rows": [
+     58.559,
+     57.687,
+     58.743,
+     44.036,
+     43.85
+    ]
+   },
+   "min_clean_rows_for_eligibility": 3,
+   "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-16/dram_15r_shell.csv"
+  }
+ }
+}

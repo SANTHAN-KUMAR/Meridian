@@ -1,0 +1,138 @@
+{
+ "registered_at_utc": "2026-09-15T18:42:04.586687+00:00",
+ "target": {
+  "name": "Qwen3-30B-A3B",
+  "E": 128,
+  "k": 8
+ },
+ "reference": {
+  "E": 64,
+  "k": 8,
+  "curve": "cache_fcrit_OLMoE-1B-7B-0924.json",
+  "curve_sha256": "e353e5739fb6e147a5ad950c2cde4eaf407f1f0a76ae8a259bbe490dd37195c8",
+  "trace": "traces_OLMoE-1B-7B-0924.npz",
+  "trace_sha256": "b0d68eaaaf57a839c2e7145a6464429c07683aeff8d5cdd23ed2fdabf8b1f29e"
+ },
+ "grid_rho": [
+  1.0,
+  1.1,
+  1.25,
+  1.5,
+  2.0,
+  3.0,
+  4.0
+ ],
+ "noise_split_half": [
+  {
+   "rho": 1.0,
+   "first_half": 0.382232666015625,
+   "second_half": 0.37065744400024414,
+   "abs_diff": 0.01157522201538086
+  },
+  {
+   "rho": 1.1,
+   "first_half": 0.39591360092163086,
+   "second_half": 0.3838462829589844,
+   "abs_diff": 0.012067317962646484
+  },
+  {
+   "rho": 1.25,
+   "first_half": 0.4174771308898926,
+   "second_half": 0.40470075607299805,
+   "abs_diff": 0.012776374816894531
+  },
+  {
+   "rho": 1.5,
+   "first_half": 0.4565591812133789,
+   "second_half": 0.44228124618530273,
+   "abs_diff": 0.014277935028076172
+  },
+  {
+   "rho": 2.0,
+   "first_half": 0.5346970558166504,
+   "second_half": 0.5201334953308105,
+   "abs_diff": 0.014563560485839844
+  },
+  {
+   "rho": 3.0,
+   "first_half": 0.6686701774597168,
+   "second_half": 0.6573667526245117,
+   "abs_diff": 0.011303424835205078
+  },
+  {
+   "rho": 4.0,
+   "first_half": 0.7736377716064453,
+   "second_half": 0.7682957649230957,
+   "abs_diff": 0.005342006683349609
+  }
+ ],
+ "tolerance": 0.029127120971679688,
+ "min_separation": 0.0625,
+ "confound_inconclusive_if_exceeds": 0.03125,
+ "predictions": [
+  {
+   "rho": 1.0,
+   "h_olmoe": 0.3764455318450928,
+   "f_olmoe": 0.125,
+   "f_target": 0.0625,
+   "pred_H_rho": 0.3764455318450928,
+   "pred_H_floor": 0.3139455318450928,
+   "separation": 0.0625
+  },
+  {
+   "rho": 1.1,
+   "h_olmoe": 0.3898806571960449,
+   "f_olmoe": 0.1375,
+   "f_target": 0.06875,
+   "pred_H_rho": 0.3898806571960449,
+   "pred_H_floor": 0.32113065719604494,
+   "separation": 0.06874999999999998
+  },
+  {
+   "rho": 1.25,
+   "h_olmoe": 0.4110901355743408,
+   "f_olmoe": 0.15625,
+   "f_target": 0.078125,
+   "pred_H_rho": 0.4110901355743408,
+   "pred_H_floor": 0.3329651355743408,
+   "separation": 0.078125
+  },
+  {
+   "rho": 1.5,
+   "h_olmoe": 0.4494209289550781,
+   "f_olmoe": 0.1875,
+   "f_target": 0.09375,
+   "pred_H_rho": 0.4494209289550781,
+   "pred_H_floor": 0.3556709289550781,
+   "separation": 0.09375
+  },
+  {
+   "rho": 2.0,
+   "h_olmoe": 0.5274200439453125,
+   "f_olmoe": 0.25,
+   "f_target": 0.125,
+   "pred_H_rho": 0.5274200439453125,
+   "pred_H_floor": 0.4024200439453125,
+   "separation": 0.125
+  },
+  {
+   "rho": 3.0,
+   "h_olmoe": 0.6630315780639648,
+   "f_olmoe": 0.375,
+   "f_target": 0.1875,
+   "pred_H_rho": 0.6630315780639648,
+   "pred_H_floor": 0.47553157806396484,
+   "separation": 0.1875
+  },
+  {
+   "rho": 4.0,
+   "h_olmoe": 0.7710022926330566,
+   "f_olmoe": 0.5,
+   "f_target": 0.25,
+   "pred_H_rho": 0.7710022926330566,
+   "pred_H_floor": 0.5210022926330566,
+   "separation": 0.25
+  }
+ ],
+ "decision_rule": "see module docstring of gates/s9_prereg.py"
+}
