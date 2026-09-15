@@ -1,0 +1,3 @@
+tag,model,threads,n_gen,rep,mode,resident_after_drop,t_wall_s,read_bytes,rchar,max_vmrss_kb,max_rssfile_kb,tg_tok_s,memavail_kb_start,batt_level,batt_temp_dC,exit,cpu_s,memavail_kb_min
+granite-3.1-1b-a400m-instruct-Q4_0_t2_n64_r1_warm,granite-3.1-1b-a400m-instruct-Q4_0.gguf,2,64,1,warm,NA,1.87909,0,2020909,1455484,758508,87.000221,5421120,,,0,2.3,4723412
+granite-3.1-1b-a400m-instruct-Q4_0_t2_n320_r1_warm,granite-3.1-1b-a400m-instruct-Q4_0.gguf,2,320,1,warm,NA,5.12205,0,2020909,1467692,758320,80.908801,5404320,,,0,8.73,4677184

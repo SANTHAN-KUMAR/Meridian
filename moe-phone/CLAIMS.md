@@ -72,6 +72,11 @@ internally consistent and wrong. That is what the property tests are for.
 | `olmoe_t2_warm_marginal` | campaign 2: warm OLMoE Q4_0 decodes at 30.1 tok/s steady state with 2 threads | `decode_15r_cpu.json` | 30.0835 | ok |
 | `olmoe_t4_warm_marginal` | and at 8.0 tok/s with 4 threads, in the same memory state | `decode_15r_cpu.json` | 8.0353 | ok |
 | `s11_matched_t2_ratio` | at matched thread count (2) the linear-in-bytes rule under-predicts OLMoE by 1.33x | `s11_nonflash_15r.json` | 1.3261 | ok |
+| `thr_olmoe_t1` | thread sweep (interleaved): warm OLMoE 20.8 tok/s at 1 thread | `decode_15r_threads.json` | 20.8115 | ok |
+| `thr_olmoe_t2` | 17.4 tok/s at 2 threads | `decode_15r_threads.json` | 17.4166 | ok |
+| `thr_olmoe_t3` | 2.3 tok/s at 3 threads: a cliff between 2 and 3 | `decode_15r_threads.json` | 2.3160 | ok |
+| `thr_olmoe_t4` | 2.1 tok/s at 4 threads | `decode_15r_threads.json` | 2.1198 | ok |
+| `thr_granite_t4` | resident granite scales normally: 88.6 tok/s at 4 threads | `decode_15r_threads.json` | 88.6004 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-61 claims checked.
+66 claims checked.

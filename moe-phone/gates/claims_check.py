@@ -406,6 +406,26 @@ CLAIMS = [
          artifact="s11_nonflash_15r.json", expected=1.33, tol=0.01,
          value=lambda A: next(t["ratio_observed_over_predicted"]
                               for t in A["s11"]["matched_thread_tests"] if t["threads"] == 2)),
+    dict(id="thr_olmoe_t1",
+         text="thread sweep (interleaved): warm OLMoE 20.8 tok/s at 1 thread",
+         artifact="decode_15r_threads.json", expected=20.8, tol=0.1,
+         value=lambda A: next(c["marginal_tok_s_median"] for c in A["thr"]["by_threads"] if c["model"].startswith("olmoe") and c["threads"] == 1)),
+    dict(id="thr_olmoe_t2",
+         text="17.4 tok/s at 2 threads",
+         artifact="decode_15r_threads.json", expected=17.4, tol=0.1,
+         value=lambda A: next(c["marginal_tok_s_median"] for c in A["thr"]["by_threads"] if c["model"].startswith("olmoe") and c["threads"] == 2)),
+    dict(id="thr_olmoe_t3",
+         text="2.3 tok/s at 3 threads: a cliff between 2 and 3",
+         artifact="decode_15r_threads.json", expected=2.3, tol=0.05,
+         value=lambda A: next(c["marginal_tok_s_median"] for c in A["thr"]["by_threads"] if c["model"].startswith("olmoe") and c["threads"] == 3)),
+    dict(id="thr_olmoe_t4",
+         text="2.1 tok/s at 4 threads",
+         artifact="decode_15r_threads.json", expected=2.1, tol=0.05,
+         value=lambda A: next(c["marginal_tok_s_median"] for c in A["thr"]["by_threads"] if c["model"].startswith("olmoe") and c["threads"] == 4)),
+    dict(id="thr_granite_t4",
+         text="resident granite scales normally: 88.6 tok/s at 4 threads",
+         artifact="decode_15r_threads.json", expected=88.6, tol=0.1,
+         value=lambda A: next(c["marginal_tok_s_median"] for c in A["thr"]["by_threads"] if c["model"].startswith("granite") and c["threads"] == 4)),
     # ------------------------------------------------------ instrument agreement
     dict(id="roofline_inputs_agree",
          text="the bandwidth constant used here is the one the engine_sim artifact was run with",
@@ -432,6 +452,7 @@ def load_all():
         "dec": load("decode_15r.json"),
         "g1qd": load("g1_storage_qd.json"),
         "dec2": load("decode_15r_cpu.json"),
+        "thr": load("decode_15r_threads.json"),
     }
 
 

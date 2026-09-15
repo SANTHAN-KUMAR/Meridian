@@ -1,0 +1,3 @@
+tag,model,threads,n_gen,rep,mode,resident_after_drop,t_wall_s,read_bytes,rchar,max_vmrss_kb,max_rssfile_kb,tg_tok_s,memavail_kb_start,batt_level,batt_temp_dC,exit,cpu_s,memavail_kb_min
+olmoe-1b-7b-0924-q4_0_t4_n64_r1_warm,olmoe-1b-7b-0924-q4_0.gguf,4,64,1,warm,NA,57.7745,8323571712,2061869,5316552,3840412,1.532548,5572884,,,0,136.59,1934988
+olmoe-1b-7b-0924-q4_0_t4_n320_r1_warm,olmoe-1b-7b-0924-q4_0.gguf,4,320,1,warm,NA,178.538,8840089600,2061869,5345144,3840344,1.935523,5649532,,,0,499.73,1745452

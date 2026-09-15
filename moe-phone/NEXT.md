@@ -21,7 +21,11 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
    G1-QD in `README.md`). A second, CPU-time-instrumented campaign (`device/phone_campaign_cpu.sh`,
    tmux session `moe2`, output `~/moe/out2_*`) ran clean: 2 threads 30.1 tok/s vs 4 threads 8.0
    for warm OLMoE, no flash traffic to explain it. Campaign 3 (`phone_campaign_threads.sh`, tmux
-   `moe3`, `~/moe/out3_*`) sweeps 1-4 threads interleaved; pull and run `decode_analyze.py` on it.
+   `moe3`) found a cliff: warm OLMoE 20.8 / 17.4 / 2.3 / 2.1 tok/s at 1-4 threads, resident granite
+   scaling normally (`decode_15r_threads.json`). **Next on the phone:** explain the cliff — log
+   majflt (field 12 of /proc/pid/stat) and per-thread CPU time (/proc/pid/task/*/stat) at 2 vs 3
+   threads, and repeat with a model that fits with room to spare. Busy-waiting threads mean CPU
+   share alone cannot tell stalls from work.
 1. **Phone campaign** (`device/phone_campaign.sh`, in Termux `tmux` session `moe`): OLMoE Q4_0
    cold/warm, granite-1b-a400m resident, pp512, ufsbench 16/32 threads. Output on the phone in
    `~/moe/out_<date>_<time>/`. Pull it, then:

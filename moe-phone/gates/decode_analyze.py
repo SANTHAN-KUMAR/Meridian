@@ -121,6 +121,24 @@ def main():
     a = p.parse_args()
     mb = {k: float(v) for k, v in (s.split("=") for s in a.model_bytes)}
     res = {"source": os.path.abspath(a.root), "groups": analyse(load_rows(a.root), mb)}
+    # Cells of an interleaved sweep (one repeat per directory) pooled per (model, mode,
+    # threads). Pooling ACROSS those keys is never done.
+    cells = {}
+    for g in res["groups"]:
+        c = cells.setdefault((g["model"], g["mode"], g["threads"]), {"marg": [], "flash": [], "cpu": []})
+        c["marg"] += [x for x in g["marginal_tok_s_all"] if x]
+        c["flash"] += [p_["marginal_flash_MB_per_tok"] for p_ in g["pairs"]]
+        c["cpu"] += [x["cpu_share"] for x in g["runs"] if x["cpu_share"] is not None]
+    res["by_threads"] = [{"model": m, "mode": mo, "threads": t, "n_pairs": len(c["marg"]),
+                          "marginal_tok_s_all": c["marg"], "marginal_tok_s_median": med(c["marg"]),
+                          "marginal_flash_MB_per_tok_median": med(c["flash"]),
+                          "cpu_share_median": med(c["cpu"])}
+                         for (m, mo, t), c in sorted(cells.items())]
+    for c in res["by_threads"]:
+        print(f"  BY THREADS {c['model'][:34]:<34} {c['mode']:<5} t{c['threads']}: "
+              f"{c['marginal_tok_s_median'] if c['marginal_tok_s_median'] is None else round(c['marginal_tok_s_median'], 1)} tok/s "
+              f"(n={c['n_pairs']}: {[round(x, 1) for x in c['marginal_tok_s_all']]}), "
+              f"flash {c['marginal_flash_MB_per_tok_median']} MB/tok, cpu share {c['cpu_share_median']}")
     for g in res["groups"]:
         print(f"{g['model']:<42} t{g['threads']} {g['mode']:<5} tg by n {g['tg_tok_s_median_by_n']} "
               f"marginal {g['marginal_tok_s_median']} tok/s, "

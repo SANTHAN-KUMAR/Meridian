@@ -288,8 +288,9 @@ it should be run early rather than assumed.
    linear-in-bytes transfer to other models was tested at matched thread count and **not
    confirmed** (1.33x under-prediction at 2 threads), and stock llama.cpp OLMoE is ~4x slower at
    4 threads than at 2 with no flash traffic to explain it (`README.md`, G6-baseline). **So the
-   thread count is a first-order engine parameter on this phone, not a detail** — the next
-   measurement is the thread sweep (campaign 3), then the S9 trace.
+   thread count is a first-order engine parameter on this phone, not a detail.** The sweep
+   (campaign 3) shows a cliff: warm OLMoE 17.4 tok/s at 2 threads, 2.3 at 3. Next: explain the
+   cliff (major faults and per-thread CPU time at 2 vs 3 threads), then the S9 trace.
 
 1. **A drafter's acceptance rate `alpha`** (**S10**). S12's closure makes this the *only*
    remaining route to the 2.2×, and the sign of the effect flips inside the plausible range of
