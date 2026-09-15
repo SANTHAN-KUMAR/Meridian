@@ -27,14 +27,23 @@ seconds / token  =  E_tok_bytes × (1 − h) / bulk_bandwidth
 ```
 
 `E_tok_bytes` is fixed by the checkpoint and the quantisation. `bulk_bandwidth` is a device
-constant. **`h`, the expert-cache hit rate, is the only free variable, and everything the engine
-does exists to raise it.**
+constant. `h`, the expert-cache hit rate, is the only free variable **of this equation**.
+
+> **Tested 2026-09-16 against an independent engine, and the equation is incomplete**
+> (`gates/external_validation.py`, G-VALID-3). On colibri's published disk-bound rows with
+> speculation off it over-predicts tok/s by 2.8x (median); at a 98% hit rate by 4.4x. It leaves
+> out DRAM reads of resident weights and cache hits, and compute — and on real hardware those
+> are the same order as the flash term. So raising `h` is necessary and not sufficient.
+> `engine_target.py` now charges DRAM at the measured 59.74 GB/s (S1); compute is still
+> uncharged (S11) until the on-device forward-pass time is measured.
 
 > ```
-> python moe-phone/gates/engine_target.py --bulk-gbps 2.806 --ram-gb 4.85 --target-tps 5
+> python moe-phone/gates/engine_target.py --bulk-gbps 2.806 --dram-gbps 59.74 --ram-gb 4.85 --target-tps 5
 > ```
-> prints, per candidate model, the achieved tok/s at the measured LRU and Belady hit rates.
-> **S9 applies to every row.**
+> prints, per candidate model, the flash-only tok/s, the serial flash + DRAM tok/s, and the
+> serial figure under S9's competing hypothesis. Fully resident models are reported as
+> flash-free and models outside the measured `rho` range get no number. **S9 applies to every
+> row.**
 
 ---
 
@@ -109,8 +118,10 @@ Four tokens is a remarkably short horizon, and it is the load-bearing result of 
     + event-atomic fetch (a layer's whole top-k decided before any eviction)
 ```
 
-That is the whole deployable design, and it is already worth **double digits of tok/s on three
-candidate models** (§1). Everything below is about the 2.2× that §2.4 says is still on the table,
+That is the whole deployable design. An earlier version said it was "worth double digits of tok/s
+on three candidate models"; that came from three `engine_target.py` defects (README defect table)
+and is withdrawn. Corrected: Qwen3-30B-A3B at 11.5 tok/s flash-only, 8.8 with DRAM charged, and
+5.0 if S9's floor-additive hypothesis holds — before any compute cost (S11). Everything below is about the 2.2× that §2.4 says is still on the table,
 and whether it can be reached.
 
 ### 3.1 A cheap predictor was the primary recommendation. It is not.
@@ -206,6 +217,12 @@ not be multiplied.** `engine_sim.py` replays the whole loop in one pass and pric
 > a regression at α ≤ 0.8, roughly 1.13–1.28× at α = 0.9, and clearly worth it only above
 > α ≈ 0.95. There is no cheaper substitute — S12 closed that door.
 
+**And the table above is flash-only.** A self-draft runs W−1 extra forward passes per window and
+the verify pass is not free either. `engine_sim.py --fwd-ms` charges them (c seconds per pass,
+verify = c·(1 + beta·(W−1))): at 10 ms per pass, W=4, alpha=0.9 falls from 1.13x to 1.10x, and to
+1.02x if the batched verify is compute-bound (beta = 1). c is swept until the on-device
+forward-pass time is measured.
+
 `alpha` is swept, not measured (**S10**), and the sign of the effect flips inside the plausible
 range of published drafters. So **the number to measure next is `alpha` for a specific drafter —
 not another cache policy.**
@@ -226,10 +243,12 @@ Three external facts that sharpen this:
 
 - **It does not beat the flash roofline.** It raises `h`; the equation in §1 is unchanged.
 - **It does not transfer across expert counts for free** (**S9**). Every per-model tok/s figure
-  goes through `engine_target.at_rho()`. The one external check available is consistent (an
-  independently reported 512-expert top-10 model reaches 0.693 where our curve interpolates 0.669
-  at the same `rho`), but one point is not a validation.
-- **It does not include a compute term** (**S11**). Valid only while the device is flash-bound.
+  goes through `engine_target.at_rho()`. An earlier version cited an "independently reported"
+  0.693 for a 512-expert model as a consistent external check; no source for it was ever
+  recorded, so it is deleted. The two competing transfer rules are pre-registered in
+  `results/2026-09-16/s9_prereg_Qwen3-30B-A3B.json`.
+- **It does not include a compute term** (**S11**). Valid only while the device is flash-bound —
+  and G-VALID-3 says real engines are not purely flash-bound even at modest hit rates.
 - **It does not include a predictor.** S12 is closed, negative: no cheap cross-token, same-layer predictor reaches the lookahead lever, because one step is the wrong horizon (§3.2).
 - **It is not novel in its parts.** Union-of-experts loading exists in llama.cpp PR #25294 for
   *prefill*; self-speculative MoE decode exists (S2-MoE, DraftExpert — the latter on this exact
@@ -250,7 +269,7 @@ stacking them owes a fidelity check per row.
 | lever | multiplier | status | what it would cost to find out |
 |---|---|---|---|
 | **raise `h`** via lookahead | up to ~2.2×, but ONLY from an exact 4-token window (§3, §4) | **measured, and its cheap route is closed** (S12) | done; what remains is α, below |
-| **deeper I/O queue** | 1.25–1.5× (est.) | **untested.** G1 stopped at 8 threads; at 1 MB the 1→8 scaling was ×1.81 and still rising | one afternoon: extend `ufsbench` to 16/32/64. **Cheapest lever, and it scales every figure linearly** |
+| **deeper I/O queue** | probably ~1.0× | **downgraded 2026-09-16.** G1's own bulk cells are flat from 4 threads (the 4→8 step adds almost nothing at 256 KB–1 MB and loses at 2–4 MB, `g1_storage.json`), which looks like a device ceiling, not a queue-depth limit. Only 4 KB reads were unsaturated, and whole-expert reads are never 4 KB | queued: `device/phone_campaign.sh` step 5 runs 16/32 threads at 512 KB–4 MB |
 | **lower precision**, 4.5 → ~3.0 bpw | ~1.5× | **untested against our margin** | rerun G3's harness at Q3_K/IQ3 against the same pre-registered Q4_0 Tier-A margin |
 | **whole-expert skipping** (ACE, arXiv 2609.05228: 50%, training-free *and* calibration-free) | up to 2× | **untested, and a different axis from G3** — G3 killed intra-expert *neuron* sparsity on a gate-first criterion; this drops whole experts, so S8 does not gate it | same harness. ACE's headline is measured against other skipping methods, not against the full model, so our margin is the real test |
 | **union fetch** across a verification window | ~1.2× at α=0.9 | **measured, but can be negative** (§4) | measure `alpha` |
@@ -260,7 +279,12 @@ it should be run early rather than assumed.
 
 ---
 
-## 6. The next four measurements, in order of how much they move the answer
+## 6. The next measurements, in order of how much they move the answer
+
+0. **The on-device forward-pass time of a resident MoE** (**S11**). G-VALID-3 says the terms the
+   flash equation drops are the same order as the flash term, so every tok/s in this document is
+   an upper bound of unknown slack until this exists. Queued in `device/phone_campaign.sh`
+   (granite-3.1-1b-a400m, fully resident, plus OLMoE warm); needs the phone unlocked.
 
 1. **A drafter's acceptance rate `alpha`** (**S10**). S12's closure makes this the *only*
    remaining route to the 2.2×, and the sign of the effect flips inside the plausible range of
@@ -270,8 +294,8 @@ it should be run early rather than assumed.
    already runs the full sweep; it needs a second model argument.
 3. **Whole-expert skipping at the pre-registered fidelity margin** (§5b row four). The largest
    untested multiplier, and S8 does not gate it.
-4. **Extend the G1 thread sweep past 8.** The bandwidth constant in §1 is a measurement limit, not
-   a device limit. Cheapest of the four, and it scales everything.
+4. **Extend the G1 thread sweep past 8.** Downgraded (§5b): G1's bulk cells already plateau from
+   4 threads. Queued, because it is cheap, not because it is expected to move anything.
 
 ---
 

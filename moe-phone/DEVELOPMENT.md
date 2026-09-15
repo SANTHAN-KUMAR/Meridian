@@ -14,7 +14,8 @@ three claims, and two of them came from code that ran fine and tested green.
 
 ```bash
 # the venv is required -- system pip is broken on this machine
-.venv/Scripts/python.exe -m pytest moe-phone/tests -q     # 44 tests, ~30 s, no GPU needed
+.venv/Scripts/python.exe -m pytest moe-phone/tests -q     # the gate suite, seconds, no GPU needed
+# Linux: any python >= 3.11 with numpy + pytest (+ nbformat) runs the same suite
 ```
 
 The offline analysis (everything under `gates/` except `traces_sparsity.py`) needs only numpy.
@@ -71,7 +72,7 @@ $P moe-phone/gates/cache_sim.py $T --lookahead 4 \
 $P moe-phone/gates/scope_compare.py $T --max-tokens 8000 --fractions 0.10,0.20
 
 # classical policies on a held-out split
-$P moe-phone/gates/expert_policy.py $T --fractions 0.05,0.10,0.20,0.30,0.50
+$P moe-phone/gates/expert_policy.py $T --fractions 0.05,0.10,0.20,0.30
 
 # the decode loop, priced per accepted token
 $P moe-phone/gates/engine_sim.py $T --bulk-gbps 2.806 --expert-mb 3.54
@@ -80,7 +81,23 @@ $P moe-phone/gates/engine_sim.py $T --bulk-gbps 2.806 --expert-mb 3.54
 $P moe-phone/gates/predictor.py $T --max-tokens 16384
 
 # per-model verdicts on the measured 15R numbers
-$P moe-phone/gates/engine_target.py --bulk-gbps 2.806 --ram-gb 4.85 --target-tps 5
+$P moe-phone/gates/engine_target.py --bulk-gbps 2.806 --dram-gbps 59.74 --ram-gb 4.85 --target-tps 5
+
+# the same loop with draft and verify passes charged (c swept until S11 is measured)
+$P moe-phone/gates/engine_sim.py $T --bulk-gbps 2.806 --expert-mb 3.54 --fwd-ms 10,20,40,80
+
+# S1: DRAM bandwidth from device/dramprobe.c output
+$P moe-phone/gates/dram_analyze.py app=moe-phone/results/2026-09-16/dram_15r_app.csv \
+    shell=moe-phone/results/2026-09-16/dram_15r_shell.csv
+
+# G-VALID-3: the flash-only formula against colibri's published rows
+$P moe-phone/gates/external_validation.py
+
+# S9 pre-registration (run BEFORE collecting the second model's trace)
+$P moe-phone/gates/s9_prereg.py --target-E 128 --target-k 8 --target-name Qwen3-30B-A3B
+
+# G-REPRO: re-run every committed gate into a temp dir and diff against the artifacts
+$P moe-phone/gates/repro_check.py --out-dir /tmp/moe_repro
 
 # and finally: does the prose still match all of that?
 $P moe-phone/gates/claims_check.py
@@ -98,7 +115,7 @@ From [`ARCHITECTURE.md`](ARCHITECTURE.md). Each step is independently useful, an
 benefit was measured before it was put on the list.
 
 1. **Per-layer expert cache with LRU eviction, event-atomic fetch.** This is the baseline and it
-   is already worth double digits of tok/s on three candidate models. Do not build a shared pool
+   is worth 8.8 tok/s on Qwen3-30B-A3B with DRAM charged (11.5 flash-only), before compute (S11). Do not build a shared pool
    (§2.1) and do not build static pinning (§2.3); both were measured and both lose.
 2. **Cache warming at load.** Buys time-to-first-token, not throughput. Do not count it in the
    byte budget.
@@ -174,9 +191,12 @@ largest single piece of load-bearing uncertainty in the project: **every tok/s n
 `ARCHITECTURE.md` §1 goes through it**, and four of ten models sit outside the measured `rho`
 range entirely (flagged `curve_extrapolated` in the artifact).
 
-One external check exists and is consistent: an independently reported 512-expert top-10 model
-reaches 0.693 where our curve interpolates 0.669 — 3.5% apart, on the target's actual geometry.
-One point is not a validation.
+The predictions are **pre-registered** in `results/2026-09-16/s9_prereg_Qwen3-30B-A3B.json`
+(`gates/s9_prereg.py`), committed before any trace. (An "independently reported 0.693" once cited
+here had no recorded source and is deleted.) Without a GPU that holds the model, the trace can be
+collected on CPU through llama.cpp from the Q4_0 GGUF: `tools/route_trace.cpp` +
+`gates/llamacpp_traces.py`, with an OLMoE Q4_0 trace through the same path as the pre-registered
+confound control.
 
 **To close it:** open `kaggle/g2_g3_olmoe.ipynb` on a 2×T4 session, set `RUN_S9 = True` in the
 `s9-geometry` cell, run. It collects **Qwen3-30B-A3B** — `E=128`, double OLMoE's, same top-8, and

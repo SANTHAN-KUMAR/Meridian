@@ -53,6 +53,13 @@ internally consistent and wrong. That is what the property tests are for.
 | `dram_app_gbps` | DRAM read bandwidth available to an unprivileged app is 59.7 GB/s (4 threads, median of clean rows) | `dram_15r.json` | 59.7410 | ok |
 | `dram_8thread_never_clean` | at 8 threads no DRAM row was free of descheduling in either domain | `dram_15r.json` | 0.0000 | ok |
 | `turbosparse_resident_ratio` | TurboSparse-Mixtral's HF-derived resident count is 3.70x its config-derived count | `byte_budget_measured.json` | 3.7004 | ok |
+| `colibri_flash_only_overpredicts` | on colibri's disk-bound MTP-off rows the flash-only formula over-predicts tok/s by 2.8x (median) | `external_validation_colibri.json` | 2.7879 | ok |
+| `colibri_high_hit_overpredicts` | at a 98% hit rate (RAM-bandwidth + matmul bound) it over-predicts by 4.4x | `external_validation_colibri.json` | 4.3860 | ok |
+| `colibri_m1_eta_reproduces_their_93pct` | the in-engine disk efficiency computed for colibri's M1 Ultra row is 0.93, the same '~93% of its iobench ceiling' colibri reports for that run | `external_validation_colibri.json` | 0.9274 | ok |
+| `spec_w4_a09_compute10ms` | charging 10 ms per forward pass (draft passes and verify, beta = 0), W=4 at alpha=0.9 gives 1.10x over plain decode, not 1.13x | `engine_sim_OLMoE-1B-7B-0924.json` | 1.1014 | ok |
+| `spec_w4_a09_compute10ms_beta1` | if the batched verify is compute-bound (beta = 1) the same point is 1.02x | `engine_sim_OLMoE-1B-7B-0924.json` | 1.0236 | ok |
+| `g1_4k_cell_spread` | the 4 KB cell behind the 8.9x bulk/small ratio has a 39% run-to-run spread | `g1_storage.json` | 0.3887 | ok |
+| `gvalid1_bound_below_published` | the roofline bound for PowerInfer-2's own configuration is 1.90 tok/s, BELOW the 2.13 tok/s PowerInfer-2 measured | `byte_budget_validate_powerinfer2.json` | 1.8974 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-42 claims checked.
+49 claims checked.

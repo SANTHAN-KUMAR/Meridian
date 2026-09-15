@@ -39,8 +39,14 @@ WHAT IS ASSUMED, NOT MEASURED
     True by construction for accepted tokens (verification re-runs the real
     router); for rejected ones the engine fetched experts it did not need,
     which is already charged.
-  - compute is free. Valid only while the device is flash-bound; engine_target
-    prints the required GFLOP/s so that can be checked.
+  - compute is free -- in the DEFAULT output only. --fwd-ms charges it
+    (2026-09-16): a self-draft runs W-1 extra forward passes per window, each
+    flash-free but not free (DRAM + compute, c seconds), and the verify pass
+    costs c * (1 + beta * (W - 1)): beta = 0 if the batched pass is purely
+    weight-read-bound (extra positions ride along), 1 if it is compute-bound
+    (W positions cost W passes). Plain decode (W = 1) pays c too, so the
+    baseline is charged the same way. c and beta are SWEPT, not measured,
+    until an on-device forward-pass time exists (S11).
 
 Run:
   python moe-phone/gates/engine_sim.py results/<date>/traces_OLMoE-1B-7B-0924.npz \\
@@ -141,8 +147,14 @@ def engine_fetches(ev, cap_total, window, lookahead_beyond=0):
     return fetches, n_win, verified
 
 
+def tok_s_with_compute(bytes_per_window, window, alpha, bulk_bps, c, beta):
+    """Accepted tokens per second when flash I/O and compute are serial."""
+    t = bytes_per_window / bulk_bps + (window - 1) * c + c * (1 + beta * (window - 1))
+    return accepted_per_pass(window, alpha) / t
+
+
 def run(ev, num_experts, fractions, windows, expert_bytes, bulk_bps,
-        lookahead_beyond=0):
+        lookahead_beyond=0, fwd_s=(), betas=(0.0,)):
     T, L, k = ev.shape
     rows = []
     for f in fractions:
@@ -160,6 +172,12 @@ def run(ev, num_experts, fractions, windows, expert_bytes, bulk_bps,
                     str(a): bulk_bps * accepted_per_pass(w, a) * n_win / bytes_per_window
                     for a in ALPHAS},
             }
+            if fwd_s:
+                per_f["windows"][str(w)]["tok_s_with_compute"] = {
+                    f"c={c * 1e3:g}ms,beta={b:g}": {
+                        str(a): tok_s_with_compute(bytes_per_window / n_win, w, a, bulk_bps, c, b)
+                        for a in ALPHAS}
+                    for c in fwd_s for b in betas}
         rows.append(per_f)
     return rows
 
@@ -176,6 +194,11 @@ def main():
     p.add_argument("--lookahead-beyond", type=int, default=0,
                    help="extra tokens of known routing past the window end. 0 is honest "
                         "for a chain draft; >0 models a drafter kept one window ahead.")
+    p.add_argument("--fwd-ms", default=None,
+                   help="comma list of forward-pass compute+DRAM times in ms to charge "
+                        "(draft passes and verify). Omit for the original flash-only pricing.")
+    p.add_argument("--verify-beta", default="0,0.25,1",
+                   help="marginal verify cost per extra position, as a fraction of one pass")
     p.add_argument("--max-tokens", type=int, default=None)
     p.add_argument("--out-dir", default=None)
     a = p.parse_args()
@@ -189,7 +212,9 @@ def main():
     eb = a.expert_mb * 1e6
     bps = a.bulk_gbps * 1e9
 
-    rows = run(ev, E, fr, wins, eb, bps, a.lookahead_beyond)
+    fwd = [float(x) / 1e3 for x in a.fwd_ms.split(",")] if a.fwd_ms else []
+    betas = [float(x) for x in a.verify_beta.split(",")]
+    rows = run(ev, E, fr, wins, eb, bps, a.lookahead_beyond, fwd, betas)
     print(f"{T} tokens x {L} layers x top-{k} of {E}   "
           f"{a.expert_mb} MB/expert   {a.bulk_gbps} GB/s bulk")
     print("W=1 is plain autoregressive decode with the same cache: the baseline.\n")
@@ -206,7 +231,13 @@ def main():
         best = max((d["tok_s_by_alpha"][str(x)], w, x)
                    for w, d in r["windows"].items() for x in ALPHAS)
         print(f"  baseline W=1: {base:.1f} tok/s   "
-              f"best in sweep: {best[0]:.1f} tok/s at W={best[1]}, alpha={best[2]}\n")
+              f"best in sweep: {best[0]:.1f} tok/s at W={best[1]}, alpha={best[2]}")
+        for key in (r["windows"]["1"].get("tok_s_with_compute") or {}):
+            b1 = r["windows"]["1"]["tok_s_with_compute"][key]["0.9"]
+            cells = "  ".join(f"W={w}:{r['windows'][str(w)]['tok_s_with_compute'][key]['0.9'] / b1:.2f}x"
+                              for w in wins if w in (2, 4, 8, 16))
+            print(f"  {key:<20} alpha=0.9 speed-up over W=1 with compute charged: {cells}")
+        print()
 
     out = {"source": os.path.abspath(a.npz), "inputs": vars(a),
            "tokens": T, "layers": L, "top_k": k, "num_experts": E,

@@ -295,6 +295,53 @@ CLAIMS = [
          value=lambda A: 1.0 / (1.0 - next(m["resident_crosscheck_rel_diff"]
                                            for m in A["bb"]["models"]
                                            if "TurboSparse" in m["repo"]))),
+    # -------------------------------------------------- G-VALID-3 (colibri)
+    dict(id="colibri_flash_only_overpredicts",
+         text="on colibri's disk-bound MTP-off rows the flash-only formula over-predicts tok/s "
+              "by 2.8x (median)",
+         artifact="external_validation_colibri.json", expected=2.79, tol=0.01,
+         value=lambda A: A["ext"]["by_cold_bytes"]["benchmarks.md:86"]["summary"]
+                          ["disk_bound_ratio_median"]),
+    dict(id="colibri_high_hit_overpredicts",
+         text="at a 98% hit rate (RAM-bandwidth + matmul bound) it over-predicts by 4.4x",
+         artifact="external_validation_colibri.json", expected=4.39, tol=0.01,
+         value=lambda A: A["ext"]["by_cold_bytes"]["benchmarks.md:86"]["summary"]
+                          ["high_hit_ratio"][0]),
+    dict(id="colibri_m1_eta_reproduces_their_93pct",
+         text="the in-engine disk efficiency computed for colibri's M1 Ultra row is 0.93, the "
+              "same '~93% of its iobench ceiling' colibri reports for that run",
+         artifact="external_validation_colibri.json", expected=0.93, tol=0.005,
+         value=lambda A: next(r["eta_in_engine"] for r in
+                              A["ext"]["by_cold_bytes"]["benchmarks.md:86"]["rows"]
+                              if r["line"] == 111)),
+    # ------------------------------------------- speculation, compute charged
+    dict(id="spec_w4_a09_compute10ms",
+         text="charging 10 ms per forward pass (draft passes and verify, beta = 0), W=4 at "
+              "alpha=0.9 gives 1.10x over plain decode, not 1.13x",
+         artifact="engine_sim_OLMoE-1B-7B-0924.json", expected=1.10, tol=0.005,
+         value=lambda A: (row(A["engine"], 0.10)["windows"]["4"]["tok_s_with_compute"]
+                          ["c=10ms,beta=0"]["0.9"]
+                          / row(A["engine"], 0.10)["windows"]["1"]["tok_s_with_compute"]
+                          ["c=10ms,beta=0"]["0.9"])),
+    dict(id="spec_w4_a09_compute10ms_beta1",
+         text="if the batched verify is compute-bound (beta = 1) the same point is 1.02x",
+         artifact="engine_sim_OLMoE-1B-7B-0924.json", expected=1.02, tol=0.005,
+         value=lambda A: (row(A["engine"], 0.10)["windows"]["4"]["tok_s_with_compute"]
+                          ["c=10ms,beta=1"]["0.9"]
+                          / row(A["engine"], 0.10)["windows"]["1"]["tok_s_with_compute"]
+                          ["c=10ms,beta=1"]["0.9"])),
+    # ------------------------------------------------------- G1 / G-VALID-1
+    dict(id="g1_4k_cell_spread",
+         text="the 4 KB cell behind the 8.9x bulk/small ratio has a 39% run-to-run spread",
+         artifact="g1_storage.json", expected=0.389, tol=0.001,
+         value=lambda A: A["g1"]["small_4k_rand_best"]["rel_spread"]),
+    dict(id="gvalid1_bound_below_published",
+         text="the roofline bound for PowerInfer-2's own configuration is 1.90 tok/s, BELOW the "
+              "2.13 tok/s PowerInfer-2 measured",
+         artifact="byte_budget_validate_powerinfer2.json", expected=1.90, tol=0.005,
+         value=lambda A: next(r["tps_overlap_bound"] for r in A["pi2"]["models"][0]["rows"]
+                              if r["format"] == "Q4_0" and r["d"] == 0.03
+                              and r["mode"] == "predicted" and r["h_label"] == "floor")),
     # ------------------------------------------------------ instrument agreement
     dict(id="roofline_inputs_agree",
          text="the bandwidth constant used here is the one the engine_sim artifact was run with",
@@ -314,6 +361,9 @@ def load_all():
         "predictor": load("predictor_OLMoE-1B-7B-0924.json"),
         "dram": load("dram_15r.json"),
         "bb": load("byte_budget_measured.json"),
+        "ext": load("external_validation_colibri.json"),
+        "g1": load("g1_storage.json"),
+        "pi2": load("byte_budget_validate_powerinfer2.json"),
     }
 
 

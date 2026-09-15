@@ -22,15 +22,18 @@ error that produced a retraction here once already.
 
 ## 1. The strongest external check we have
 
-Our G1 measured a **bulk-to-4 KB read ratio of 8.9×** on the 15R [M]. PowerInfer-2 publishes
-**8.89×** for the same ratio on a OnePlus 12 [V]. Two different phones, two different UFS
-generations, three significant figures. That is the single best evidence that our storage
-instrument measures what it claims to.
+**Revised 2026-09-16 — neither of the two checks this section used to lead with is evidence.**
 
-Second check, on the quantity the engine now turns on: an independently reported **512-expert
-top-10** model reaches a **0.693** hit rate at the `rho` where our OLMoE-derived curve
-interpolates **0.669** [V vs M] — 3.5% apart, on the target model's actual geometry. One point is
-not a validation, and this is exactly what stub **S9** exists to close.
+- Our G1 **bulk-to-4 KB ratio of 8.9×** [M] matches PowerInfer-2's **8.89×** [V] to three
+  figures, but that is a coincidence, not an instrument validation: the 4 KB cell has a 39%
+  run-to-run spread (`g1_storage.json`), and the ratio depends on where the thread sweep stopped.
+- An "independently reported **0.693** hit rate for a 512-expert top-10 model", cited as the one
+  external check on S9, had **no recorded source** [N]. Deleted; S9 is pre-registered instead
+  (`results/2026-09-16/s9_prereg_Qwen3-30B-A3B.json`).
+
+The strongest external check now is **G-VALID-3** [E from V]: colibri's published rows, run
+through our flash-only formula, are over-predicted by 2.8x (median) on disk-bound rows — the
+formula is incomplete, which is a result about our model, not about theirs.
 
 ---
 
@@ -60,9 +63,10 @@ not a validation, and this is exactly what stub **S9** exists to close.
 - **Our G1 thread sweep stops at 8** [M]. At 4 KB the device scaled ×7.26 from 1→8 threads with
   **flat p50 latency** (86.7 → 93.0 µs), i.e. small reads are latency-bound and had **not
   saturated** at the top of our sweep. At 1 MB the scaling is only ×1.81 and at 4 MB ×1.24, so
-  whole-expert reads are already near the ceiling — but the ceiling itself is a measurement
-  limit, not a device limit. **Extending the sweep to 16/32/64 is the cheapest experiment we
-  have** and it scales every tok/s figure in `ARCHITECTURE.md` linearly.
+  whole-expert reads are already near the ceiling. **Re-read 2026-09-16:** the bulk cells are flat
+  from 4 threads and fall at 2–4 MB from 4 to 8, which looks like a device ceiling rather than a
+  queue-depth limit. The 16/32-thread run is queued because it is cheap, not because it is
+  expected to move the constant.
 - **EStream** (arXiv 2609.06551, 8 days old at time of writing) [V] runs on a **OnePlus 15 with
   UFS 4.1** — our device class — and explicitly names **MoE decode streaming as future work**.
   Closest neighbour; read fully before claiming novelty.
@@ -148,6 +152,24 @@ verification.** That is the concrete engineering wedge.
    we tree at all.
 5. Also verified present: EcoSpec, MoE-Spec, MoE-SpAc, SpecMoE (DAC'26), ELMoE-3D, EdgeXpert,
    MoESD, MoE-SpeQ, SpecMoEOff, SP-MoE, Utility-Driven SD [all V].
+
+6. **colibri** ([github.com/JustVugg/colibri](https://github.com/JustVugg/colibri), Apache-2.0)
+   [V, read in full at commit a8f2ca6 on 2026-09-16] — open C engine streaming MoE experts from
+   disk: per-layer LRU, learned pinned hot store, one-layer-ahead router prefetch, io_uring /
+   O_DIRECT read path for its GLM engine, CUDA/Metal/Vulkan tiers, and a table of community
+   measurements (our G-VALID-3 input). Its OLMoE engine reads synchronously at queue depth 1 and
+   keeps dense weights and KV in fp32 (~1.8 GB dense), so it is **not** a phone base as it stands.
+   Its hit rate counts every lookup (OLMoE) or every distinct expert per forward (GLM) and
+   prefetch loads never count as misses, so its hit rates are not ours; its `[PROF]` "GB fetched"
+   is the comparable quantity. Its "71.6%" next-layer recall has no recorded provenance and a code
+   comment beside it says 75.8% [U].
+7. Found 2026-09-16 by a research subagent [V by the subagent, numbers not re-checked]: **mllm /
+   EdgeMoE** (Android, QNN + OpenCL, expert streaming from storage — the closest shipping peer);
+   **llama.cpp discussion #27149** (expert-aware SSD streaming, Qwen3-30B-A3B, reports 4.10 tok/s
+   at an 88% hit rate on a laptop); **slipstream** (Apple M5, per-layer LFU-with-decay, reports
+   bytes read per token); **scale-snu/SSD-offloading** (an analytical SSD cost model — read its
+   functional form before finalising ours); **FlashMoE** (2601.17063, learned replacement, paper
+   only). Each is a candidate held-out validation point once its conditions are checked.
 
 **Design constraint worth remembering** [V]: per AcceptMoE, *"a wide shallow tree tends to select
 overlapping expert sets, yielding smaller unions; a deep tree can activate many distinct experts
