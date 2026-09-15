@@ -249,11 +249,52 @@ CLAIMS = [
          value=lambda A: next(m["tok_s_at_lru"] for m in A["target"]["models"]
                               if "Qwen3-Next-80B" in m["repo"])),
     dict(id="qwen3_next_80b_h_lru",
-         text="the curve interpolates h = 0.669 for Qwen3-Next-80B-A3B, against an independently "
-              "reported 0.693 for a 512-expert top-10 model at the same rho",
+         text="the curve interpolates h = 0.669 for Qwen3-Next-80B-A3B (transferred from OLMoE at "
+              "equal rho, S9)",
          artifact="engine_target.json", expected=0.669, tol=0.002,
          value=lambda A: next(m["h_lru_measured"] for m in A["target"]["models"]
                               if "Qwen3-Next-80B" in m["repo"])),
+    dict(id="qwen3_30b_serial_dram_tok_s",
+         text="charging DRAM reads of resident weights and cache hits (no overlap), Qwen3-30B-A3B "
+              "falls from 11.5 to 8.8 tok/s",
+         artifact="engine_target.json", expected=8.8, tol=0.1,
+         value=lambda A: next(m["tok_s_at_lru_serial_dram"] for m in A["target"]["models"]
+                              if m["repo"] == "Qwen/Qwen3-30B-A3B")),
+    dict(id="qwen3_30b_floor_additive_tok_s",
+         text="under S9's competing floor-additive hypothesis the same serial figure is 5.0 tok/s",
+         artifact="engine_target.json", expected=5.0, tol=0.1,
+         value=lambda A: next(m["tok_s_at_lru_floor_additive_serial_dram"]
+                              for m in A["target"]["models"] if m["repo"] == "Qwen/Qwen3-30B-A3B")),
+    dict(id="olmoe_fully_resident",
+         text="OLMoE-1B-7B fits entirely in the 4.85 GB budget, so it has no flash traffic and "
+              "no cache-curve number (1 = fully resident)",
+         artifact="engine_target.json", expected=1.0, tol=1e-9,
+         value=lambda A: float(next(m["fully_resident"] for m in A["target"]["models"]
+                                    if "OLMoE" in m["repo"]))),
+    dict(id="n_models_outside_curve",
+         text="3 of 10 candidate models sit outside the measured rho range and get no number",
+         artifact="engine_target.json", expected=3.0, tol=1e-9,
+         value=lambda A: float(sum(1 for m in A["target"]["models"]
+                                   if m["resident_fits"] and m["curve_extrapolated"]
+                                   and not m["fully_resident"]))),
+    # -------------------------------------------------------------- S1 DRAM
+    dict(id="dram_app_gbps",
+         text="DRAM read bandwidth available to an unprivileged app is 59.7 GB/s (4 threads, "
+              "median of clean rows)",
+         artifact="dram_15r.json", expected=59.74, tol=0.01,
+         value=lambda A: A["dram"]["runs"]["app"]["best"]["GBps_median_clean"]),
+    dict(id="dram_8thread_never_clean",
+         text="at 8 threads no DRAM row was free of descheduling in either domain",
+         artifact="dram_15r.json", expected=0.0, tol=1e-9,
+         value=lambda A: float(sum(t["n_clean"] for d in A["dram"]["runs"].values()
+                                   for t in d["table"] if t["threads"] == 8))),
+    # ----------------------------------------------------------------- S2
+    dict(id="turbosparse_resident_ratio",
+         text="TurboSparse-Mixtral's HF-derived resident count is 3.70x its config-derived count",
+         artifact="byte_budget_measured.json", expected=3.70, tol=0.01,
+         value=lambda A: 1.0 / (1.0 - next(m["resident_crosscheck_rel_diff"]
+                                           for m in A["bb"]["models"]
+                                           if "TurboSparse" in m["repo"]))),
     # ------------------------------------------------------ instrument agreement
     dict(id="roofline_inputs_agree",
          text="the bandwidth constant used here is the one the engine_sim artifact was run with",
@@ -271,6 +312,8 @@ def load_all():
         "scope": load("scope_compare_OLMoE-1B-7B-0924.json"),
         "policy": load("expert_policy_OLMoE-1B-7B-0924.json"),
         "predictor": load("predictor_OLMoE-1B-7B-0924.json"),
+        "dram": load("dram_15r.json"),
+        "bb": load("byte_budget_measured.json"),
     }
 
 

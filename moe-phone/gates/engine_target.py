@@ -104,6 +104,10 @@ def main():
     p.add_argument("--ram-gb", type=float, required=True,
                    help="MEASURED weight budget, GB (G0 memprobe --file). Note this is "
                         "bimodal on a real phone; name which regime you mean.")
+    p.add_argument("--dram-gbps", type=float, required=True,
+                   help="MEASURED DRAM read bandwidth, GB/s (S1: dram_15r.json). Every resident "
+                        "weight and every cache HIT is read at this rate; the flash-only formula "
+                        "leaves it out, so rows report both.")
     p.add_argument("--target-tps", type=float, required=True,
                    help="decode rate to clear; ESTIMAND.md §4 derives it from reading speed")
     p.add_argument("--bpw", type=float, default=4.5, help="bits per weight (Q4_0 = 4.5)")
@@ -131,7 +135,37 @@ def main():
         # h such that E_tok_bytes*(1-h)/bulk == 1/target_tps
         need = 1.0 - (a.bulk_gbps * 1e9 / a.target_tps) / e_tok_b
         rho = h_floor * g["num_experts"] / g["top_k"] if fits else 0.0
+        fully_resident = fits and cache_b >= e_all_b
         h_lru, h_bel, extrap = at_rho(curve, rho)
+        h_lru_floor_add = None
+        if fully_resident:
+            # Every expert fits: the hit rate is 1 by construction and there is no
+            # flash traffic. Reading a cache curve here would credit a streaming
+            # engine for a model that is never streamed (2026-09-16 defect: OLMoE
+            # was reported at 27.1 tok/s "on plain LRU").
+            h_lru, h_bel = 1.0, 1.0
+        elif extrap:
+            # Outside the measured rho range the curve was CLAMPED to an endpoint.
+            # A clamped value is not a measurement, so no tok/s is derived from it
+            # (2026-09-16 defect: the flag existed but only one verdict branch
+            # printed it, so clamped rows were reported unmarked).
+            h_lru, h_bel = None, None
+        else:
+            # S9's competing hypothesis (gates/s9_prereg.py): transfer only
+            # OLMoE's excess over its own LRU null f = rho * k / E.
+            f0 = rho * curve["top_k"] / curve["num_experts"]
+            h_lru_floor_add = h_floor + (h_lru - f0)
+
+        def rate(h):
+            """(flash-only, serial flash+DRAM, overlapped max(flash, DRAM)) tok/s at hit rate h."""
+            if not fits or h is None:
+                return None, None, None
+            t_f = e_tok_b * (1 - h) / (a.bulk_gbps * 1e9)
+            t_d = (res_b + e_tok_b * h) / (a.dram_gbps * 1e9)
+            return ((1 / t_f) if t_f > 0 else None, 1 / (t_f + t_d), 1 / max(t_f, t_d))
+
+        fo_lru, se_lru, ov_lru = rate(h_lru)
+        _, se_fa, _ = rate(h_lru_floor_add)
         rows.append({
             "rho": rho, "h_lru_measured": h_lru, "h_belady_measured": h_bel,
             "curve_extrapolated": extrap,
@@ -140,11 +174,18 @@ def main():
             # the verdict string; it does not enter this.
             "tok_s_at_floor": (a.bulk_gbps * 1e9 / (e_tok_b * (1 - h_floor))
                                if fits and h_floor < 1 else None),
-            "tok_s_at_lru": (a.bulk_gbps * 1e9 / (e_tok_b * (1 - h_lru))
-                             if fits and h_lru is not None and h_lru < 1 else None),
+            "tok_s_at_lru": fo_lru,
             "tok_s_at_belady": (a.bulk_gbps * 1e9 / (e_tok_b * (1 - h_bel))
                                 if fits and h_bel is not None and h_bel < 1 else None),
-            "clears_with_plain_lru": bool(fits and h_lru is not None and need <= h_lru),
+            # The flash-only figure omits DRAM reads of resident weights and cache
+            # hits. The serial figure charges both with no overlap; the overlap
+            # figure assumes perfect overlap. Compute is still NOT charged (S11).
+            "tok_s_at_lru_serial_dram": se_lru,
+            "tok_s_at_lru_overlap_dram": ov_lru,
+            "fully_resident": fully_resident,
+            "h_lru_floor_additive": h_lru_floor_add,
+            "tok_s_at_lru_floor_additive_serial_dram": se_fa,
+            "clears_with_plain_lru": bool(fits and not extrap and h_lru is not None and need <= h_lru),
             "unreachable_even_with_belady": bool(
                 fits and h_bel is not None and need > h_bel),
             "repo": m["repo"], "total_params": m["total_params"],
@@ -160,27 +201,30 @@ def main():
             "unreachable_by_any_policy": need >= 1.0,
         })
 
-    rows.sort(key=lambda r: (not r["resident_fits"], -(r["tok_s_at_lru"] or -1)))
-    print(f"target {a.target_tps} tok/s | bulk {a.bulk_gbps} GB/s | budget {a.ram_gb} GB | "
-          f"{a.bpw} bpw")
+    rows.sort(key=lambda r: (not r["resident_fits"], -(r["tok_s_at_lru_serial_dram"] or -1)))
+    print(f"target {a.target_tps} tok/s | bulk {a.bulk_gbps} GB/s | DRAM {a.dram_gbps} GB/s | "
+          f"budget {a.ram_gb} GB | {a.bpw} bpw   (compute NOT charged: S11)")
     print(f"\nmeasured LRU curve: {os.path.basename(curve['path'])} "
           f"(top-{curve['top_k']} of {curve['num_experts']}, {curve['tokens']} tokens), "
           f"indexed by rho = per-layer slots / top_k")
     print(f"\n{'model':<30}{'total':>7}{'GB/tok':>8}{'cache%':>8}{'rho':>7}"
-          f"{'h_LRU':>7}{'tok/s LRU':>10}{'tok/s Bel':>10}  verdict")
+          f"{'h_LRU':>7}{'flash':>7}{'serial':>8}{'H_floor':>8}  verdict")
+    nan = float("nan")
     for r in rows:
-        t = r["tok_s_at_lru"]
+        t = r["tok_s_at_lru_serial_dram"]
         if not r["resident_fits"]:
             v = "RESIDENT WEIGHTS ALONE EXCEED THE BUDGET"
-        elif t is not None and t >= 10.0:
-            v = f"DOUBLE DIGITS on plain LRU ({t:.1f} tok/s)"
+        elif r["fully_resident"]:
+            v = "FULLY RESIDENT: no flash traffic; DRAM/compute set the rate"
+        elif r["curve_extrapolated"]:
+            v = "rho OUTSIDE the measured curve: no number (needs its own trace)"
         elif r["unreachable_by_any_policy"]:
             v = "unreachable: needs h >= 1"
         elif r["clears_with_no_policy"]:
             v = "CLEARS on the no-locality floor alone"
         elif r["clears_with_plain_lru"]:
             v = f"CLEARS with plain LRU (measured {r['h_lru_measured']:.3f})"
-        elif r["unreachable_even_with_belady"]:
+        elif r["unreachable_even_with_belady"] and r["h_belady_measured"] is not None:
             v = f"beyond Belady ({r['h_belady_measured']:.3f}): drop or re-quantise"
         else:
             v = (f"gap {r['h_required'] - r['h_lru_measured']:+.3f} over LRU"
@@ -188,9 +232,12 @@ def main():
         print(f"{r['repo'][:29]:<30}{r['total_params']/1e9:>6.0f}B"
               f"{r['E_tok_GB']:>8.2f}{100*r['cache_fraction_of_experts']:>7.1f}%"
               f"{r['rho']:>7.2f}"
-              f"{(r['h_lru_measured'] if r['h_lru_measured'] is not None else float('nan')):>7.3f}"
-              f"{(r['tok_s_at_lru'] or float('nan')):>10.1f}"
-              f"{(r['tok_s_at_belady'] or float('nan')):>10.1f}  {v}")
+              f"{(r['h_lru_measured'] if r['h_lru_measured'] is not None else nan):>7.3f}"
+              f"{(r['tok_s_at_lru'] or nan):>7.1f}"
+              f"{(r['tok_s_at_lru_serial_dram'] or nan):>8.1f}"
+              f"{(r['tok_s_at_lru_floor_additive_serial_dram'] or nan):>8.1f}  {v}")
+    print("\nflash = flash-only (ARCHITECTURE §1); serial = flash + DRAM, no overlap; H_floor = "
+          "serial under S9's competing hypothesis. All three ignore compute (S11).")
 
     n_bulk = sum(1 for r in rows if r["every_read_is_bulk"])
     print(f"\nevery read is bulk for {n_bulk}/{len(rows)} models "

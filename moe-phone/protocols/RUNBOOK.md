@@ -98,7 +98,7 @@ record what an ordinary app cannot see, which is `POSITION.md` finding F6.
 
 ### 3. G0 — how much memory one app can hold (5 minutes)
 Close apps you care about first: this can make Android close **background** apps. It stops
-itself before anything is killed.
+on a resident-set plateau; it does **not** check whether other apps were killed on the way.
 ```sh
 ./memprobe > memprobe_15r.csv          # repeat at least 3x; the spread is large
 tail -3 memprobe_15r.csv

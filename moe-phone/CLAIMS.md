@@ -45,7 +45,14 @@ internally consistent and wrong. That is what the property tests are for.
 | `spec_baseline` | the W=1 baseline at a 10% cache is 8.6 tok/s | `engine_sim_OLMoE-1B-7B-0924.json` | 8.5947 | ok |
 | `qwen3_30b_lru_tok_s` | Qwen3-30B-A3B reaches 11.5 tok/s on plain LRU | `engine_target.json` | 11.5228 | ok |
 | `qwen3_next_80b_lru_tok_s` | Qwen3-Next-80B-A3B reaches 10.0 tok/s on plain LRU | `engine_target.json` | 9.9669 | ok |
-| `qwen3_next_80b_h_lru` | the curve interpolates h = 0.669 for Qwen3-Next-80B-A3B, against an independently reported 0.693 for a 512-expert top-10 model at the same rho | `engine_target.json` | 0.6685 | ok |
+| `qwen3_next_80b_h_lru` | the curve interpolates h = 0.669 for Qwen3-Next-80B-A3B (transferred from OLMoE at equal rho, S9) | `engine_target.json` | 0.6685 | ok |
+| `qwen3_30b_serial_dram_tok_s` | charging DRAM reads of resident weights and cache hits (no overlap), Qwen3-30B-A3B falls from 11.5 to 8.8 tok/s | `engine_target.json` | 8.7504 | ok |
+| `qwen3_30b_floor_additive_tok_s` | under S9's competing floor-additive hypothesis the same serial figure is 5.0 tok/s | `engine_target.json` | 5.0294 | ok |
+| `olmoe_fully_resident` | OLMoE-1B-7B fits entirely in the 4.85 GB budget, so it has no flash traffic and no cache-curve number (1 = fully resident) | `engine_target.json` | 1.0000 | ok |
+| `n_models_outside_curve` | 3 of 10 candidate models sit outside the measured rho range and get no number | `engine_target.json` | 3.0000 | ok |
+| `dram_app_gbps` | DRAM read bandwidth available to an unprivileged app is 59.7 GB/s (4 threads, median of clean rows) | `dram_15r.json` | 59.7410 | ok |
+| `dram_8thread_never_clean` | at 8 threads no DRAM row was free of descheduling in either domain | `dram_15r.json` | 0.0000 | ok |
+| `turbosparse_resident_ratio` | TurboSparse-Mixtral's HF-derived resident count is 3.70x its config-derived count | `byte_budget_measured.json` | 3.7004 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-35 claims checked.
+42 claims checked.
