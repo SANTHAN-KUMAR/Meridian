@@ -1,0 +1,28 @@
+[
+ {
+  "file": "olmoe-1b-7b-0924-q4_0.gguf",
+  "arch": "olmoe",
+  "n_expert": 64,
+  "top_k": 8,
+  "file_tensor_bytes": 3926255616,
+  "expert_bytes_all": 3623878656,
+  "embedding_bytes": 57950208,
+  "other_bytes": 244426752,
+  "active_bytes_per_token": 697412736.0,
+  "expert_bytes_per_token": 452984832.0,
+  "per_expert_bytes_all_layers": 56623104.0
+ },
+ {
+  "file": "granite-3.1-1b-a400m-instruct-Q4_0.gguf",
+  "arch": "granitemoe",
+  "n_expert": 32,
+  "top_k": 8,
+  "file_tensor_bytes": 769726936,
+  "expert_bytes_all": 682622976,
+  "embedding_bytes": 41290200,
+  "other_bytes": 45813760,
+  "active_bytes_per_token": 216470344.0,
+  "expert_bytes_per_token": 170655744.0,
+  "per_expert_bytes_all_layers": 21331968.0
+ }
+]

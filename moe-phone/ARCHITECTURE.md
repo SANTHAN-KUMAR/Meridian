@@ -34,8 +34,10 @@ constant. `h`, the expert-cache hit rate, is the only free variable **of this eq
 > speculation off it over-predicts tok/s by 2.8x (median); at a 98% hit rate by 4.4x. It leaves
 > out DRAM reads of resident weights and cache hits, and compute — and on real hardware those
 > are the same order as the flash term. So raising `h` is necessary and not sufficient.
-> `engine_target.py` now charges DRAM at the measured 59.74 GB/s (S1); compute is still
-> uncharged (S11) until the on-device forward-pass time is measured.
+> `engine_target.py` now charges DRAM at the measured 59.74 GB/s (S1) and, with
+> `--nonflash-gbps`, the measured on-device non-flash rate (S11): a resident MoE on the 15R
+> consumes its per-token bytes at 23.2 GB/s, 39% of the DRAM probe, so compute and engine
+> overhead — not DRAM — set the non-flash term here.
 
 > ```
 > python moe-phone/gates/engine_target.py --bulk-gbps 2.806 --dram-gbps 59.74 --ram-gb 4.85 --target-tps 5
@@ -120,8 +122,9 @@ Four tokens is a remarkably short horizon, and it is the load-bearing result of 
 
 That is the whole deployable design. An earlier version said it was "worth double digits of tok/s
 on three candidate models"; that came from three `engine_target.py` defects (README defect table)
-and is withdrawn. Corrected: Qwen3-30B-A3B at 11.5 tok/s flash-only, 8.8 with DRAM charged, and
-5.0 if S9's floor-additive hypothesis holds — before any compute cost (S11). Everything below is about the 2.2× that §2.4 says is still on the table,
+and is withdrawn. Corrected: Qwen3-30B-A3B at 11.5 tok/s flash-only, 8.8 with DRAM charged, and **6.3 with the
+measured on-device non-flash rate charged (S11) — 4.2 if S9's floor-additive hypothesis holds**.
+The reading-speed target (5 tok/s) sits between the two, so the S9 trace decides this model. Everything below is about the 2.2× that §2.4 says is still on the table,
 and whether it can be reached.
 
 ### 3.1 A cheap predictor was the primary recommendation. It is not.
@@ -269,7 +272,7 @@ stacking them owes a fidelity check per row.
 | lever | multiplier | status | what it would cost to find out |
 |---|---|---|---|
 | **raise `h`** via lookahead | up to ~2.2×, but ONLY from an exact 4-token window (§3, §4) | **measured, and its cheap route is closed** (S12) | done; what remains is α, below |
-| **deeper I/O queue** | probably ~1.0× | **downgraded 2026-09-16.** G1's own bulk cells are flat from 4 threads (the 4→8 step adds almost nothing at 256 KB–1 MB and loses at 2–4 MB, `g1_storage.json`), which looks like a device ceiling, not a queue-depth limit. Only 4 KB reads were unsaturated, and whole-expert reads are never 4 KB | queued: `device/phone_campaign.sh` step 5 runs 16/32 threads at 512 KB–4 MB |
+| **deeper I/O queue** | 1.0× | **closed 2026-09-16, negative.** At 1 MB direct reads 16 or 32 threads reach 0.99x of 8 threads (`g1_storage_qd.json`); the plateau starts at 4 threads. It is a device ceiling, not a queue-depth limit | — |
 | **lower precision**, 4.5 → ~3.0 bpw | ~1.5× | **untested against our margin** | rerun G3's harness at Q3_K/IQ3 against the same pre-registered Q4_0 Tier-A margin |
 | **whole-expert skipping** (ACE, arXiv 2609.05228: 50%, training-free *and* calibration-free) | up to 2× | **untested, and a different axis from G3** — G3 killed intra-expert *neuron* sparsity on a gate-first criterion; this drops whole experts, so S8 does not gate it | same harness. ACE's headline is measured against other skipping methods, not against the full model, so our margin is the real test |
 | **union fetch** across a verification window | ~1.2× at α=0.9 | **measured, but can be negative** (§4) | measure `alpha` |
@@ -281,10 +284,9 @@ it should be run early rather than assumed.
 
 ## 6. The next measurements, in order of how much they move the answer
 
-0. **The on-device forward-pass time of a resident MoE** (**S11**). G-VALID-3 says the terms the
-   flash equation drops are the same order as the flash term, so every tok/s in this document is
-   an upper bound of unknown slack until this exists. Queued in `device/phone_campaign.sh`
-   (granite-3.1-1b-a400m, fully resident, plus OLMoE warm); needs the phone unlocked.
+0. **Done 2026-09-16 (S11):** a resident MoE's non-flash rate is 23.2 GB/s on the 15R. Next is a
+   clean *resident* OLMoE run to test the linear-in-bytes assumption it rests on (predicted
+   33.3 tok/s), and the S9 trace, which now decides whether Qwen3-30B-A3B clears 5 tok/s.
 
 1. **A drafter's acceptance rate `alpha`** (**S10**). S12's closure makes this the *only*
    remaining route to the 2.2×, and the sign of the effect flips inside the plausible range of
@@ -294,8 +296,7 @@ it should be run early rather than assumed.
    already runs the full sweep; it needs a second model argument.
 3. **Whole-expert skipping at the pre-registered fidelity margin** (§5b row four). The largest
    untested multiplier, and S8 does not gate it.
-4. **Extend the G1 thread sweep past 8.** Downgraded (§5b): G1's bulk cells already plateau from
-   4 threads. Queued, because it is cheap, not because it is expected to move anything.
+4. ~~Extend the G1 thread sweep past 8.~~ Run 2026-09-16: no gain past 8 threads (§5b).
 
 ---
 

@@ -1,0 +1,469 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-16/decode_15r",
+ "groups": [
+  {
+   "model": "granite-3.1-1b-a400m-instruct-Q4_0.gguf",
+   "threads": 2,
+   "mode": "warm",
+   "dir": "granite_warm_t2",
+   "n_short_long": [
+    64,
+    320
+   ],
+   "runs": [
+    {
+     "n_gen": 64,
+     "rep": 1,
+     "tg_tok_s": 88.005088,
+     "t_wall_s": 1.76685,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1421.1484375,
+     "max_rssfile_MB": 740.76953125,
+     "anon_MB_at_peak_est": 680.37890625,
+     "memavail_MB_start": 5422.1953125,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 320,
+     "rep": 1,
+     "tg_tok_s": 66.524703,
+     "t_wall_s": 5.63415,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1433.44921875,
+     "max_rssfile_MB": 740.828125,
+     "anon_MB_at_peak_est": 692.62109375,
+     "memavail_MB_start": 5299.46875,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 64,
+     "rep": 2,
+     "tg_tok_s": 88.448597,
+     "t_wall_s": 1.68556,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1421.24609375,
+     "max_rssfile_MB": 740.55859375,
+     "anon_MB_at_peak_est": 680.6875,
+     "memavail_MB_start": 5305.76171875,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 320,
+     "rep": 2,
+     "tg_tok_s": 80.88394,
+     "t_wall_s": 4.88635,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1433.32421875,
+     "max_rssfile_MB": 740.703125,
+     "anon_MB_at_peak_est": 692.62109375,
+     "memavail_MB_start": 5263.5625,
+     "resident_after_drop": null,
+     "exit": 0
+    }
+   ],
+   "pairs": [
+    {
+     "rep": 1,
+     "marginal_s_per_tok": 0.015106640625,
+     "marginal_tok_s": 66.19605409458795,
+     "marginal_flash_MB_per_tok": 0.0,
+     "memavail_MB_start": [
+      5422.1953125,
+      5299.46875
+     ]
+    },
+    {
+     "rep": 2,
+     "marginal_s_per_tok": 0.012503085937500002,
+     "marginal_tok_s": 79.98025487457782,
+     "marginal_flash_MB_per_tok": 0.0,
+     "memavail_MB_start": [
+      5305.76171875,
+      5263.5625
+     ]
+    }
+   ],
+   "tg_tok_s_median_by_n": {
+    "64": 88.2268425,
+    "320": 73.70432149999999
+   },
+   "marginal_tok_s_median": 73.08815448458289,
+   "marginal_flash_MB_per_tok_median": 0.0,
+   "n_failed_runs": 0
+  },
+  {
+   "model": "granite-3.1-1b-a400m-instruct-Q4_0.gguf",
+   "threads": 4,
+   "mode": "warm",
+   "dir": "granite_warm_t4",
+   "n_short_long": [
+    64,
+    320
+   ],
+   "runs": [
+    {
+     "n_gen": 64,
+     "rep": 1,
+     "tg_tok_s": 111.024103,
+     "t_wall_s": 2.23969,
+     "read_GB": 0.77350912,
+     "file_fault_multiple": 1.0026476325817675,
+     "max_vmrss_MB": 1421.15625,
+     "max_rssfile_MB": 740.05078125,
+     "anon_MB_at_peak_est": 681.10546875,
+     "memavail_MB_start": 5436.9921875,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 320,
+     "rep": 1,
+     "tg_tok_s": 98.110727,
+     "t_wall_s": 4.1118,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1433.40234375,
+     "max_rssfile_MB": 740.6796875,
+     "anon_MB_at_peak_est": 692.72265625,
+     "memavail_MB_start": 5435.0234375,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 64,
+     "rep": 2,
+     "tg_tok_s": 111.22961,
+     "t_wall_s": 1.70956,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1421.234375,
+     "max_rssfile_MB": 740.5703125,
+     "anon_MB_at_peak_est": 680.6640625,
+     "memavail_MB_start": 5429.1328125,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 320,
+     "rep": 2,
+     "tg_tok_s": 99.80626,
+     "t_wall_s": 4.43993,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1433.2265625,
+     "max_rssfile_MB": 740.515625,
+     "anon_MB_at_peak_est": 692.7109375,
+     "memavail_MB_start": 5403.83203125,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 64,
+     "rep": 3,
+     "tg_tok_s": 113.085038,
+     "t_wall_s": 1.72135,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1421.53125,
+     "max_rssfile_MB": 740.7734375,
+     "anon_MB_at_peak_est": 680.7578125,
+     "memavail_MB_start": 5443.9140625,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 320,
+     "rep": 3,
+     "tg_tok_s": 99.691678,
+     "t_wall_s": 4.11039,
+     "read_GB": 0.0,
+     "file_fault_multiple": 0.0,
+     "max_vmrss_MB": 1433.43359375,
+     "max_rssfile_MB": 740.83203125,
+     "anon_MB_at_peak_est": 692.6015625,
+     "memavail_MB_start": 5424.5390625,
+     "resident_after_drop": null,
+     "exit": 0
+    }
+   ],
+   "pairs": [
+    {
+     "rep": 1,
+     "marginal_s_per_tok": 0.007312929687499999,
+     "marginal_tok_s": 136.74410157522797,
+     "marginal_flash_MB_per_tok": -3.02152,
+     "memavail_MB_start": [
+      5436.9921875,
+      5435.0234375
+     ]
+    },
+    {
+     "rep": 2,
+     "marginal_s_per_tok": 0.010665507812500002,
+     "marginal_tok_s": 93.76018634837034,
+     "marginal_flash_MB_per_tok": 0.0,
+     "memavail_MB_start": [
+      5429.1328125,
+      5403.83203125
+     ]
+    },
+    {
+     "rep": 3,
+     "marginal_s_per_tok": 0.009332187499999998,
+     "marginal_tok_s": 107.15601245688647,
+     "marginal_flash_MB_per_tok": 0.0,
+     "memavail_MB_start": [
+      5443.9140625,
+      5424.5390625
+     ]
+    }
+   ],
+   "tg_tok_s_median_by_n": {
+    "64": 111.22961,
+    "320": 99.691678
+   },
+   "marginal_tok_s_median": 107.15601245688647,
+   "marginal_flash_MB_per_tok_median": 0.0,
+   "n_failed_runs": 0
+  },
+  {
+   "model": "olmoe-1b-7b-0924-q4_0.gguf",
+   "threads": 4,
+   "mode": "cold",
+   "dir": "olmoe_cold",
+   "n_short_long": [
+    64,
+    320
+   ],
+   "runs": [
+    {
+     "n_gen": 64,
+     "rep": 1,
+     "tg_tok_s": 13.128517,
+     "t_wall_s": 22.4278,
+     "read_GB": 10.142294016,
+     "file_fault_multiple": 2.5820261161697418,
+     "max_vmrss_MB": 3728.36328125,
+     "max_rssfile_MB": 2377.8828125,
+     "anon_MB_at_peak_est": 1350.48046875,
+     "memavail_MB_start": 4315.11328125,
+     "resident_after_drop": 0.0,
+     "exit": 0
+    },
+    {
+     "n_gen": 320,
+     "rep": 1,
+     "tg_tok_s": 2.620439,
+     "t_wall_s": 135.879,
+     "read_GB": 10.07173632,
+     "file_fault_multiple": 2.5640635316221667,
+     "max_vmrss_MB": 5116.54296875,
+     "max_rssfile_MB": 3750.53515625,
+     "anon_MB_at_peak_est": 1366.0078125,
+     "memavail_MB_start": 5647.796875,
+     "resident_after_drop": 0.0,
+     "exit": 0
+    },
+    {
+     "n_gen": 64,
+     "rep": 2,
+     "tg_tok_s": 11.65743,
+     "t_wall_s": 20.338,
+     "read_GB": 8.304009216,
+     "file_fault_multiple": 2.114035407650543,
+     "max_vmrss_MB": 5163.84765625,
+     "max_rssfile_MB": 3750.421875,
+     "anon_MB_at_peak_est": 1413.42578125,
+     "memavail_MB_start": 5522.23046875,
+     "resident_after_drop": 0.0,
+     "exit": 0
+    },
+    {
+     "n_gen": 320,
+     "rep": 2,
+     "tg_tok_s": 3.164271,
+     "t_wall_s": 113.301,
+     "read_GB": 9.29458176,
+     "file_fault_multiple": 2.366215454347456,
+     "max_vmrss_MB": 5413.01953125,
+     "max_rssfile_MB": 3750.4921875,
+     "anon_MB_at_peak_est": 1662.52734375,
+     "memavail_MB_start": 5582.96875,
+     "resident_after_drop": 0.0,
+     "exit": 0
+    },
+    {
+     "n_gen": 64,
+     "rep": 3,
+     "tg_tok_s": 8.703536,
+     "t_wall_s": 21.8704,
+     "read_GB": 8.765054976,
+     "file_fault_multiple": 2.2314084783968022,
+     "max_vmrss_MB": 5168.515625,
+     "max_rssfile_MB": 3750.453125,
+     "anon_MB_at_peak_est": 1418.0625,
+     "memavail_MB_start": 5416.4140625,
+     "resident_after_drop": 0.0,
+     "exit": 0
+    },
+    {
+     "n_gen": 320,
+     "rep": 3,
+     "tg_tok_s": 10.428588,
+     "t_wall_s": 46.1496,
+     "read_GB": 9.264267264,
+     "file_fault_multiple": 2.3584979872490814,
+     "max_vmrss_MB": 5147.9765625,
+     "max_rssfile_MB": 3750.41796875,
+     "anon_MB_at_peak_est": 1397.55859375,
+     "memavail_MB_start": 5532.6015625,
+     "resident_after_drop": 0.0,
+     "exit": 0
+    }
+   ],
+   "pairs": [
+    {
+     "rep": 1,
+     "marginal_s_per_tok": 0.44316874999999994,
+     "marginal_tok_s": 2.2564767935464767,
+     "marginal_flash_MB_per_tok": -0.275616,
+     "memavail_MB_start": [
+      4315.11328125,
+      5647.796875
+     ]
+    },
+    {
+     "rep": 2,
+     "marginal_s_per_tok": 0.36313671875,
+     "marginal_tok_s": 2.7537837634327635,
+     "marginal_flash_MB_per_tok": 3.869424,
+     "memavail_MB_start": [
+      5522.23046875,
+      5582.96875
+     ]
+    },
+    {
+     "rep": 3,
+     "marginal_s_per_tok": 0.094840625,
+     "marginal_tok_s": 10.544004744802136,
+     "marginal_flash_MB_per_tok": 1.950048,
+     "memavail_MB_start": [
+      5416.4140625,
+      5532.6015625
+     ]
+    }
+   ],
+   "tg_tok_s_median_by_n": {
+    "64": 11.65743,
+    "320": 3.164271
+   },
+   "marginal_tok_s_median": 2.7537837634327635,
+   "marginal_flash_MB_per_tok_median": 1.950048,
+   "n_failed_runs": 0
+  },
+  {
+   "model": "olmoe-1b-7b-0924-q4_0.gguf",
+   "threads": 4,
+   "mode": "warm",
+   "dir": "olmoe_warm",
+   "n_short_long": [
+    64,
+    320
+   ],
+   "runs": [
+    {
+     "n_gen": 64,
+     "rep": 1,
+     "tg_tok_s": 1.186281,
+     "t_wall_s": 67.6444,
+     "read_GB": 7.596818432,
+     "file_fault_multiple": 1.933998714716778,
+     "max_vmrss_MB": 5323.58203125,
+     "max_rssfile_MB": 3750.66015625,
+     "anon_MB_at_peak_est": 1572.921875,
+     "memavail_MB_start": 5522.16796875,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 320,
+     "rep": 1,
+     "tg_tok_s": 1.81719,
+     "t_wall_s": 190.06,
+     "read_GB": 8.795684864,
+     "file_fault_multiple": 2.2392062380186974,
+     "max_vmrss_MB": 5244.85546875,
+     "max_rssfile_MB": 3750.48828125,
+     "anon_MB_at_peak_est": 1494.3671875,
+     "memavail_MB_start": 5462.9296875,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 64,
+     "rep": 2,
+     "tg_tok_s": 5.506469,
+     "t_wall_s": 23.119,
+     "read_GB": 6.578532352,
+     "file_fault_multiple": 1.6747633535505226,
+     "max_vmrss_MB": 5207.359375,
+     "max_rssfile_MB": 3750.484375,
+     "anon_MB_at_peak_est": 1456.875,
+     "memavail_MB_start": 5521.2109375,
+     "resident_after_drop": null,
+     "exit": 0
+    },
+    {
+     "n_gen": 320,
+     "rep": 2,
+     "tg_tok_s": 7.288163,
+     "t_wall_s": 59.6829,
+     "read_GB": 7.311429632,
+     "file_fault_multiple": 1.8613444085312272,
+     "max_vmrss_MB": 5262.94140625,
+     "max_rssfile_MB": 3750.51953125,
+     "anon_MB_at_peak_est": 1512.421875,
+     "memavail_MB_start": 5776.75390625,
+     "resident_after_drop": null,
+     "exit": 0
+    }
+   ],
+   "pairs": [
+    {
+     "rep": 1,
+     "marginal_s_per_tok": 0.4781859375,
+     "marginal_tok_s": 2.0912367378013914,
+     "marginal_flash_MB_per_tok": 4.683072,
+     "memavail_MB_start": [
+      5522.16796875,
+      5462.9296875
+     ]
+    },
+    {
+     "rep": 2,
+     "marginal_s_per_tok": 0.142827734375,
+     "marginal_tok_s": 7.001441312332656,
+     "marginal_flash_MB_per_tok": 2.86288,
+     "memavail_MB_start": [
+      5521.2109375,
+      5776.75390625
+     ]
+    }
+   ],
+   "tg_tok_s_median_by_n": {
+    "64": 3.346375,
+    "320": 4.5526765000000005
+   },
+   "marginal_tok_s_median": 4.546339025067024,
+   "marginal_flash_MB_per_tok_median": 3.772976,
+   "n_failed_runs": 0
+  }
+ ]
+}

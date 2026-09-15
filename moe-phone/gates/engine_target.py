@@ -108,6 +108,11 @@ def main():
                    help="MEASURED DRAM read bandwidth, GB/s (S1: dram_15r.json). Every resident "
                         "weight and every cache HIT is read at this rate; the flash-only formula "
                         "leaves it out, so rows report both.")
+    p.add_argument("--nonflash-gbps", type=float, default=None,
+                   help="MEASURED effective rate at which a resident MoE's per-token bytes are "
+                        "consumed on this device, GB/s (S11: s11_nonflash_15r.json). Charges DRAM "
+                        "AND compute for resident weights and cache hits; the flash term is added "
+                        "serially. Assumes non-flash time is linear in bytes touched.")
     p.add_argument("--target-tps", type=float, required=True,
                    help="decode rate to clear; ESTIMAND.md §4 derives it from reading speed")
     p.add_argument("--bpw", type=float, default=4.5, help="bits per weight (Q4_0 = 4.5)")
@@ -166,6 +171,13 @@ def main():
 
         fo_lru, se_lru, ov_lru = rate(h_lru)
         _, se_fa, _ = rate(h_lru_floor_add)
+
+        def rate_nf(h):
+            """serial flash + measured non-flash (DRAM and compute) tok/s at hit rate h."""
+            if not fits or h is None or not a.nonflash_gbps:
+                return None
+            return 1.0 / (e_tok_b * (1 - h) / (a.bulk_gbps * 1e9)
+                          + (res_b + e_tok_b * h) / (a.nonflash_gbps * 1e9))
         rows.append({
             "rho": rho, "h_lru_measured": h_lru, "h_belady_measured": h_bel,
             "curve_extrapolated": extrap,
@@ -185,6 +197,8 @@ def main():
             "fully_resident": fully_resident,
             "h_lru_floor_additive": h_lru_floor_add,
             "tok_s_at_lru_floor_additive_serial_dram": se_fa,
+            "tok_s_at_lru_serial_nonflash": rate_nf(h_lru),
+            "tok_s_at_lru_floor_additive_serial_nonflash": rate_nf(h_lru_floor_add),
             "clears_with_plain_lru": bool(fits and not extrap and h_lru is not None and need <= h_lru),
             "unreachable_even_with_belady": bool(
                 fits and h_bel is not None and need > h_bel),
@@ -208,7 +222,7 @@ def main():
           f"(top-{curve['top_k']} of {curve['num_experts']}, {curve['tokens']} tokens), "
           f"indexed by rho = per-layer slots / top_k")
     print(f"\n{'model':<30}{'total':>7}{'GB/tok':>8}{'cache%':>8}{'rho':>7}"
-          f"{'h_LRU':>7}{'flash':>7}{'serial':>8}{'H_floor':>8}  verdict")
+          f"{'h_LRU':>7}{'flash':>7}{'serial':>8}{'H_floor':>8}{'+comp':>7}{'+c,Hf':>7}  verdict")
     nan = float("nan")
     for r in rows:
         t = r["tok_s_at_lru_serial_dram"]
@@ -235,9 +249,12 @@ def main():
               f"{(r['h_lru_measured'] if r['h_lru_measured'] is not None else nan):>7.3f}"
               f"{(r['tok_s_at_lru'] or nan):>7.1f}"
               f"{(r['tok_s_at_lru_serial_dram'] or nan):>8.1f}"
-              f"{(r['tok_s_at_lru_floor_additive_serial_dram'] or nan):>8.1f}  {v}")
+              f"{(r['tok_s_at_lru_floor_additive_serial_dram'] or nan):>8.1f}"
+              f"{(r['tok_s_at_lru_serial_nonflash'] or nan):>7.1f}"
+              f"{(r['tok_s_at_lru_floor_additive_serial_nonflash'] or nan):>7.1f}  {v}")
     print("\nflash = flash-only (ARCHITECTURE §1); serial = flash + DRAM, no overlap; H_floor = "
-          "serial under S9's competing hypothesis. All three ignore compute (S11).")
+          "serial under S9's competing hypothesis; +comp = flash + MEASURED non-flash rate "
+          "(DRAM and compute, --nonflash-gbps, S11); +c,Hf = the same under H_floor.")
 
     n_bulk = sum(1 for r in rows if r["every_read_is_bulk"])
     print(f"\nevery read is bulk for {n_bulk}/{len(rows)} models "

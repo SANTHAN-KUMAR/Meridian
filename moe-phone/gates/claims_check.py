@@ -342,6 +342,54 @@ CLAIMS = [
          value=lambda A: next(r["tps_overlap_bound"] for r in A["pi2"]["models"][0]["rows"]
                               if r["format"] == "Q4_0" and r["d"] == 0.03
                               and r["mode"] == "predicted" and r["h_label"] == "floor")),
+    # --------------------------------------------- S11, on-device decode (G6-baseline)
+    dict(id="s11_effective_nonflash_gbps",
+         text="a resident MoE on the 15R consumes its per-token bytes at an effective 23.2 GB/s "
+              "(granite-1b-a400m Q4_0, 4 threads, stock llama.cpp)",
+         artifact="s11_nonflash_15r.json", expected=23.2, tol=0.05,
+         value=lambda A: A["s11"]["effective_nonflash_GBps"]),
+    dict(id="s11_fraction_of_dram",
+         text="that is 39% of the DRAM probe's bandwidth: resident decode is compute/overhead-bound",
+         artifact="s11_nonflash_15r.json", expected=0.39, tol=0.005,
+         value=lambda A: A["s11"]["fraction_of_dram"]),
+    dict(id="s11_olmoe_resident_prediction",
+         text="predicted fully resident OLMoE-1B-7B Q4_0 decode: 33.3 tok/s (DRAM-only bound 85.7)",
+         artifact="s11_nonflash_15r.json", expected=33.3, tol=0.05,
+         value=lambda A: A["s11"]["prediction"]["resident_tok_s_predicted"]),
+    dict(id="granite_resident_tok_s",
+         text="granite-1b-a400m Q4_0 fully resident decodes at 107.2 tok/s steady state, 4 threads",
+         artifact="decode_15r.json", expected=107.2, tol=0.1,
+         value=lambda A: next(g["marginal_tok_s_median"] for g in A["dec"]["groups"]
+                              if g["model"].startswith("granite") and g["threads"] == 4)),
+    dict(id="olmoe_stock_steady_state_spread",
+         text="stock llama.cpp OLMoE Q4_0 steady-state s/token varied 4.7x between cold repeats "
+              "with no change in flash bytes",
+         artifact="decode_15r.json", expected=4.7, tol=0.05,
+         value=lambda A: (lambda ps: max(ps) / min(ps))(
+             [p["marginal_s_per_tok"] for g in A["dec"]["groups"]
+              if g["model"].startswith("olmoe") and g["mode"] == "cold" for p in g["pairs"]])),
+    dict(id="qwen3_30b_serial_nonflash_tok_s",
+         text="with the measured non-flash rate charged, Qwen3-30B-A3B is 6.3 tok/s under H_rho",
+         artifact="engine_target.json", expected=6.3, tol=0.05,
+         value=lambda A: next(m["tok_s_at_lru_serial_nonflash"] for m in A["target"]["models"]
+                              if m["repo"] == "Qwen/Qwen3-30B-A3B")),
+    dict(id="qwen3_30b_floor_additive_nonflash_tok_s",
+         text="and 4.2 tok/s under H_floor — either side of the 5 tok/s target, so S9 decides it",
+         artifact="engine_target.json", expected=4.2, tol=0.05,
+         value=lambda A: next(m["tok_s_at_lru_floor_additive_serial_nonflash"]
+                              for m in A["target"]["models"] if m["repo"] == "Qwen/Qwen3-30B-A3B")),
+    dict(id="nonflash_input_agrees",
+         text="the non-flash rate engine_target was run with is the one s11_nonflash derived",
+         artifact="engine_target.json", expected=0.0, tol=0.001,
+         value=lambda A: abs(A["target"]["inputs"]["nonflash_gbps"]
+                             - A["s11"]["effective_nonflash_GBps"])),
+    dict(id="queue_depth_plateau",
+         text="at 1 MB direct reads, 16 or 32 threads reach 0.99x of 8 threads: no queue-depth lever",
+         artifact="g1_storage_qd.json", expected=0.99, tol=0.005,
+         value=lambda A: max(t["MBps_median"] for t in A["g1qd"]["table"]
+                             if t["mode"] == "direct" and t["size_kb"] == 1024 and t["threads"] in (16, 32))
+                        / next(t["MBps_median"] for t in A["g1qd"]["table"]
+                               if t["mode"] == "direct" and t["size_kb"] == 1024 and t["threads"] == 8)),
     # ------------------------------------------------------ instrument agreement
     dict(id="roofline_inputs_agree",
          text="the bandwidth constant used here is the one the engine_sim artifact was run with",
@@ -364,6 +412,9 @@ def load_all():
         "ext": load("external_validation_colibri.json"),
         "g1": load("g1_storage.json"),
         "pi2": load("byte_budget_validate_powerinfer2.json"),
+        "s11": load("s11_nonflash_15r.json"),
+        "dec": load("decode_15r.json"),
+        "g1qd": load("g1_storage_qd.json"),
     }
 
 

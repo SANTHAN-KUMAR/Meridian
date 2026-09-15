@@ -10,6 +10,11 @@
 # first-token costs cancel, leaving marginal seconds and bytes per decoded token
 # over tokens n_short+1 .. n_long — the steady-state window of ESTIMAND §1.
 #
+# CPU share is MEASURED too (added 2026-09-16, after steady-state decode varied 4.6x between
+# repeats with no difference in flash bytes): utime+stime of the process is sampled from
+# /proc/<pid>/stat, and cpu_share = CPU seconds / (wall seconds x threads). A run whose threads
+# did not get the CPU is descheduled, not slow — the dramprobe rule applied to the engine.
+#
 # Cold start is MEASURED, not assumed: fadvdrop evicts the checkpoint and prints
 # its mincore() residency before every run (a run whose post-drop residency is
 # above 5% is marked not_cold).
@@ -24,7 +29,8 @@ BENCH=$HERE/llm/llama-bench
 DROP=$HERE/fadvdrop
 mkdir -p "$OUT"
 CSV=$OUT/runs.csv
-[ -f "$CSV" ] || echo "tag,model,threads,n_gen,rep,mode,resident_after_drop,t_wall_s,read_bytes,rchar,max_vmrss_kb,max_rssfile_kb,tg_tok_s,memavail_kb_start,batt_level,batt_temp_dC,exit" > "$CSV"
+[ -f "$CSV" ] || echo "tag,model,threads,n_gen,rep,mode,resident_after_drop,t_wall_s,read_bytes,rchar,max_vmrss_kb,max_rssfile_kb,tg_tok_s,memavail_kb_start,batt_level,batt_temp_dC,exit,cpu_s,memavail_kb_min" > "$CSV"
+TCK=$(getconf CLK_TCK 2>/dev/null || echo 100)
 batt() { dumpsys battery 2>/dev/null | awk '/^  level:/{l=$2} /^  temperature:/{t=$2} END{printf "%s,%s", l, t}'; }
 for rep in $(seq 1 "$REPS"); do
   for n in $NS; do
@@ -44,7 +50,10 @@ for rep in $(seq 1 "$REPS"); do
       if [ -r /proc/$pid/io ]; then
         s=$(awk '/^read_bytes/{r=$2} /^rchar/{c=$2} END{print r, c}' /proc/$pid/io 2>/dev/null)
         v=$(awk '/^VmRSS/{r=$2} /^RssFile/{f=$2} END{print r+0, f+0}' /proc/$pid/status 2>/dev/null)
-        [ -n "$s" ] && echo "$(date +%s.%N) $s $v" >> "$OUT/$tag.io"
+        # fields 14,15 of /proc/pid/stat = utime, stime in clock ticks (comm has no spaces here)
+        u=$(awk '{print $14+$15}' /proc/$pid/stat 2>/dev/null)
+        ma=$(awk '/MemAvailable/{print $2}' /proc/meminfo)
+        [ -n "$s" ] && echo "$(date +%s.%N) $s $v ${u:-0} $ma" >> "$OUT/$tag.io"
       fi
       sleep 0.25
     done
@@ -54,9 +63,11 @@ for rep in $(seq 1 "$REPS"); do
     rb=$(echo "$last" | awk '{print $2}'); rc=$(echo "$last" | awk '{print $3}')
     mr=$(awk 'BEGIN{m=0} {if ($4>m) m=$4} END{print m}' "$OUT/$tag.io")
     mf=$(awk 'BEGIN{m=0} {if ($5>m) m=$5} END{print m}' "$OUT/$tag.io")
+    cpu=$(echo "$last" | awk -v t="$TCK" '{print $6/t}')
+    mmin=$(awk 'BEGIN{m=-1} {if (m<0 || $7<m) m=$7} END{print m}' "$OUT/$tag.io")
     # llama-bench csv: avg_ts is the tok/s column
     ts=$(awk -F, 'NR==1{for(i=1;i<=NF;i++) if($i=="\"avg_ts\""||$i=="avg_ts") c=i} NR==2{gsub(/"/,"",$c); print $c}' "$OUT/$tag.csv")
-    echo "$tag,$(basename "$MODEL"),$THREADS,$n,$rep,$MODE,$res,$(echo "$t1 - $t0" | bc -l 2>/dev/null || awk "BEGIN{print $t1-$t0}"),$rb,$rc,$mr,$mf,$ts,$mem,$b,$ex" >> "$CSV"
+    echo "$tag,$(basename "$MODEL"),$THREADS,$n,$rep,$MODE,$res,$(echo "$t1 - $t0" | bc -l 2>/dev/null || awk "BEGIN{print $t1-$t0}"),$rb,$rc,$mr,$mf,$ts,$mem,$b,$ex,$cpu,$mmin" >> "$CSV"
     tail -1 "$CSV"
   done
 done

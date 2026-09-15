@@ -1,0 +1,20 @@
+{
+ "reference": {
+  "model": "granite-3.1-1b-a400m-instruct-Q4_0.gguf",
+  "threads": 4,
+  "marginal_tok_s": 107.15601245688647,
+  "active_bytes_per_token": 216470344.0,
+  "n_pairs": 3
+ },
+ "effective_nonflash_GBps": 23.1960988782105,
+ "dram_GBps_measured": 59.741,
+ "fraction_of_dram": 0.3882777134331615,
+ "nonflash_s_per_GB": 0.04311069741728686,
+ "prediction": {
+  "model": "olmoe-1b-7b-0924-q4_0.gguf",
+  "active_bytes_per_token": 697412736.0,
+  "resident_tok_s_predicted": 33.260216914378944,
+  "resident_tok_s_dram_only_bound": 85.6608962185629,
+  "note": "resident = every weight in DRAM; linear-in-active-bytes assumption"
+ }
+}

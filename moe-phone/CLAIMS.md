@@ -60,6 +60,15 @@ internally consistent and wrong. That is what the property tests are for.
 | `spec_w4_a09_compute10ms_beta1` | if the batched verify is compute-bound (beta = 1) the same point is 1.02x | `engine_sim_OLMoE-1B-7B-0924.json` | 1.0236 | ok |
 | `g1_4k_cell_spread` | the 4 KB cell behind the 8.9x bulk/small ratio has a 39% run-to-run spread | `g1_storage.json` | 0.3887 | ok |
 | `gvalid1_bound_below_published` | the roofline bound for PowerInfer-2's own configuration is 1.90 tok/s, BELOW the 2.13 tok/s PowerInfer-2 measured | `byte_budget_validate_powerinfer2.json` | 1.8974 | ok |
+| `s11_effective_nonflash_gbps` | a resident MoE on the 15R consumes its per-token bytes at an effective 23.2 GB/s (granite-1b-a400m Q4_0, 4 threads, stock llama.cpp) | `s11_nonflash_15r.json` | 23.1961 | ok |
+| `s11_fraction_of_dram` | that is 39% of the DRAM probe's bandwidth: resident decode is compute/overhead-bound | `s11_nonflash_15r.json` | 0.3883 | ok |
+| `s11_olmoe_resident_prediction` | predicted fully resident OLMoE-1B-7B Q4_0 decode: 33.3 tok/s (DRAM-only bound 85.7) | `s11_nonflash_15r.json` | 33.2602 | ok |
+| `granite_resident_tok_s` | granite-1b-a400m Q4_0 fully resident decodes at 107.2 tok/s steady state, 4 threads | `decode_15r.json` | 107.1560 | ok |
+| `olmoe_stock_steady_state_spread` | stock llama.cpp OLMoE Q4_0 steady-state s/token varied 4.7x between cold repeats with no change in flash bytes | `decode_15r.json` | 4.6728 | ok |
+| `qwen3_30b_serial_nonflash_tok_s` | with the measured non-flash rate charged, Qwen3-30B-A3B is 6.3 tok/s under H_rho | `engine_target.json` | 6.3453 | ok |
+| `qwen3_30b_floor_additive_nonflash_tok_s` | and 4.2 tok/s under H_floor — either side of the 5 tok/s target, so S9 decides it | `engine_target.json` | 4.2448 | ok |
+| `nonflash_input_agrees` | the non-flash rate engine_target was run with is the one s11_nonflash derived | `engine_target.json` | 0.0001 | ok |
+| `queue_depth_plateau` | at 1 MB direct reads, 16 or 32 threads reach 0.99x of 8 threads: no queue-depth lever | `g1_storage_qd.json` | 0.9925 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-49 claims checked.
+58 claims checked.
