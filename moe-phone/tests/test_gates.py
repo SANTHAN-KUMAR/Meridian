@@ -730,3 +730,30 @@ def test_traces_sparsity_selftest():
     pytest.importorskip("transformers")
     import traces_sparsity
     assert traces_sparsity.selftest() == 0
+
+
+def test_prefetch_sim_without_prefetch_is_exactly_atomic_per_layer_lru():
+    """An identity, not a result: with prefetching off, prefetch_sim's replay IS the
+    engine's per-layer, event-atomic LRU, so its hit rate must equal cache_sim's to
+    the last access. If this breaks, the prefetch comparison is between two machines."""
+    import prefetch_sim
+    tr, E, L, k = _synthetic_trace(T=800)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    for f in (0.1, 0.3):
+        cap = max(1, int(round(f * L * E)))
+        got = prefetch_sim.replay(ev, E, cap, {}, 0.0, 1e-3, prefetch=False)["hit_rate"]
+        ref = cache_sim.lru_hits_events(ev, cap, "per_layer", "atomic") / (T * L * k)
+        assert got == ref, (f, got, ref)
+
+
+def test_prefetch_with_zero_recall_never_reduces_flash_reads():
+    """A predictor that is always wrong can only ADD reads (wasted fetches plus the
+    evictions they cause); it cannot make demand traffic fall below no prefetch."""
+    import prefetch_sim
+    tr, E, L, k = _synthetic_trace(T=800)
+    ev, T, _, _ = cache_sim.event_stream(tr, E)
+    recall0 = {l: 0.0 for l in range(L)}
+    cap = max(1, int(round(0.25 * L * E)))
+    base = prefetch_sim.replay(ev, E, cap, recall0, 0.0, 1e-3, prefetch=False)
+    pf = prefetch_sim.replay(ev, E, cap, recall0, 0.0, 1e-3, prefetch=True)
+    assert pf["flash_reads_per_tok"] >= base["flash_reads_per_tok"]
