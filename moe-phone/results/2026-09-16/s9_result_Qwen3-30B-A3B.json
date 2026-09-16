@@ -1,0 +1,63 @@
+{
+ "prereg": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-16/s9_prereg_Qwen3-30B-A3B.json",
+ "tolerance": 0.029127120971679688,
+ "grid_rho": [
+  1.0,
+  1.1,
+  1.25,
+  1.5,
+  2.0,
+  3.0,
+  4.0
+ ],
+ "confound": {
+  "curve": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-16/cache_fcrit_OLMoE-1B-7B-0924-q4_0-llamacpp.json",
+  "rows": [
+   {
+    "rho": 1.0,
+    "reference_fp16": 0.3764455318450928,
+    "same_model_target_format": 0.37513041496276855,
+    "abs_diff": 0.0013151168823242188
+   },
+   {
+    "rho": 1.1,
+    "reference_fp16": 0.3898806571960449,
+    "same_model_target_format": 0.3885819911956787,
+    "abs_diff": 0.001298666000366211
+   },
+   {
+    "rho": 1.25,
+    "reference_fp16": 0.4110901355743408,
+    "same_model_target_format": 0.409757137298584,
+    "abs_diff": 0.001332998275756836
+   },
+   {
+    "rho": 1.5,
+    "reference_fp16": 0.4494209289550781,
+    "same_model_target_format": 0.4481074810028076,
+    "abs_diff": 0.0013134479522705078
+   },
+   {
+    "rho": 2.0,
+    "reference_fp16": 0.5274200439453125,
+    "same_model_target_format": 0.5261802673339844,
+    "abs_diff": 0.001239776611328125
+   },
+   {
+    "rho": 3.0,
+    "reference_fp16": 0.6630315780639648,
+    "same_model_target_format": 0.6623687744140625,
+    "abs_diff": 0.0006628036499023438
+   },
+   {
+    "rho": 4.0,
+    "reference_fp16": 0.7710022926330566,
+    "same_model_target_format": 0.7704429626464844,
+    "abs_diff": 0.0005593299865722656
+   }
+  ],
+  "max_abs_diff": 0.001332998275756836,
+  "limit": 0.03125,
+  "voids_test": false
+ }
+}

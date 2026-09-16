@@ -17,6 +17,12 @@
 // decoded as ONE batch, i.e. teacher forcing — the same as the HF forward pass
 // that produced the committed OLMoE trace.
 //
+// Logits are requested for EVERY position, and that is not a detail: llama.cpp
+// prunes the last layer to the rows whose logits are needed (build_inp_out_ids),
+// so with the usual "logits for the final token only" batch the LAST MoE layer
+// routes one token per window instead of all of them. The tool refuses a trace
+// with a short layer rather than writing one silently.
+//
 // Output: binary file
 //   char[8] "MOETRC01"; int32 n_layers, top_k, n_windows, window_len, n_experts
 //   int32 layer_ids[n_layers]
@@ -61,12 +67,19 @@ static bool cb_eval(struct ggml_tensor * t, bool ask, void * ud) {
     const int n = (int) t->ne[1];
     if (c->top_k < 0) c->top_k = k;
     if (k != c->top_k) { fprintf(stderr, "FATAL: top_k changed %d -> %d\n", c->top_k, k); exit(3); }
+    // ffn_moe_topk is a VIEW of the argsort over all experts (the first k rows of it),
+    // so its row stride is n_expert * 4, not k * 4. Copy row by row at the tensor's own
+    // stride rather than assuming contiguity.
     std::vector<int32_t> buf((size_t) k * n);
-    if (t->nb[0] != sizeof(int32_t) || t->nb[1] != (size_t) k * sizeof(int32_t)) {
-        fprintf(stderr, "FATAL: %s is not contiguous (nb0=%zu nb1=%zu)\n", t->name, t->nb[0], t->nb[1]);
+    if (t->nb[0] != sizeof(int32_t)) {
+        fprintf(stderr, "FATAL: %s has element stride %zu, expected %zu\n",
+                t->name, t->nb[0], sizeof(int32_t));
         exit(3);
     }
-    ggml_backend_tensor_get(t, buf.data(), 0, buf.size() * sizeof(int32_t));
+    for (int row = 0; row < n; row++) {
+        ggml_backend_tensor_get(t, buf.data() + (size_t) row * k,
+                                (size_t) row * t->nb[1], (size_t) k * sizeof(int32_t));
+    }
     auto & v = c->by_layer[layer];
     v.insert(v.end(), buf.begin(), buf.end());      // ubatches append in token order
     c->n_seen++;
@@ -111,14 +124,22 @@ int main(int argc, char ** argv) {
     llama_context * ctx = llama_init_from_model(model, cp);
     if (!ctx) { fprintf(stderr, "failed to create context\n"); return 1; }
 
+    llama_batch batch = llama_batch_init(wl, 0, 1);
     FILE * fo = nullptr;
     std::vector<int> layers;
     std::vector<int16_t> row;
     for (int w = 0; w < nw; w++) {
         llama_memory_clear(llama_get_memory(ctx), true);
         c.by_layer.clear();
-        llama_batch b = llama_batch_get_one(ids.data() + (size_t) w * wl, wl);
-        if (llama_decode(ctx, b) != 0) { fprintf(stderr, "decode failed at window %d\n", w); return 1; }
+        batch.n_tokens = wl;
+        for (int i = 0; i < wl; i++) {
+            batch.token[i]    = ids[(size_t) w * wl + i];
+            batch.pos[i]      = i;
+            batch.n_seq_id[i] = 1;
+            batch.seq_id[i][0] = 0;
+            batch.logits[i]   = 1;      // every position: keeps the last layer unpruned
+        }
+        if (llama_decode(ctx, batch) != 0) { fprintf(stderr, "decode failed at window %d\n", w); return 1; }
         if (c.by_layer.empty()) { fprintf(stderr, "FATAL: no ffn_moe_topk tensors seen — not an MoE graph?\n"); return 3; }
         if (layers.empty()) {
             for (auto & kv : c.by_layer) layers.push_back(kv.first);
@@ -164,6 +185,7 @@ int main(int argc, char ** argv) {
         fprintf(stderr, "window %d/%d done\n", w + 1, nw);
     }
     fclose(fo);
+    llama_batch_free(batch);
     llama_free(ctx);
     llama_model_free(model);
     llama_backend_free();

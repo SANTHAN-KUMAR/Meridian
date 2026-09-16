@@ -36,11 +36,20 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
    **Before trusting any run, check `results/2026-09-16/phone_state_log.csv`**: a run that overlaps
    a non-`Awake` state, `keyguard=true`, a non-Termux focus, or an `INTERVENTION` line is
    contaminated. The first campaign (00:23) was, and is kept only as evidence.
-2. **S9 trace** — blocked on downloads (the laptop was on mobile data; ask before downloading):
-   the rest of `unsloth/Qwen3-30B-A3B-GGUF` Q4_0 (17.4 GB, ~8 GB already in
-   `moe-work/models/.cache`, resumable) and the wikitext-2 test split + tokenizers (~10 MB).
-   Then, in order: OLMoE Q4_0 control trace, Qwen3 trace, `cache_sim --fractions-around-crit`
-   on each, and score against the pre-registration.
+2. **S9 trace** — the control half is DONE (2026-09-16): tokens, the OLMoE Q4_0 trace through
+   llama.cpp, its f_crit curve and the confound score all exist, and the control passes
+   (0.0013 against a 0.031 limit). What remains is the target: resume
+   `unsloth/Qwen3-30B-A3B-GGUF` Q4_0 (9.6 GB left of 17.4, resumable from
+   `moe-work/models/.cache`), then:
+   ```
+   python moe-phone/gates/llamacpp_traces.py tokens --model Qwen/Qwen3-30B-A3B --out tok_qwen3.bin
+   moe-work/route_trace <qwen gguf> tok_qwen3.bin qwen3.trc 20
+   python moe-phone/gates/llamacpp_traces.py convert qwen3.trc --tag Qwen3-30B-A3B-q4_0-llamacpp ...
+   python moe-phone/gates/cache_sim.py <npz> --fractions-around-crit --out-name cache_fcrit_Qwen3-30B-A3B
+   python moe-phone/gates/s9_score.py --prereg .../s9_prereg_Qwen3-30B-A3B.json \
+       --target-curve .../cache_fcrit_Qwen3-30B-A3B.json \
+       --confound-curve .../cache_fcrit_OLMoE-1B-7B-0924-q4_0-llamacpp.json
+   ```
 3. **S11** — the on-device forward-pass time comes out of step 1 (granite resident, OLMoE warm);
    feed it to `engine_sim --fwd-ms` and to a compute column in `engine_target`.
 

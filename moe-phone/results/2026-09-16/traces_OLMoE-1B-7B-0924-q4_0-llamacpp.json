@@ -1,0 +1,29 @@
+{
+ "engine": "llama.cpp (tools/route_trace.cpp, ffn_moe_topk tensors)",
+ "gguf": "olmoe-1b-7b-0924-q4_0.gguf",
+ "gguf_sha256": null,
+ "llama_cpp_commit": "9f31776",
+ "tokens": 32768,
+ "moe_layers_in_graph": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15
+ ],
+ "top_k": 8,
+ "num_experts": 64,
+ "corpus": "wikitext-2-raw-v1 test, traces_sparsity.windows_from_text procedure",
+ "note": "keys L<i> are the i-th MoE layer in graph order, like traces_sparsity"
+}

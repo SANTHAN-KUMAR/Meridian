@@ -77,6 +77,10 @@ internally consistent and wrong. That is what the property tests are for.
 | `thr_olmoe_t3` | 2.3 tok/s at 3 threads: a cliff between 2 and 3 | `decode_15r_threads.json` | 2.3160 | ok |
 | `thr_olmoe_t4` | 2.1 tok/s at 4 threads | `decode_15r_threads.json` | 2.1198 | ok |
 | `thr_granite_t4` | resident granite scales normally: 88.6 tok/s at 4 threads | `decode_15r_threads.json` | 88.6004 | ok |
+| `s9_confound_max_curve_diff` | the same model measured through llama.cpp at Q4_0 differs from the fp16/HF reference curve by at most 0.0013 across the pre-registered rho grid | `s9_result_Qwen3-30B-A3B.json` | 0.0013 | ok |
+| `s9_confound_under_limit` | that is far below the pre-registered limit of 0.031, so the S9 test may proceed | `s9_result_Qwen3-30B-A3B.json` | 0.0000 | ok |
+| `q4_token_slot_overlap` | Q4_0 routing shares 94.8% of each token's expert slots with fp16 | `traces_confound_olmoe_q4_vs_fp16.json` | 0.9478 | ok |
+| `q4_exact_set_match` | but only 61.8% of tokens get an identical top-8 SET: quantisation moves routing per token while leaving the hit-rate curve intact | `traces_confound_olmoe_q4_vs_fp16.json` | 0.6179 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-66 claims checked.
+70 claims checked.

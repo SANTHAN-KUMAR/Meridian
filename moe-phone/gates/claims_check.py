@@ -426,6 +426,25 @@ CLAIMS = [
          text="resident granite scales normally: 88.6 tok/s at 4 threads",
          artifact="decode_15r_threads.json", expected=88.6, tol=0.1,
          value=lambda A: next(c["marginal_tok_s_median"] for c in A["thr"]["by_threads"] if c["model"].startswith("granite") and c["threads"] == 4)),
+    # ------------------------------------------- S9 confound control (pre-registered)
+    dict(id="s9_confound_max_curve_diff",
+         text="the same model measured through llama.cpp at Q4_0 differs from the fp16/HF "
+              "reference curve by at most 0.0013 across the pre-registered rho grid",
+         artifact="s9_result_Qwen3-30B-A3B.json", expected=0.00133, tol=0.00005,
+         value=lambda A: A["s9r"]["confound"]["max_abs_diff"]),
+    dict(id="s9_confound_under_limit",
+         text="that is far below the pre-registered limit of 0.031, so the S9 test may proceed",
+         artifact="s9_result_Qwen3-30B-A3B.json", expected=0.0, tol=1e-9,
+         value=lambda A: float(A["s9r"]["confound"]["voids_test"])),
+    dict(id="q4_token_slot_overlap",
+         text="Q4_0 routing shares 94.8% of each token's expert slots with fp16",
+         artifact="traces_confound_olmoe_q4_vs_fp16.json", expected=0.9478, tol=0.0005,
+         value=lambda A: A["conf"]["mean_overlap"]),
+    dict(id="q4_exact_set_match",
+         text="but only 61.8% of tokens get an identical top-8 SET: quantisation moves routing "
+              "per token while leaving the hit-rate curve intact",
+         artifact="traces_confound_olmoe_q4_vs_fp16.json", expected=0.6179, tol=0.0005,
+         value=lambda A: A["conf"]["exact_set_match"]),
     # ------------------------------------------------------ instrument agreement
     dict(id="roofline_inputs_agree",
          text="the bandwidth constant used here is the one the engine_sim artifact was run with",
@@ -453,6 +472,8 @@ def load_all():
         "g1qd": load("g1_storage_qd.json"),
         "dec2": load("decode_15r_cpu.json"),
         "thr": load("decode_15r_threads.json"),
+        "s9r": load("s9_result_Qwen3-30B-A3B.json"),
+        "conf": load("traces_confound_olmoe_q4_vs_fp16.json"),
     }
 
 
