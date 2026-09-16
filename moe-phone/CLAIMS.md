@@ -96,6 +96,11 @@ internally consistent and wrong. That is what the property tests are for.
 | `cliff_fix_no_primes_needed` | pinned to cores 0-3, with no prime cores, still 28.1 tok/s | `decode_15r_pin.json` | 28.1090 | ok |
 | `cliff_t6_pinned` | 6 pinned threads: 29.0 tok/s, no gain over 4 | `decode_15r_pin.json` | 28.9641 | ok |
 | `cliff_t8_pinned_worse` | 8 pinned threads on every core: 16.1 tok/s, contending with the system | `decode_15r_pin.json` | 16.0506 | ok |
+| `bmoe_reproduced_decode` | BigMoeOnEdge's published Qwen3-30B-A3B run reproduces on our OnePlus 15R: 3.98 tok/s median decode (reference build, its documented command) | `bmoe_repro.json` | 3.9770 | ok |
+| `bmoe_reproduced_hit` | at a 69.5% expert-cache hit rate (auto budget ~3.0-3.4 GB) | `bmoe_repro.json` | 69.5000 | ok |
+| `bmoe_compute_share` | decode spends 0.145 s/token in compute, the largest single term | `bmoe_repro.json` | 0.1445 | ok |
+| `bmoe_i8mm_no_gain` | an i8mm build of the same engine gains nothing: 3.71 tok/s (its kernels are generic with repacking off) | `bmoe_repro.json` | 3.7060 | ok |
+| `bmoe_pinning_starves_io` | pinning every thread to 4 cores collapses streaming to 0.23 tok/s: it starves the I/O lanes | `bmoe_repro.json` | 0.2265 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-85 claims checked.
+90 claims checked.

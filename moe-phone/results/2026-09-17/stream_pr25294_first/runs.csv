@@ -1,0 +1,2 @@
+tag,model,threads,n_gen,rep,flags,t_wall_s,decode_tok_s,prefill_tok_s,read_bytes,max_vmrss_kb,cpu_s,majflt,memavail_kb_start,memavail_kb_min,exit
+Qwen3-30B-A3B-Q4_0_t4_n128_r1_moe_stream_cache_16s_moe_stream_direct_moe_stream_io_threads_4_no_warmup_ub_1_C_0xF0_cpu_strict_1_c_1024,Qwen3-30B-A3B-Q4_0.gguf,4,128,1,"--moe-stream-cache 16s --moe-stream-direct --moe-stream-io-threads 4 --no-warmup -ub 1 -C 0xF0 --cpu-strict 1 -c 1024",199.799,0.68,3.12,64214978560,2963528,517.67,1518,4341340,1679580,0
