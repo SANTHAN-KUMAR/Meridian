@@ -64,10 +64,11 @@ def fnum(x):
 def analyse(rows, model_bytes):
     groups = {}
     for r in rows:
-        key = (r["model"], int(r["threads"]), r["mode"], r["_group_dir"])
+        key = (r["model"], int(r["threads"]), r["mode"], r["_group_dir"],
+               (r.get("extra") or "").strip().strip('"'))
         groups.setdefault(key, []).append(r)
     out = []
-    for (model, thr, mode, gdir), rs in sorted(groups.items()):
+    for (model, thr, mode, gdir, extra), rs in sorted(groups.items()):
         ns = sorted({int(r["n_gen"]) for r in rs})
         by = {(int(r["rep"]), int(r["n_gen"])): r for r in rs}
         pairs = []
@@ -99,7 +100,8 @@ def analyse(rows, model_bytes):
                  "memavail_min_MB": (fnum(r.get("memavail_kb_min")) / 1024
                                      if fnum(r.get("memavail_kb_min")) is not None else None)}
                 for r in rs]
-        out.append({"model": model, "threads": thr, "mode": mode, "dir": gdir,
+        out.append({"model": model, "threads": thr, "mode": mode, "dir": gdir, "extra": extra,
+                    "majflt_per_run": [fnum(r.get("majflt")) for r in rs],
                     "n_short_long": ns, "runs": runs, "pairs": pairs,
                     "tg_tok_s_median_by_n": {str(n): med([x["tg_tok_s"] for x in runs if x["n_gen"] == n])
                                               for n in ns},
@@ -125,17 +127,20 @@ def main():
     # threads). Pooling ACROSS those keys is never done.
     cells = {}
     for g in res["groups"]:
-        c = cells.setdefault((g["model"], g["mode"], g["threads"]), {"marg": [], "flash": [], "cpu": []})
+        c = cells.setdefault((g["model"], g["mode"], g["threads"], g["extra"]),
+                             {"marg": [], "flash": [], "cpu": [], "majflt": []})
+        c["majflt"] += [x for x in g["majflt_per_run"] if x is not None]
         c["marg"] += [x for x in g["marginal_tok_s_all"] if x]
         c["flash"] += [p_["marginal_flash_MB_per_tok"] for p_ in g["pairs"]]
         c["cpu"] += [x["cpu_share"] for x in g["runs"] if x["cpu_share"] is not None]
-    res["by_threads"] = [{"model": m, "mode": mo, "threads": t, "n_pairs": len(c["marg"]),
+    res["by_threads"] = [{"model": m, "mode": mo, "threads": t, "extra": ex, "n_pairs": len(c["marg"]),
+                          "majflt_median": med(c["majflt"]),
                           "marginal_tok_s_all": c["marg"], "marginal_tok_s_median": med(c["marg"]),
                           "marginal_flash_MB_per_tok_median": med(c["flash"]),
                           "cpu_share_median": med(c["cpu"])}
-                         for (m, mo, t), c in sorted(cells.items())]
+                         for (m, mo, t, ex), c in sorted(cells.items())]
     for c in res["by_threads"]:
-        print(f"  BY THREADS {c['model'][:34]:<34} {c['mode']:<5} t{c['threads']}: "
+        print(f"  BY THREADS {c['model'][:34]:<34} {c['mode']:<5} t{c['threads']} [{c['extra'] or 'default'}]: "
               f"{c['marginal_tok_s_median'] if c['marginal_tok_s_median'] is None else round(c['marginal_tok_s_median'], 1)} tok/s "
               f"(n={c['n_pairs']}: {[round(x, 1) for x in c['marginal_tok_s_all']]}), "
               f"flash {c['marginal_flash_MB_per_tok_median']} MB/tok, cpu share {c['cpu_share_median']}")

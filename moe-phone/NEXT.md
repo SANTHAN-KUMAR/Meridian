@@ -75,6 +75,39 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
   partial of Qwen3-30B-A3B Q4_0 is kept in `moe-work/models/` and resumes with
   `curl -C -`. The pre-registered family-confound separator (gpt-oss-20b, 12 GB) is unfetched.
 
+## OVERNIGHT PLAN 2026-09-16 night — resume here
+
+**Goal (user, verbatim intent): run big MoE models on the 15R at a decent decode rate — reproduce
+BigMoeOnEdge's 5.2 tok/s on Qwen3-30B-A3B, then aim for 10+; bigger models at 5+. Try real
+speculative decoding. Fix the thread cliff.**
+
+Jobs that run without the agent (check them first on resume):
+| job | where | done when |
+|---|---|---|
+| downloads (curl) | `moe-work/dl_{qwen3,gptoss}.log`, GGUFs in `moe-work/models/` | `DL_DONE` in the log (granite-3b already done) |
+| draft model Qwen3-0.6B Q8_0 | `moe-work/models/` | file present, ~0.6 GB |
+| streaming engine (llama.cpp PR #25294, branch `freedomljc/feat/moe-streaming-core`) | `moe-work/llama.cpp-stream/build-{cpu,android}` | `llama-cli` present in `build-android/bin` |
+| speculative binaries on the same branch | `moe-work/spec-build-{cpu,android}.log` | `llama-speculative-simple`, `llama-lookup` present |
+| thread-cliff campaign 4 | phone `~/moe/out4_*`, tmux `moe4` | `DONE` file |
+| BigMoeOnEdge method extraction | research subagent | its report |
+| phone state monitor (auto-unlock) | `moe-work/phone_monitor.sh` -> `results/2026-09-16/phone_state_log.csv` | runs until killed |
+
+Order of work:
+1. Pull campaign 4, analyse with `decode_analyze.py` (groups by engine flags). Early rows: 4 threads
+   = 566k-879k MAJOR faults in <60 s vs fewer at 2 threads -> the cliff is a 4 KB page-fault storm
+   under memory pressure. Fix = stop faulting weights in at 4 KB: bulk O_DIRECT expert reads
+   (the streaming engine), not a thread flag. Confirm with the --poll 0 / cpu-mask cells.
+2. Streaming engine on the phone: push `build-android/bin` + OLMoE smoke test with a small
+   `--moe-stream-cache` and `--moe-stream-direct`; then push Qwen3-30B-A3B Q4_0 and run beyond DRAM.
+   Budget: the app's ANONYMOUS memory (median 2.45 GB) holds the slabs. Start at 2 threads.
+3. Reproduce 5.2 tok/s using BigMoeOnEdge's exact flags (from the subagent), then tune one lever
+   per measured step: threads, cache slots, io-threads, quant, then GPU/NPU compute.
+4. Speculative decoding for real: `llama-speculative-simple` with Qwen3-0.6B draft, sweep draft
+   length 2-8, record acceptance and tok/s; `llama-lookup` (no draft). Close S10 with the measured alpha.
+5. Bigger models (gpt-oss-20b, then larger) once Qwen3 is solid.
+Commit + push after each milestone. Phone asleep between runs (PIN via the monitor). Shut the
+laptop down when done (user instruction).
+
 ## Local setup this session used (not committed)
 
 - Linux venv in the session scratchpad; `numpy pytest nbformat transformers==4.56.2 datasets`.
