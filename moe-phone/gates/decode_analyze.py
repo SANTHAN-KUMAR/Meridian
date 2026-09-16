@@ -128,19 +128,28 @@ def main():
     cells = {}
     for g in res["groups"]:
         c = cells.setdefault((g["model"], g["mode"], g["threads"], g["extra"]),
-                             {"marg": [], "flash": [], "cpu": [], "majflt": []})
+                             {"marg": [], "flash": [], "cpu": [], "majflt": [], "tg_long": []})
+        # llama-bench's OWN generation rate on the long run. Under memory pressure the page cache is
+        # evicted between runs, so a short run can absorb a re-fault the long run does not; the
+        # marginal difference then inflates (negative flash bytes are the tell). tg over n_long
+        # is the robust per-configuration rate and is reported beside it.
+        n_long = max(g["n_short_long"]) if g["n_short_long"] else None
+        c["tg_long"] += [x["tg_tok_s"] for x in g["runs"] if x["n_gen"] == n_long and x["tg_tok_s"]]
         c["majflt"] += [x for x in g["majflt_per_run"] if x is not None]
         c["marg"] += [x for x in g["marginal_tok_s_all"] if x]
         c["flash"] += [p_["marginal_flash_MB_per_tok"] for p_ in g["pairs"]]
         c["cpu"] += [x["cpu_share"] for x in g["runs"] if x["cpu_share"] is not None]
     res["by_threads"] = [{"model": m, "mode": mo, "threads": t, "extra": ex, "n_pairs": len(c["marg"]),
                           "majflt_median": med(c["majflt"]),
+                          "tg_tok_s_long_all": c["tg_long"], "tg_tok_s_long_median": med(c["tg_long"]),
+                          "marginal_suspect": any(f is not None and f < 0 for f in c["flash"]),
                           "marginal_tok_s_all": c["marg"], "marginal_tok_s_median": med(c["marg"]),
                           "marginal_flash_MB_per_tok_median": med(c["flash"]),
                           "cpu_share_median": med(c["cpu"])}
                          for (m, mo, t, ex), c in sorted(cells.items())]
     for c in res["by_threads"]:
         print(f"  BY THREADS {c['model'][:34]:<34} {c['mode']:<5} t{c['threads']} [{c['extra'] or 'default'}]: "
+              f"tg@long {[round(x, 1) for x in c['tg_tok_s_long_all']]} median {c['tg_tok_s_long_median']} | "
               f"{c['marginal_tok_s_median'] if c['marginal_tok_s_median'] is None else round(c['marginal_tok_s_median'], 1)} tok/s "
               f"(n={c['n_pairs']}: {[round(x, 1) for x in c['marginal_tok_s_all']]}), "
               f"flash {c['marginal_flash_MB_per_tok_median']} MB/tok, cpu share {c['cpu_share_median']}")

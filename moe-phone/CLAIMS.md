@@ -91,6 +91,11 @@ internally consistent and wrong. That is what the property tests are for.
 | `spec_measured_compute_beta1_is_a_regression` | if the batched verify is compute-bound the same W=4 point becomes 0.89x, a regression | `engine_sim_OLMoE-1B-7B-0924.json` | 0.8912 | ok |
 | `prefetch_measured_compute_10pct` | within-token prefetch at the measured compute cost LOSES at a 10% cache (0.76x): it needs about 80 ms of compute per token to pay, and the phone has 30 | `prefetch_sim_OLMoE-1B-7B-0924.json` | 0.7581 | ok |
 | `prefetch_measured_compute_20pct` | and only breaks even at a 20% cache (0.99x) | `prefetch_sim_OLMoE-1B-7B-0924.json` | 0.9889 | ok |
+| `cliff_unpinned_t4` | thread-cliff sweep: stock llama.cpp OLMoE Q4_0, 4 UNPINNED threads, decodes at 4.0 tok/s | `decode_15r_pin.json` | 3.9760 | ok |
+| `cliff_fix_pinned_t4` | the same 4 threads pinned with --cpu-strict 1 decode at 30.1 tok/s: the cliff is thread placement | `decode_15r_pin.json` | 30.0982 | ok |
+| `cliff_fix_no_primes_needed` | pinned to cores 0-3, with no prime cores, still 28.1 tok/s | `decode_15r_pin.json` | 28.1090 | ok |
+| `cliff_t6_pinned` | 6 pinned threads: 29.0 tok/s, no gain over 4 | `decode_15r_pin.json` | 28.9641 | ok |
+| `cliff_t8_pinned_worse` | 8 pinned threads on every core: 16.1 tok/s, contending with the system | `decode_15r_pin.json` | 16.0506 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-80 claims checked.
+85 claims checked.
