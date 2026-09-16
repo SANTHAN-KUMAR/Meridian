@@ -1,0 +1,18 @@
+# applies to https://github.com/freedomljc/llama.cpp branch feat/moe-streaming-core @ 1248fd8 (llama.cpp PR #25294)
+diff --git a/src/llama-context.cpp b/src/llama-context.cpp
+index bf2d582..6596071 100644
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -573,7 +573,11 @@ void llama_context::sched_reserve() {
+             }
+         }
+ 
+-        if (cparams.fused_gdn_ch) {
++        // moe-phone patch: the chunked Gated Delta Net path needs >1 token per sequence in a ubatch, so with
++        // n_ubatch <= 1 it can never run and its device check is moot. Reserving its 16-token probe graph
++        // anyway trips the MoE-streaming wave floor (3*n_expert_used slots) on models that stream experts
++        // with a small cache, even though no real ubatch ever exceeds n_ubatch.
++        if (cparams.fused_gdn_ch && cparams.n_ubatch > 1) {
+             // more than one token in the batch per sequence in order to take the chunked path
+             // note: n_outputs must match n_tokens for embedding models with mean/rank pooling,
+             // because build_pooling creates inp_mean with shape [n_tokens, n_seqs] and multiplies
