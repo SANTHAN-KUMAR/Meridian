@@ -58,9 +58,50 @@ JOBS = [
 ]
 # engine_target.json of 2026-09-14 predates the 2026-09-16 fix (resident / clamped rows and
 # the DRAM term), so its reproduction is against the 2026-09-16 artifact instead.
+D16 = os.path.join(RESULTS_ROOT, "2026-09-16")
+Q4 = os.path.join(D16, "traces_OLMoE-1B-7B-0924-q4_0-llamacpp.npz")
+GR = os.path.join(D16, "traces_granite-3.1-1b-a400m-q4_0-llamacpp.npz")
+MB = ["olmoe-1b-7b-0924-q4_0.gguf=3928036960",
+      "granite-3.1-1b-a400m-instruct-Q4_0.gguf=771466560"]
+# The measured forward-pass cost the 2026-09-16 artifacts were produced with. It is not a
+# tuned constant: it is active_bytes / effective_nonflash_GBps, both measured, and the
+# claims map asserts the artifacts carry this exact setting.
+FWD = "10,20,30.07,40,80"
+
 JOBS_NEW = [
-    ("engine_target.py", ["--bulk-gbps", "2.806", "--dram-gbps", "59.74", "--ram-gb", "4.85",
-                          "--target-tps", "5"], "engine_target.json", "2026-09-16"),
+    ("engine_target.py", ["--bulk-gbps", "2.806", "--dram-gbps", "59.74", "--nonflash-gbps",
+                          "23.196", "--ram-gb", "4.85", "--target-tps", "5"],
+     "engine_target.json", "2026-09-16"),
+    ("external_validation.py", [], "external_validation_colibri.json", "2026-09-16"),
+    ("dram_analyze.py", [f"app={D16}/dram_15r_app.csv", f"shell={D16}/dram_15r_shell.csv"],
+     "dram_15r.json", "2026-09-16"),
+    ("decode_analyze.py", [f"{D16}/decode_15r", "--model-bytes"] + MB,
+     "decode_15r.json", "2026-09-16"),
+    ("decode_analyze.py", [f"{D16}/decode_15r_cpu", "--out-name", "decode_15r_cpu.json",
+                           "--model-bytes"] + MB, "decode_15r_cpu.json", "2026-09-16"),
+    ("decode_analyze.py", [f"{D16}/decode_15r_threads", "--out-name", "decode_15r_threads.json",
+                           "--model-bytes"] + MB, "decode_15r_threads.json", "2026-09-16"),
+    ("s11_nonflash.py", [], "s11_nonflash_15r.json", "2026-09-16"),
+    ("cache_sim.py", [Q4, "--fractions-around-crit", "--out-name",
+                      "cache_fcrit_OLMoE-1B-7B-0924-q4_0-llamacpp"],
+     "cache_fcrit_OLMoE-1B-7B-0924-q4_0-llamacpp.json", "2026-09-16"),
+    ("cache_sim.py", [GR, "--fractions-around-crit", "--out-name",
+                      "cache_fcrit_granite-3.1-1b-a400m"],
+     "cache_fcrit_granite-3.1-1b-a400m.json", "2026-09-16"),
+    ("llamacpp_traces.py", ["compare", os.path.join(REF, "traces_OLMoE-1B-7B-0924.npz"), Q4,
+                            "--out", os.path.join("{OUT}", "traces_confound_olmoe_q4_vs_fp16.json")],
+     "traces_confound_olmoe_q4_vs_fp16.json", "2026-09-16"),
+    ("s9_score.py", ["--prereg", f"{D16}/s9_prereg_granite-3.1-1b-a400m.json",
+                     "--target-curve", f"{D16}/cache_fcrit_granite-3.1-1b-a400m.json",
+                     "--confound-curve", f"{D16}/cache_fcrit_OLMoE-1B-7B-0924-q4_0-llamacpp.json"],
+     "s9_result_granite-3.1-1b-a400m.json", "2026-09-16"),
+    ("engine_sim.py", [os.path.join(REF, "traces_OLMoE-1B-7B-0924.npz"), "--bulk-gbps", "2.806",
+                       "--expert-mb", "3.54", "--fwd-ms", FWD, "--verify-beta", "0,0.25,1"],
+     "engine_sim_OLMoE-1B-7B-0924.json", "2026-09-16"),
+    ("prefetch_sim.py", [os.path.join(REF, "traces_OLMoE-1B-7B-0924.npz"), "--g3",
+                         os.path.join(REF, "g3_OLMoE-1B-7B-0924.json"), "--bulk-gbps", "2.806",
+                         "--expert-mb", "3.54", "--fwd-ms", "0,30.07,80,160"],
+     "prefetch_sim_OLMoE-1B-7B-0924.json", "2026-09-16"),
 ]
 
 SHIM = ("import os,sys,runpy; sys.path.insert(0,{g!r}); import _paths; "
@@ -118,6 +159,7 @@ def main():
         script, args, art, ref_date = job
         od = os.path.join(a.out_dir, ref_date)
         os.makedirs(od, exist_ok=True)
+        args = [x.replace("{OUT}", od) if isinstance(x, str) else x for x in args]
         code = SHIM.format(g=HERE, o=od, s=os.path.join(HERE, script), a=args)
         with open(os.path.join(od, art + ".log"), "w") as log:
             rc = subprocess.call([sys.executable, "-c", code], stdout=log, stderr=subprocess.STDOUT,
