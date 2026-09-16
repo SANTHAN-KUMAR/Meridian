@@ -445,6 +445,31 @@ CLAIMS = [
               "per token while leaving the hit-rate curve intact",
          artifact="traces_confound_olmoe_q4_vs_fp16.json", expected=0.6179, tol=0.0005,
          value=lambda A: A["conf"]["exact_set_match"]),
+    # ------------------------------------------------- S9 result (granite, E/k=4)
+    dict(id="s9_granite_rmse_h_rho",
+         text="the pre-registered S9 test on granite-3.1-1b-a400m (E/k=4): the equal-rho "
+              "transfer misses by RMSE 0.167, against a tolerance of 0.029",
+         artifact="s9_result_granite-3.1-1b-a400m.json", expected=0.1669, tol=0.0005,
+         value=lambda A: A["s9g"]["test"]["rmse"]["H_rho"]),
+    dict(id="s9_granite_rmse_h_floor",
+         text="the floor-additive rule misses by RMSE 0.048 — closer, but also outside tolerance",
+         artifact="s9_result_granite-3.1-1b-a400m.json", expected=0.0482, tol=0.0005,
+         value=lambda A: A["s9g"]["test"]["rmse"]["H_floor"]),
+    dict(id="s9_granite_h_rho_refuted",
+         text="no grid point supports the equal-rho transfer (supported = false)",
+         artifact="s9_result_granite-3.1-1b-a400m.json", expected=0.0, tol=1e-9,
+         value=lambda A: float(A["s9g"]["test"]["supported"]["H_rho"])),
+    dict(id="s9_granite_worst_h_rho_error",
+         text="its largest miss is +0.243 in hit rate, at rho = 3",
+         artifact="s9_result_granite-3.1-1b-a400m.json", expected=0.243, tol=0.001,
+         value=lambda A: max(r["err_H_rho"] for r in A["s9g"]["test"]["rows"]
+                             if not r["degenerate"])),
+    dict(id="s9_granite_all_errors_same_sign",
+         text="every scored point lies ABOVE the equal-rho prediction, so the error is a bias, "
+              "not scatter",
+         artifact="s9_result_granite-3.1-1b-a400m.json", expected=1.0, tol=1e-9,
+         value=lambda A: float(all(r["err_H_rho"] > 0 for r in A["s9g"]["test"]["rows"]
+                                   if not r["degenerate"]))),
     # ------------------------------------------------------ instrument agreement
     dict(id="roofline_inputs_agree",
          text="the bandwidth constant used here is the one the engine_sim artifact was run with",
@@ -474,6 +499,7 @@ def load_all():
         "thr": load("decode_15r_threads.json"),
         "s9r": load("s9_result_Qwen3-30B-A3B.json"),
         "conf": load("traces_confound_olmoe_q4_vs_fp16.json"),
+        "s9g": load("s9_result_granite-3.1-1b-a400m.json"),
     }
 
 

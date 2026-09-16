@@ -36,7 +36,12 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
    **Before trusting any run, check `results/2026-09-16/phone_state_log.csv`**: a run that overlaps
    a non-`Awake` state, `keyguard=true`, a non-Termux focus, or an `INTERVENTION` line is
    contaminated. The first campaign (00:23) was, and is kept only as evidence.
-2. **S9 trace** — the control half is DONE (2026-09-16): tokens, the OLMoE Q4_0 trace through
+2. **S9 is answered for one geometry (2026-09-16): the equal-rho transfer is REFUTED**
+   (`s9_result_granite-3.1-1b-a400m.json`). The top open item is now the **family confound**:
+   granite differs from OLMoE in family as well as in E/k. The pre-registered separator is
+   **gpt-oss-20b** (E=32, k=4 — OLMoE's E/k in a different family), where both hypotheses predict
+   the same value, so any gap is family, not geometry. It needs a 12 GB download.
+   The rest of the original item: the control half is DONE (2026-09-16): tokens, the OLMoE Q4_0 trace through
    llama.cpp, its f_crit curve and the confound score all exist, and the control passes
    (0.0013 against a 0.031 limit). What remains is the target: resume
    `unsloth/Qwen3-30B-A3B-GGUF` Q4_0 (9.6 GB left of 17.4, resumable from

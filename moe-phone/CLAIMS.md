@@ -81,6 +81,11 @@ internally consistent and wrong. That is what the property tests are for.
 | `s9_confound_under_limit` | that is far below the pre-registered limit of 0.031, so the S9 test may proceed | `s9_result_Qwen3-30B-A3B.json` | 0.0000 | ok |
 | `q4_token_slot_overlap` | Q4_0 routing shares 94.8% of each token's expert slots with fp16 | `traces_confound_olmoe_q4_vs_fp16.json` | 0.9478 | ok |
 | `q4_exact_set_match` | but only 61.8% of tokens get an identical top-8 SET: quantisation moves routing per token while leaving the hit-rate curve intact | `traces_confound_olmoe_q4_vs_fp16.json` | 0.6179 | ok |
+| `s9_granite_rmse_h_rho` | the pre-registered S9 test on granite-3.1-1b-a400m (E/k=4): the equal-rho transfer misses by RMSE 0.167, against a tolerance of 0.029 | `s9_result_granite-3.1-1b-a400m.json` | 0.1669 | ok |
+| `s9_granite_rmse_h_floor` | the floor-additive rule misses by RMSE 0.048 — closer, but also outside tolerance | `s9_result_granite-3.1-1b-a400m.json` | 0.0482 | ok |
+| `s9_granite_h_rho_refuted` | no grid point supports the equal-rho transfer (supported = false) | `s9_result_granite-3.1-1b-a400m.json` | 0.0000 | ok |
+| `s9_granite_worst_h_rho_error` | its largest miss is +0.243 in hit rate, at rho = 3 | `s9_result_granite-3.1-1b-a400m.json` | 0.2427 | ok |
+| `s9_granite_all_errors_same_sign` | every scored point lies ABOVE the equal-rho prediction, so the error is a bias, not scatter | `s9_result_granite-3.1-1b-a400m.json` | 1.0000 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-70 claims checked.
+75 claims checked.

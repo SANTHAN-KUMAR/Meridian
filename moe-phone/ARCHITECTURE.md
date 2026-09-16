@@ -123,8 +123,10 @@ Four tokens is a remarkably short horizon, and it is the load-bearing result of 
 That is the whole deployable design. An earlier version said it was "worth double digits of tok/s
 on three candidate models"; that came from three `engine_target.py` defects (README defect table)
 and is withdrawn. Corrected: Qwen3-30B-A3B at 11.5 tok/s flash-only, 8.8 with DRAM charged, and **6.3 with the
-measured on-device non-flash rate charged (S11) — 4.2 if S9's floor-additive hypothesis holds**.
-The reading-speed target (5 tok/s) sits between the two, so the S9 trace decides this model. Everything below is about the 2.2× that §2.4 says is still on the table,
+measured on-device non-flash rate charged (S11) — 4.2 under the floor-additive rule**. S9's test
+(2026-09-16) refutes the equal-rho transfer and prefers floor-additive, so **4.2 is now the
+better estimate and it sits BELOW the 5 tok/s reading-speed target** — pending the model's own
+trace, which is what would settle it. Everything below is about the 2.2× that §2.4 says is still on the table,
 and whether it can be reached.
 
 ### 3.1 A cheap predictor was the primary recommendation. It is not.
@@ -245,11 +247,13 @@ Three external facts that sharpen this:
 ## 5. What this engine is *not* claimed to do
 
 - **It does not beat the flash roofline.** It raises `h`; the equation in §1 is unchanged.
-- **It does not transfer across expert counts for free** (**S9**). Every per-model tok/s figure
-  goes through `engine_target.at_rho()`. An earlier version cited an "independently reported"
-  0.693 for a 512-expert model as a consistent external check; no source for it was ever
-  recorded, so it is deleted. The two competing transfer rules are pre-registered in
-  `results/2026-09-16/s9_prereg_Qwen3-30B-A3B.json`.
+- **It does not transfer across expert counts at all** (**S9, refuted 2026-09-16**). Every
+  per-model tok/s figure goes through `engine_target.at_rho()`, and the pre-registered test says
+  that rule is wrong: on granite (E/k=4) it misses by RMSE 0.167 against a 0.029 tolerance, with
+  every point above it. The floor-additive rule is closer (0.048) and still outside tolerance.
+  So the per-model numbers below are provisional upper estimates; for models with E/k LARGER
+  than OLMoE's — which includes every large candidate — the floor-additive figure is the better
+  estimate and it is lower.
 - **It does not include a compute term** (**S11**). Valid only while the device is flash-bound —
   and G-VALID-3 says real engines are not purely flash-bound even at modest hit rates.
 - **It does not include a predictor.** S12 is closed, negative: no cheap cross-token, same-layer predictor reaches the lookahead lever, because one step is the wrong horizon (§3.2).

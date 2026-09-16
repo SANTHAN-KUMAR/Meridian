@@ -262,11 +262,15 @@ def main():
           f"bulk threshold {BULK_THRESHOLD_MB} MB) -- so the 8.9x small-read penalty")
     print("does not apply to whole-expert reads, and raising h is the ONLY lever.")
     n_ex = sum(1 for r in rows if r["resident_fits"] and r["curve_extrapolated"])
-    print(f"\nTRANSFER ASSUMPTION: h_LRU is read off a curve measured on "
+    print(f"\nTRANSFER: h_LRU is read off a curve measured on "
           f"{curve['num_experts']}-expert top-{curve['top_k']} routing, applied at equal rho.")
-    print("That the hit rate depends on geometry only through rho is an ASSUMPTION, not a")
-    print(f"measurement -- it is untested across expert counts, and {n_ex}/{len(rows)} models")
-    print("sit outside the measured rho range entirely. Registered as stub S9 in POSITION.md.")
+    print("That rule is REFUTED (S9, scored 2026-09-16 against predictions registered before the")
+    print("trace existed): on the one target measured it missed by many times the pre-registered")
+    print("tolerance, with every point on the same side, and the floor-additive alternative fit")
+    print("better. So the flash and serial columns are PROVISIONAL UPPER estimates, and for a")
+    print("model whose E/k exceeds the reference's the H_floor columns are the better estimate.")
+    print(f"See results/<date>/s9_result_*.json. {n_ex}/{len(rows)} models also")
+    print("sit outside the measured rho range entirely and get no number at all.")
 
     out = {"inputs": vars(a), "source": os.path.abspath(src),
            "lru_curve": {kk: vv for kk, vv in curve.items() if kk != "points"},
