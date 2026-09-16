@@ -17,7 +17,12 @@ different E/k:
            only OLMoE's EXCESS over its own null.
 
 For the same E/k both hypotheses coincide, so a model with OLMoE's E/k (e.g.
-gpt-oss-20b, 32/4) is a control, not a test.
+gpt-oss-20b, 32/4) is a CONTROL, not a test: it asks whether anything besides
+geometry — model family, training — moves the curve. Its registration is marked
+`control: true`. Because the two predictions are identical there, "half the
+minimum separation" is zero and would void the control on any confound at all,
+so for a control the engine/format confound limit is half the TOLERANCE instead
+(added 2026-09-16, before any control trace existed).
 
 Decision rule, fixed here and not after seeing the trace:
   - A grid point where the target's cache fraction f_target = rho*k/E reaches 1 is
@@ -98,11 +103,16 @@ def main():
     p.add_argument("--target-E", type=int, required=True)
     p.add_argument("--target-k", type=int, required=True)
     p.add_argument("--target-name", required=True)
+    p.add_argument("--reference-curve", default="cache_fcrit_OLMoE-1B-7B-0924.json",
+                   help="f_crit artifact of the REFERENCE model the curve is transferred from "
+                        "(default OLMoE). A within-family test names another model here.")
+    p.add_argument("--reference-trace", default="traces_OLMoE-1B-7B-0924.npz",
+                   help="the reference model's trace, for the split-half noise scale")
     p.add_argument("--out-dir", default=None)
     a = p.parse_args()
 
-    src_curve = read_path("cache_fcrit_OLMoE-1B-7B-0924.json")
-    src_trace = read_path("traces_OLMoE-1B-7B-0924.npz")
+    src_curve = read_path(a.reference_curve)
+    src_trace = read_path(a.reference_trace)
     art = json.load(open(src_curve, encoding="utf-8"))
     E0, k0 = art["num_experts"], art["top_k"]
     c = curve(art)
@@ -131,12 +141,15 @@ def main():
         "tolerance": tol,
         "n_degenerate_excluded": sum(1 for r in rows if r["degenerate"]),
         "min_separation": min(r["separation"] for r in rows if not r["degenerate"]),
-        "confound_inconclusive_if_exceeds": min(r["separation"] for r in rows) / 2.0,
+        "control": min(r["separation"] for r in rows if not r["degenerate"]) < 1e-9,
+        "confound_inconclusive_if_exceeds": (
+            tol / 2.0 if min(r["separation"] for r in rows if not r["degenerate"]) < 1e-9
+            else min(r["separation"] for r in rows) / 2.0),
         "predictions": rows,
         "decision_rule": "see module docstring of gates/s9_prereg.py",
     }
     print(f"S9 pre-registration for {a.target_name} (E={a.target_E}, k={a.target_k}); "
-          f"reference OLMoE E={E0} k={k0}")
+          f"reference {os.path.basename(src_curve)} E={E0} k={k0}")
     print(f"tolerance (2x split-half) = {tol:.4f}; confound limit = "
           f"{out['confound_inconclusive_if_exceeds']:.4f}")
     print(f"{'rho':>5} {'H_rho':>7} {'H_floor':>8} {'sep':>7}  note")

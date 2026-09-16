@@ -120,6 +120,12 @@ def main():
                    "both within tolerance — the grid does not separate them here"
                    if supported["H_rho"] and supported["H_floor"] else
                    f"neither validated; {preferred} preferred (lower RMSE)")
+        if pre.get("control"):
+            # both hypotheses are the same prediction here; the question is family, not geometry
+            verdict = ("CONTROL PASSES: no family effect at equal E/k (within tolerance)"
+                       if supported["H_rho"] else
+                       f"CONTROL FAILS: a family effect at equal E/k (RMSE {rmse['H_rho']:.4f} "
+                       f"against tolerance {tol:.4f})")
         if out.get("confound", {}).get("voids_test"):
             verdict = "INCONCLUSIVE — the confound control exceeded its pre-registered limit"
         out["test"] = {"curve": os.path.abspath(a.target_curve), "rows": rows, "rmse": rmse,
