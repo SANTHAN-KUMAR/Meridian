@@ -63,6 +63,28 @@ def row(art, frac, key="rows"):
     raise KeyError(f"no row at cache_fraction={frac}")
 
 
+def spec_ratio(A, window, key):
+    """engine_sim speed-up over W=1 at alpha=0.9, at a named compute-cost setting."""
+    r = row(A["engine"], 0.10)
+    for w in (window, "1"):
+        if key not in r["windows"][w]["tok_s_with_compute"]:
+            raise KeyError(f"engine_sim artifact has no compute setting {key!r} for W={w}; "
+                           f"rerun with --fwd-ms including the measured value")
+    return (r["windows"][window]["tok_s_with_compute"][key]["0.9"]
+            / r["windows"]["1"]["tok_s_with_compute"][key]["0.9"])
+
+
+def pf_speedup(A, frac):
+    """prefetch_sim speed-up at the MEASURED forward-pass cost (the row whose fwd_ms is not
+    one of the round sweep values)."""
+    want = [r for r in A["pf"]["rows"]
+            if abs(r["cache_fraction"] - frac) < 1e-9 and abs(r["fwd_ms"] - 30.07) < 0.01]
+    if len(want) != 1:
+        raise KeyError(f"expected exactly one prefetch row at fraction {frac} and the measured "
+                       f"30.07 ms, found {len(want)}")
+    return want[0]["speedup"]
+
+
 def tok_s(h, e_tok_gb):
     """The roofline of ARCHITECTURE.md §1, applied to one hit rate."""
     return BULK_GBPS / (e_tok_gb * (1.0 - h))
@@ -470,6 +492,29 @@ CLAIMS = [
          artifact="s9_result_granite-3.1-1b-a400m.json", expected=1.0, tol=1e-9,
          value=lambda A: float(all(r["err_H_rho"] > 0 for r in A["s9g"]["test"]["rows"]
                                    if not r["degenerate"]))),
+    # -------------------------------- levers priced at the MEASURED compute cost
+    dict(id="spec_w4_a09_measured_compute",
+         text="at the phone's MEASURED forward-pass cost (30.07 ms for OLMoE), speculation at "
+              "W=4, alpha=0.9 is worth 1.06x, not the 1.13x the flash-only pricing showed",
+         artifact="engine_sim_OLMoE-1B-7B-0924.json", expected=1.061, tol=0.005,
+         value=lambda A: spec_ratio(A, "4", "c=30.07ms,beta=0")),
+    dict(id="spec_best_measured_compute",
+         text="the best window at that cost is 1.07x (W=8), against 1.45x under flash-only pricing",
+         artifact="engine_sim_OLMoE-1B-7B-0924.json", expected=1.068, tol=0.005,
+         value=lambda A: max(spec_ratio(A, W, "c=30.07ms,beta=0") for W in ("2", "4", "8", "16"))),
+    dict(id="spec_measured_compute_beta1_is_a_regression",
+         text="if the batched verify is compute-bound the same W=4 point becomes 0.89x, a regression",
+         artifact="engine_sim_OLMoE-1B-7B-0924.json", expected=0.891, tol=0.005,
+         value=lambda A: spec_ratio(A, "4", "c=30.07ms,beta=1")),
+    dict(id="prefetch_measured_compute_10pct",
+         text="within-token prefetch at the measured compute cost LOSES at a 10% cache (0.76x): "
+              "it needs about 80 ms of compute per token to pay, and the phone has 30",
+         artifact="prefetch_sim_OLMoE-1B-7B-0924.json", expected=0.758, tol=0.005,
+         value=lambda A: pf_speedup(A, 0.10)),
+    dict(id="prefetch_measured_compute_20pct",
+         text="and only breaks even at a 20% cache (0.99x)",
+         artifact="prefetch_sim_OLMoE-1B-7B-0924.json", expected=0.989, tol=0.005,
+         value=lambda A: pf_speedup(A, 0.20)),
     # ------------------------------------------------------ instrument agreement
     dict(id="roofline_inputs_agree",
          text="the bandwidth constant used here is the one the engine_sim artifact was run with",
@@ -500,6 +545,7 @@ def load_all():
         "s9r": load("s9_result_Qwen3-30B-A3B.json"),
         "conf": load("traces_confound_olmoe_q4_vs_fp16.json"),
         "s9g": load("s9_result_granite-3.1-1b-a400m.json"),
+        "pf": load("prefetch_sim_OLMoE-1B-7B-0924.json"),
     }
 
 

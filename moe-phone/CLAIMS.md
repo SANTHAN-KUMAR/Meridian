@@ -86,6 +86,11 @@ internally consistent and wrong. That is what the property tests are for.
 | `s9_granite_h_rho_refuted` | no grid point supports the equal-rho transfer (supported = false) | `s9_result_granite-3.1-1b-a400m.json` | 0.0000 | ok |
 | `s9_granite_worst_h_rho_error` | its largest miss is +0.243 in hit rate, at rho = 3 | `s9_result_granite-3.1-1b-a400m.json` | 0.2427 | ok |
 | `s9_granite_all_errors_same_sign` | every scored point lies ABOVE the equal-rho prediction, so the error is a bias, not scatter | `s9_result_granite-3.1-1b-a400m.json` | 1.0000 | ok |
+| `spec_w4_a09_measured_compute` | at the phone's MEASURED forward-pass cost (30.07 ms for OLMoE), speculation at W=4, alpha=0.9 is worth 1.06x, not the 1.13x the flash-only pricing showed | `engine_sim_OLMoE-1B-7B-0924.json` | 1.0605 | ok |
+| `spec_best_measured_compute` | the best window at that cost is 1.07x (W=8), against 1.45x under flash-only pricing | `engine_sim_OLMoE-1B-7B-0924.json` | 1.0685 | ok |
+| `spec_measured_compute_beta1_is_a_regression` | if the batched verify is compute-bound the same W=4 point becomes 0.89x, a regression | `engine_sim_OLMoE-1B-7B-0924.json` | 0.8912 | ok |
+| `prefetch_measured_compute_10pct` | within-token prefetch at the measured compute cost LOSES at a 10% cache (0.76x): it needs about 80 ms of compute per token to pay, and the phone has 30 | `prefetch_sim_OLMoE-1B-7B-0924.json` | 0.7581 | ok |
+| `prefetch_measured_compute_20pct` | and only breaks even at a 20% cache (0.99x) | `prefetch_sim_OLMoE-1B-7B-0924.json` | 0.9889 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-75 claims checked.
+80 claims checked.

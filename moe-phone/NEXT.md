@@ -58,6 +58,18 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
 3. **S11** — the on-device forward-pass time comes out of step 1 (granite resident, OLMoE warm);
    feed it to `engine_sim --fwd-ms` and to a compute column in `engine_target`.
 
+## State at the end of the 2026-09-16 morning session
+
+- **S9 is answered and negative** (see above). Every per-model tok/s through `at_rho()` is now a
+  provisional upper estimate, and the floor-additive column is the better one for large models.
+- **Both remaining "levers" were priced at the measured compute cost and shrank**: speculation to
+  1.06–1.07x (negative if the verify is compute-bound), within-token prefetch to 0.76–0.99x.
+- **The phone is disconnected** (`adb: no devices`). The open on-device experiment is the thread
+  cliff: log majflt and per-thread CPU at 2 vs 3 threads (`NEXT` item above).
+- **Downloads are stopped** at the user's direction: the laptop is on a ~384 KB/s link. A 431 MB
+  partial of Qwen3-30B-A3B Q4_0 is kept in `moe-work/models/` and resumes with
+  `curl -C -`. The pre-registered family-confound separator (gpt-oss-20b, 12 GB) is unfetched.
+
 ## Local setup this session used (not committed)
 
 - Linux venv in the session scratchpad; `numpy pytest nbformat transformers==4.56.2 datasets`.

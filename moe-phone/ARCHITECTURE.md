@@ -225,8 +225,15 @@ not be multiplied.** `engine_sim.py` replays the whole loop in one pass and pric
 **And the table above is flash-only.** A self-draft runs W−1 extra forward passes per window and
 the verify pass is not free either. `engine_sim.py --fwd-ms` charges them (c seconds per pass,
 verify = c·(1 + beta·(W−1))): at 10 ms per pass, W=4, alpha=0.9 falls from 1.13x to 1.10x, and to
-1.02x if the batched verify is compute-bound (beta = 1). c is swept until the on-device
-forward-pass time is measured.
+1.02x if the batched verify is compute-bound (beta = 1).
+
+> **Priced at the MEASURED cost (2026-09-16).** S11 gives 30.07 ms per forward pass for OLMoE on
+> the 15R (697.4 MB of active bytes at the measured 23.2 GB/s). At that cost, at a 10% cache and
+> alpha = 0.9, the whole speculation lever is worth **1.06x at W=4 and at most 1.07x (W=8)** —
+> against 1.13x and 1.45x under flash-only pricing — and it becomes a **0.89x regression** at
+> W=4 if the batched verify is compute-bound. The sign still turns on alpha and on beta, neither
+> of which is measured (**S10**), but the size of the prize has shrunk from "worth building" to
+> "a few percent".
 
 `alpha` is swept, not measured (**S10**), and the sign of the effect flips inside the plausible
 range of published drafters. So **the number to measure next is `alpha` for a specific drafter —
@@ -279,7 +286,8 @@ stacking them owes a fidelity check per row.
 | **deeper I/O queue** | 1.0× | **closed 2026-09-16, negative.** At 1 MB direct reads 16 or 32 threads reach 0.99x of 8 threads (`g1_storage_qd.json`); the plateau starts at 4 threads. It is a device ceiling, not a queue-depth limit | — |
 | **lower precision**, 4.5 → ~3.0 bpw | ~1.5× | **untested against our margin** | rerun G3's harness at Q3_K/IQ3 against the same pre-registered Q4_0 Tier-A margin |
 | **whole-expert skipping** (ACE, arXiv 2609.05228: 50%, training-free *and* calibration-free) | up to 2× | **untested, and a different axis from G3** — G3 killed intra-expert *neuron* sparsity on a gate-first criterion; this drops whole experts, so S8 does not gate it | same harness. ACE's headline is measured against other skipping methods, not against the full model, so our margin is the real test |
-| **union fetch** across a verification window | ~1.2× at α=0.9 | **measured, but can be negative** (§4) | measure `alpha` |
+| **union fetch** across a verification window | 1.06–1.07× at α=0.9, priced at the measured compute cost; negative if the verify is compute-bound | **measured** (§4) | measure `alpha` |
+| **within-token cross-layer prefetch** (Fate-style, using G3's measured 0.61–0.91 recall) | 0.76× at a 10% cache, 0.99× at 20%, priced at the measured compute cost | **measured, negative** (`gates/prefetch_sim.py`). It hides reads behind compute, so it pays only when compute per token is large (~80 ms) and the cache already holds a whole token's working set; the phone has 30 ms and, at a 10% cache, prefetching raises flash reads from 93 to 153 experts per token through eviction churn | nothing — closed unless the compute term grows |
 
 Row four is the largest single multiplier available and the least examined — which is exactly why
 it should be run early rather than assumed.
