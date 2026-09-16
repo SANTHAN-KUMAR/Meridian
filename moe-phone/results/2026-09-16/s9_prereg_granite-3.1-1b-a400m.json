@@ -1,5 +1,5 @@
 {
- "registered_at_utc": "2026-09-16T03:18:20.061742+00:00",
+ "registered_at_utc": "2026-09-16T03:19:05.623796+00:00",
  "target": {
   "name": "granite-3.1-1b-a400m",
   "E": 32,
@@ -67,6 +67,7 @@
   }
  ],
  "tolerance": 0.029127120971679688,
+ "n_degenerate_excluded": 1,
  "min_separation": 0.125,
  "confound_inconclusive_if_exceeds": 0.0625,
  "predictions": [
@@ -77,6 +78,7 @@
    "f_target": 0.25,
    "pred_H_rho": 0.3764455318450928,
    "pred_H_floor": 0.5014455318450928,
+   "degenerate": false,
    "separation": 0.125
   },
   {
@@ -86,6 +88,7 @@
    "f_target": 0.275,
    "pred_H_rho": 0.3898806571960449,
    "pred_H_floor": 0.5273806571960449,
+   "degenerate": false,
    "separation": 0.13749999999999996
   },
   {
@@ -95,6 +98,7 @@
    "f_target": 0.3125,
    "pred_H_rho": 0.4110901355743408,
    "pred_H_floor": 0.5673401355743408,
+   "degenerate": false,
    "separation": 0.15625
   },
   {
@@ -104,6 +108,7 @@
    "f_target": 0.375,
    "pred_H_rho": 0.4494209289550781,
    "pred_H_floor": 0.6369209289550781,
+   "degenerate": false,
    "separation": 0.1875
   },
   {
@@ -113,6 +118,7 @@
    "f_target": 0.5,
    "pred_H_rho": 0.5274200439453125,
    "pred_H_floor": 0.7774200439453125,
+   "degenerate": false,
    "separation": 0.25
   },
   {
@@ -121,8 +127,9 @@
    "f_olmoe": 0.375,
    "f_target": 0.75,
    "pred_H_rho": 0.6630315780639648,
-   "pred_H_floor": 1.0380315780639648,
-   "separation": 0.375
+   "pred_H_floor": 1.0,
+   "degenerate": false,
+   "separation": 0.33696842193603516
   },
   {
    "rho": 4.0,
@@ -130,8 +137,9 @@
    "f_olmoe": 0.5,
    "f_target": 1.0,
    "pred_H_rho": 0.7710022926330566,
-   "pred_H_floor": 1.2710022926330566,
-   "separation": 0.5
+   "pred_H_floor": 1.0,
+   "degenerate": true,
+   "separation": 0.22899770736694336
   }
  ],
  "decision_rule": "see module docstring of gates/s9_prereg.py"

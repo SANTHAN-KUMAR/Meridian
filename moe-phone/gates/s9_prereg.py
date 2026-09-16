@@ -10,7 +10,7 @@ different E/k:
   H_rho    h_target(rho) = h_OLMoE(rho)
            the current assumption: the hit rate depends on geometry ONLY through rho.
 
-  H_floor  h_target(rho) = f_target(rho) + [h_OLMoE(rho) - f_OLMoE(rho)]
+  H_floor  h_target(rho) = min(1, f_target(rho) + [h_OLMoE(rho) - f_OLMoE(rho)])
            with f = rho * k / E, the cache fraction. Motivation: on locality-free
            routing LRU returns exactly f (asserted in tests/test_gates.py), so f is
            LRU's null, and it depends on E/k, not on rho alone. H_floor transfers
@@ -20,6 +20,11 @@ For the same E/k both hypotheses coincide, so a model with OLMoE's E/k (e.g.
 gpt-oss-20b, 32/4) is a control, not a test.
 
 Decision rule, fixed here and not after seeing the trace:
+  - A grid point where the target's cache fraction f_target = rho*k/E reaches 1 is
+    DEGENERATE: the cache holds every expert, so h = 1 for any policy and the point
+    cannot discriminate. Such points are marked `degenerate` and excluded from
+    scoring. (Corrected 2026-09-16, before any target trace existed: the first
+    granite registration printed H_floor values above 1.)
   - Evaluate both at the pre-registered rho grid of cache_sim --fractions-around-crit
     (rho = multiples of 1: 0.5 ... 4, identical for every model because the grid
     is defined as multiples of f_crit = k/E), restricted to rho >= 1, where a layer
@@ -110,9 +115,11 @@ def main():
         h0 = c[rho]
         f0 = rho * k0 / E0
         ft = rho * a.target_k / a.target_E
+        floor_pred = min(1.0, ft + (h0 - f0))
         rows.append({"rho": rho, "h_olmoe": h0, "f_olmoe": f0, "f_target": ft,
-                     "pred_H_rho": h0, "pred_H_floor": ft + (h0 - f0),
-                     "separation": abs(h0 - (ft + (h0 - f0)))})
+                     "pred_H_rho": h0, "pred_H_floor": floor_pred,
+                     "degenerate": ft >= 1.0 - 1e-9,
+                     "separation": abs(h0 - floor_pred)})
     out = {
         "registered_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "target": {"name": a.target_name, "E": a.target_E, "k": a.target_k},
@@ -122,7 +129,8 @@ def main():
         "grid_rho": grid,
         "noise_split_half": noise,
         "tolerance": tol,
-        "min_separation": min(r["separation"] for r in rows),
+        "n_degenerate_excluded": sum(1 for r in rows if r["degenerate"]),
+        "min_separation": min(r["separation"] for r in rows if not r["degenerate"]),
         "confound_inconclusive_if_exceeds": min(r["separation"] for r in rows) / 2.0,
         "predictions": rows,
         "decision_rule": "see module docstring of gates/s9_prereg.py",
@@ -131,9 +139,10 @@ def main():
           f"reference OLMoE E={E0} k={k0}")
     print(f"tolerance (2x split-half) = {tol:.4f}; confound limit = "
           f"{out['confound_inconclusive_if_exceeds']:.4f}")
-    print(f"{'rho':>5} {'H_rho':>7} {'H_floor':>8} {'sep':>7}")
+    print(f"{'rho':>5} {'H_rho':>7} {'H_floor':>8} {'sep':>7}  note")
     for r in rows:
-        print(f"{r['rho']:5.2f} {r['pred_H_rho']:7.3f} {r['pred_H_floor']:8.3f} {r['separation']:7.3f}")
+        print(f"{r['rho']:5.2f} {r['pred_H_rho']:7.3f} {r['pred_H_floor']:8.3f} {r['separation']:7.3f}"
+              f"  {'DEGENERATE (cache holds every expert): excluded' if r['degenerate'] else ''}")
     name = f"s9_prereg_{a.target_name}.json"
     path = os.path.join(a.out_dir, name) if a.out_dir else write_path(name)
     if a.out_dir:

@@ -22,6 +22,11 @@ Verdicts (from the pre-registration's decision_rule):
   otherwise          neither validated; the lower-RMSE hypothesis is PREFERRED and
                      every per-model tok/s derived through at_rho() stays provisional
 
+Grid points the pre-registration marks `degenerate` (the target's cache would hold
+every expert, so h = 1 for any policy) are excluded from the verdict and reported
+separately, with their observed values, so the exclusion is visible rather than
+silent.
+
 Run:
   python moe-phone/gates/s9_score.py --prereg results/<d>/s9_prereg_Qwen3-30B-A3B.json \
       --target-curve results/<d>/cache_fcrit_Qwen3-30B-A3B.json \
@@ -99,11 +104,16 @@ def main():
             obs = at(tgt, pred["rho"], "target curve")
             rows.append({"rho": pred["rho"], "observed": obs,
                          "H_rho": pred["pred_H_rho"], "H_floor": pred["pred_H_floor"],
+                         "degenerate": bool(pred.get("degenerate")),
                          "err_H_rho": obs - pred["pred_H_rho"],
                          "err_H_floor": obs - pred["pred_H_floor"]})
-        rmse = {h: math.sqrt(sum(r[f"err_{h}"] ** 2 for r in rows) / len(rows))
+        scored = [r for r in rows if not r["degenerate"]]
+        if not scored:
+            raise ValueError("every pre-registered grid point is degenerate for this target")
+        rmse = {h: math.sqrt(sum(r[f"err_{h}"] ** 2 for r in scored) / len(scored))
                 for h in ("H_rho", "H_floor")}
-        supported = {h: all(abs(r[f"err_{h}"]) <= tol for r in rows) for h in ("H_rho", "H_floor")}
+        supported = {h: all(abs(r[f"err_{h}"]) <= tol for r in scored)
+                     for h in ("H_rho", "H_floor")}
         preferred = min(rmse, key=rmse.get)
         verdict = ("H_rho supported" if supported["H_rho"] and not supported["H_floor"] else
                    "H_floor supported" if supported["H_floor"] and not supported["H_rho"] else
@@ -113,11 +123,13 @@ def main():
         if out.get("confound", {}).get("voids_test"):
             verdict = "INCONCLUSIVE — the confound control exceeded its pre-registered limit"
         out["test"] = {"curve": os.path.abspath(a.target_curve), "rows": rows, "rmse": rmse,
+                       "n_scored": len(scored), "n_degenerate_excluded": len(rows) - len(scored),
                        "supported": supported, "preferred": preferred, "verdict": verdict}
         print(f"\n{'rho':>5} {'observed':>9} {'H_rho':>7} {'H_floor':>8} {'err_rho':>8} {'err_flr':>8}")
         for r in rows:
             print(f"{r['rho']:5.2f} {r['observed']:9.3f} {r['H_rho']:7.3f} {r['H_floor']:8.3f} "
-                  f"{r['err_H_rho']:+8.3f} {r['err_H_floor']:+8.3f}")
+                  f"{r['err_H_rho']:+8.3f} {r['err_H_floor']:+8.3f}"
+                  f"{'   [degenerate: excluded]' if r['degenerate'] else ''}")
         print(f"RMSE H_rho {rmse['H_rho']:.4f}, H_floor {rmse['H_floor']:.4f}, tolerance {tol:.4f}")
         print(f"VERDICT: {verdict}")
     elif not a.confound_curve:
