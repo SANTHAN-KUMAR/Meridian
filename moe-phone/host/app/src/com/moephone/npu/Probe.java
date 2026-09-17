@@ -10,7 +10,7 @@ public class Probe {
 
     private static final String[] LIBS = {
         "c++_shared", "ggml-base", "ggml-cpu", "ggml-opencl", "ggml-hexagon", "ggml",
-        "llama", "llama-common", "npuprobe"
+        "llama", "llama-common", "matmulbench", "npuprobe"
     };
 
     private static String load(String libDir) {

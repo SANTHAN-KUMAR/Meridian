@@ -93,6 +93,13 @@ Java_com_moephone_npu_Probe_bench(JNIEnv * env, jclass, jstring joutPath, jobjec
             symbol  = "_Z16llama_completioniPPc";
             argv0   = "llama-completion";
             skip    = 1;
+        } else if (c0 && std::string(c0) == "mmb") {
+            // per-op matmul benchmark (host/app/ggml_matmul_bench.cpp): the device question answered
+            // directly, without the end-to-end rate's spread hiding the effect
+            libName = "libmatmulbench.so";
+            symbol  = "matmul_bench_main";
+            argv0   = "matmul_bench";
+            skip    = 1;
         } else if (c0 && std::string(c0) == "bmoe") {
             // our own engine (BigMoeOnEdge), built as libbmoe_entry.so with an extern "C" entry point
             libName = "libbmoe_entry.so";
