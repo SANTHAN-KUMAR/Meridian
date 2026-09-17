@@ -98,21 +98,22 @@ internally consistent and wrong. That is what the property tests are for.
 | `cliff_t8_pinned_worse` | 8 pinned threads on every core: 16.1 tok/s, contending with the system | `decode_15r_pin.json` | 16.0506 | ok |
 | `bmoe_reproduced_decode` | BigMoeOnEdge's published Qwen3-30B-A3B run reproduces on our OnePlus 15R: 3.98 tok/s median decode (reference build, its documented command) | `bmoe_repro.json` | 3.9770 | ok |
 | `bmoe_reproduced_hit` | at a 69.5% expert-cache hit rate (auto budget ~3.0-3.4 GB) | `bmoe_repro.json` | 69.5000 | ok |
-| `bmoe_compute_share` | decode spends 0.145 s/token in compute, the largest single term | `bmoe_repro.json` | 0.1445 | ok |
+| `bmoe_compute_share` | decode spends 0.145 s/token in its compute residual (wall - stall - cache mgmt, BigMoeOnEdge docs/telemetry.md), the largest single term | `bmoe_repro.json` | 0.1445 | ok |
 | `bmoe_i8mm_no_gain` | an i8mm build of the same engine gains nothing: 3.71 tok/s (its kernels are generic with repacking off) | `bmoe_repro.json` | 3.7060 | ok |
 | `bmoe_pinning_starves_io` | pinning every thread to 4 cores collapses streaming to 0.23 tok/s: it starves the I/O lanes | `bmoe_repro.json` | 0.2265 | ok |
 | `levers_reference` | one-lever sweep, reference cell: 3.68 tok/s median over 2 interleaved repeats (throttled CPU) | `bmoe_levers.json` | 3.6765 | ok |
 | `levers_cache_big` | a larger expert cache (1 GB floor instead of 1.5 GB) is the only lever above reference: 3.98 tok/s median | `bmoe_levers.json` | 3.9805 | ok |
 | `levers_t6_collapse` | 6 compute threads on top of 4 I/O lanes collapse decode to 1.10 tok/s median (oversubscribed cores) | `bmoe_levers.json` | 1.0985 | ok |
 | `repack_plain` | i8mm build, generic kernels: 4.11 tok/s median, the fastest cell of the repack A/B | `bmoe_repack.json` | 4.1145 | ok |
-| `repack_compute` | repacked kernels on streamed experts: compute 0.170 s/token median vs 0.146 generic - no compute gain | `bmoe_repack.json` | 0.1700 | ok |
+| `repack_compute` | repacked kernels on streamed experts: compute residual 0.170 s/token median vs 0.146 generic - no gain | `bmoe_repack.json` | 0.1700 | ok |
 | `pin2_pinned_best` | rotated-order confirmation (4 repeats, awake, throttled SoC): pinned 4 compute threads on cores 4-7 with I/O on cores 0-3 decode Qwen3-30B-A3B at 5.36 tok/s median, the best cell | `bmoe_pin2.json` | 5.3590 | ok |
 | `pin2_unpinned` | the unpinned baseline in the same confirmation: 4.75 tok/s median | `bmoe_pin2.json` | 4.7470 | ok |
 | `pin2_recycle_not_a_gain` | page recycling on top of pinning: 5.10 tok/s median - cache management falls but compute rises, a net loss | `bmoe_pin2.json` | 5.1010 | ok |
-| `pin2_pinned_compute` | pinned compute per token 0.0995 s median vs 0.1335 s unpinned | `bmoe_pin2.json` | 0.0995 | ok |
+| `pin2_pinned_compute` | pinned compute residual (wall - stall - cache mgmt, not measured matmul time) 0.0995 s/token median vs 0.1335 s unpinned | `bmoe_pin2.json` | 0.0995 | ok |
 | `verify_cost_n2` | a streamed verify of 2 positions costs 1.71x a single-token decode (Qwen3-30B-A3B on the 15R, 3 repeats, awake) | `verify_cost.json` | 1.7119 | ok |
 | `verify_cost_n3` | a streamed verify of 3 positions costs 2.37x a single-token decode | `verify_cost.json` | 2.3716 | ok |
 | `verify_cost_n5` | a streamed verify of 5 positions costs 3.71x a single-token decode: a 4-token draft must average more than 3.71 accepted tokens per verify to break even | `verify_cost.json` | 3.7098 | ok |
+| `lookahead4_gap_at_30pct` | at a 30% cache a 4-token exact lookahead closes 70% of the LRU-to-Belady gap on OLMoE (all of it only up to ~12.5%) | `cache_OLMoE-1B-7B-0924.json` | 0.6966 | ok |
 | `hr_pinned_steady_tok_s` | pinned t4/io4 decodes Qwen3-30B-A3B at 5.30 tok/s over tokens 65-256 (ESTIMAND §1 steady state; the 256-token mean the pin2 claims quote is 5.36) | `headroom_sims.json` | 5.3025 | ok |
 | `hr_unpinned_steady_tok_s` | unpinned t4/io4: 4.72 tok/s over tokens 65-256 | `headroom_sims.json` | 4.7219 | ok |
 | `hr_pinned_compute_ms` | pinned steady state: 100 ms/token of 'compute' RESIDUAL (wall - stall - mgmt; BigMoeOnEdge telemetry.md: 'a residual, not a measured quantity') | `headroom_sims.json` | 100.2324 | ok |
@@ -152,4 +153,4 @@ internally consistent and wrong. That is what the property tests are for.
 | `hr_q4_max_lossless_saving` | so an order-0 entropy coder can save at most 8.6% of expert bytes on flash (4.114 of 4.5 bits/weight): lossless expert compression is closed | `headroom_sims.json` | 0.0858 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-139 claims checked.
+140 claims checked.

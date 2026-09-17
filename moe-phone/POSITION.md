@@ -183,8 +183,9 @@ problem — Belady's advantage is **lookahead**, and lookahead is the only lever
 **How much lookahead.** Sweeping a bounded horizon, where horizon 0 means the engine knows only
 the token it is executing and an unbounded horizon is exactly Belady (that one is asserted as an
 identity in the tests; horizon 0 is bracketed, not identified, because knowing the current token
-already makes it event-atomic): a horizon of **4 tokens reaches Belady** at every cache fraction
-up to 30%, and 2 tokens reaches 89% of it.
+already makes it event-atomic): a horizon of **4 tokens reaches Belady** up to a ~12.5% cache and closes 70% of the LRU-to-Belady
+gap at 30% (claim `lookahead4_gap_at_30pct`; corrected 2026-09-17 — this sentence previously said it
+reached Belady at every fraction up to 30%, which the artifact does not show).
 
 > **The engine this implies.** Draft a small number of tokens, then verify them in one pass. The
 > verification of W tokens is one batched forward pass, so layer *l* routes all W positions

@@ -544,7 +544,7 @@ CLAIMS = [
          artifact="bmoe_repro.json", expected=69.5, tol=0.1,
          value=lambda A: next(c["cache_hit_pct_median"] for c in A["bmoe"]["cells"] if c["cell"] == "reference_armv82")),
     dict(id="bmoe_compute_share",
-         text="decode spends 0.145 s/token in compute, the largest single term",
+         text="decode spends 0.145 s/token in its compute residual (wall - stall - cache mgmt, BigMoeOnEdge docs/telemetry.md), the largest single term",
          artifact="bmoe_repro.json", expected=0.1445, tol=0.001,
          value=lambda A: next(c["compute_s_per_token_median"] for c in A["bmoe"]["cells"] if c["cell"] == "reference_armv82")),
     dict(id="bmoe_i8mm_no_gain",
@@ -573,7 +573,7 @@ CLAIMS = [
          artifact="bmoe_repack.json", expected=4.1145, tol=0.01,
          value=lambda A: next(c["decode_tok_s_median"] for c in A["repack"]["cells"] if c["cell"] == "i8mm_plain")),
     dict(id="repack_compute",
-         text="repacked kernels on streamed experts: compute 0.170 s/token median vs 0.146 generic - no compute gain",
+         text="repacked kernels on streamed experts: compute residual 0.170 s/token median vs 0.146 generic - no gain",
          artifact="bmoe_repack.json", expected=0.17, tol=0.002,
          value=lambda A: next(c["compute_s_per_token_median"] for c in A["repack"]["cells"] if c["cell"] == "i8mm_repack")),
     dict(id="pin2_pinned_best",
@@ -589,7 +589,7 @@ CLAIMS = [
          artifact="bmoe_pin2.json", expected=5.101, tol=0.01,
          value=lambda A: next(c["decode_tok_s_median"] for c in A["bpin2"]["cells"] if c["cell"] == "pin_t4_recycle")),
     dict(id="pin2_pinned_compute",
-         text="pinned compute per token 0.0995 s median vs 0.1335 s unpinned",
+         text="pinned compute residual (wall - stall - cache mgmt, not measured matmul time) 0.0995 s/token median vs 0.1335 s unpinned",
          artifact="bmoe_pin2.json", expected=0.0995, tol=0.002,
          value=lambda A: next(c["compute_s_per_token_median"] for c in A["bpin2"]["cells"] if c["cell"] == "pin_t4c47_io4c03")),
     dict(id="verify_cost_n2",
@@ -604,6 +604,10 @@ CLAIMS = [
          text="a streamed verify of 5 positions costs 3.71x a single-token decode: a 4-token draft must average more than 3.71 accepted tokens per verify to break even",
          artifact="verify_cost.json", expected=3.7098, tol=0.01,
          value=lambda A: next(x["c_median"] for x in A["vcost"]["cells"] if x["N"] == 5)),
+    dict(id="lookahead4_gap_at_30pct",
+         text="at a 30% cache a 4-token exact lookahead closes 70% of the LRU-to-Belady gap on OLMoE (all of it only up to ~12.5%)",
+         artifact="cache_OLMoE-1B-7B-0924.json", expected=0.7, tol=0.01,
+         value=lambda A: next(((r["by_horizon"]["4"] - r["lru_atomic"]) / (r["belady"] - r["lru_atomic"])) for r in A["cacheo"]["lookahead"]["rows"] if abs(r["cache_fraction"] - 0.3) < 1e-9)),
     # ------------------------------------------------------ instrument agreement
     # ------------------------------------------- HEADROOM (gates/headroom_sims.py, 2026-09-17)
     # The offline verdicts re-run at the phone's operating point (rho 2-4), plus the per-token
@@ -815,6 +819,7 @@ def load_all():
         "levers": load("bmoe_levers.json"),
         "repack": load("bmoe_repack.json"),
         "bpin2": load("bmoe_pin2.json"),
+        "cacheo": load("cache_OLMoE-1B-7B-0924.json"),
         "vcost": load("verify_cost.json"),
         "hr": load("headroom_sims.json"),
     }

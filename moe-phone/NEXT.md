@@ -105,12 +105,13 @@ Expected reading: with a full-cost self-draft pass (~0.1 s) W>1 needs very high 
 cheaper drafter (reduced top-k / layer skip) - fwd 50 ms row approximates it.
 
 ### Earlier failures — fix status
+(Peer audit 2026-09-17, moe-phone/HEADROOM.md: bmoe `compute` is a RESIDUAL (wall - stall - mgmt), never measured matmul time; all 17 Sep bmoe runs were at throttled caps; see HEADROOM for the prefetch re-check at the phone's rho.)
 | failure | status |
 |---|---|
 | S9 transfer (hit-rate curves across expert counts) | granite-3b: neither rule validated; gpt-oss-20b family CONTROL FAILS (RMSE 0.1423 vs tol 0.0291): curves are model-specific. Qwen3-30B-A3B tracing (laptop) |
 | thread collapse / unpinned variance | CONFIRMED FIXED by pinning: 5.36 vs 4.75 tok/s median, n=4 rotated |
 | page recycling (new failure) | net loss end to end (mm lock/IPIs on compute cores); fix attempt: patch 0007 --defer-evict, step 5b |
-| repacked kernels no gain | CONFIRMED DEAD END: pinned 5.39 vs pinned+repack 4.94 (conversion in the read path costs more than the compute it saves) |
+| repacked kernels no gain | pinned 5.39 vs pinned+repack 4.94 tok/s median, but CONFOUNDED: repacked kernels generated different text (hit 80.1% / 172 MiB/tok vs 78.0% / 194), so the runs differ in routing. Compute residual 0.096 vs 0.100; the loss is in stall (~229 per-slice repack calls/token in the read path). Verdict stands as 'no gain shown'; a teacher-forced (--ppl-step) A/B would remove the text confound |
 | verify cost inconclusive (doze) | DONE clean: c(N) 1.71/2.37/3.71 -> 4-token lossless draft needs >3.71 tokens/verify |
 | GPU expert cache abort / wrong ppl | FIXED (0005 v4): ppl 11.5482 = whole-model GPU; engine speed low -> move GPU compute into an overlap engine |
 | PR engine slow on phone | diagnosed: per-layer load stall, no overlap |
