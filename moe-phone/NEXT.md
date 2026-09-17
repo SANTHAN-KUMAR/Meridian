@@ -75,6 +75,35 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
   partial of Qwen3-30B-A3B Q4_0 is kept in `moe-work/models/` and resumes with
   `curl -C -`. The pre-registered family-confound separator (gpt-oss-20b, 12 GB) is unfetched.
 
+## LIVE TRACKER (updated as results land) — 2026-09-17 evening
+
+### Phone queue (phone-side: phone_queue4 -> 5 -> 6; log /data/local/tmp/moe-stream/phone_queue.log)
+| # | step | script | status |
+|---|---|---|---|
+| 1 | GPU slot cache speed vs CPU, same engine | gpu_speed.sh | DONE -> results/2026-09-17/gpu_speed (GPU 1.5-1.9, CPU 0.17-0.39 tok/s) |
+| 2 | rotated confirmation, pin/recycle, 5 cells x 4 | bmoe_pin2.sh | RUNNING |
+| 3 | CPU vs Adreno vs Hexagon HTP v81 compute, OLMoE | npu_compare.sh | queued |
+| 4 | verify cost c(N), best config, 3 reps | bmoe_verify_cost.sh | queued |
+| 5 | repacked kernels on pin+recycle, 3 reps | bmoe_repack_pin.sh | queued |
+| 6 | I/O lanes 4/6/8 | bmoe_lanes.sh | queued |
+| 7 | cache ceiling 4/5/6 GB | bmoe_cache.sh | queued |
+Every row: quiesce (third-party apps force-stopped), wake, thermal status, cpufreq caps logged.
+
+### Earlier failures — fix status
+| failure | status |
+|---|---|
+| S9 transfer (hit-rate curves across expert counts) | granite-3b scored: neither rule validated (H_floor 0.0302 vs tol 0.0291; within-family H_rho 0.0401 vs 0.0119). gpt-oss-20b tracing, Qwen3-30B-A3B next (laptop, tools/s9_run_targets.sh, capped) |
+| thread collapse / unpinned variance | confirmation running (step 2) |
+| repacked kernels no gain | retest queued (step 5) |
+| verify cost inconclusive (doze) | clean retest queued (step 4) |
+| GPU expert cache abort / wrong ppl | FIXED (0005 v4): ppl 11.5482 = whole-model GPU; engine speed low -> move GPU compute into an overlap engine |
+| PR engine slow on phone | diagnosed: per-layer load stall, no overlap |
+| NPU unreachable (old reading) | reachable as HTP v81 with GGML_HEXAGON_ARCH=v81; compute test queued (step 3) |
+| "flash I/O wall" claim | retracted (bmoe MiB/s is per lane-second); lanes + cache tests queued |
+| G-VALID-3 formula over-predicts | deferred until speed work lands; refit with measured compute term |
+| G3 sparsity outside margin | lossy by design; not pursued for headline |
+| n-gram speculation | dead for free text; replaced by draft verify + lookahead eviction (needs Qwen trace + step 4) |
+
 ## RESUME HERE — 2026-09-17 afternoon (session limit), phone queue running unattended
 
 Phone over wireless adb: `export ANDROID_SERIAL=192.168.0.65:5555` (see memory note; tcpip mode survives
