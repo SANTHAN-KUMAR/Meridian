@@ -624,6 +624,14 @@ CLAIMS = [
          text="and cuts flash reads from 193.8 to 119.8 MiB per token",
          artifact="bmoe_cache.json", expected=119.8, tol=0.5,
          value=lambda A: next(c["read_MiB_per_token_median"] for c in A["bcache"]["cells"] if c["cell"] == "ceil5000")),
+    dict(id="qwen3_sim_lru_5gb",
+         text="replayed on Qwen3-30B-A3B's own llama.cpp trace (wikitext, 8192 tokens), global LRU at the 5 GB cache's 30.7% of experts hits 86.4%, vs 85.3% measured on the phone (essay prompt)",
+         artifact="cache_qwen3_phone_sizes.json", expected=0.864, tol=0.002,
+         value=lambda A: next(r["lru_hit__global_atomic"] for r in A["qsizes"]["rows"] if abs(r["cache_fraction"] - 0.307) < 1e-6)),
+    dict(id="qwen3_sim_belady_5gb",
+         text="at the same cache size the offline optimum (Belady, global) hits 94.6%: eviction, not cache size, is the larger remaining I/O lever",
+         artifact="cache_qwen3_phone_sizes.json", expected=0.946, tol=0.002,
+         value=lambda A: next(r["belady_hit__global"] for r in A["qsizes"]["rows"] if abs(r["cache_fraction"] - 0.307) < 1e-6)),
     # ------------------------------------------------------ instrument agreement
     # ------------------------------------------- HEADROOM (gates/headroom_sims.py, 2026-09-17)
     # The offline verdicts re-run at the phone's operating point (rho 2-4), plus the per-token
@@ -836,6 +844,7 @@ def load_all():
         "repack": load("bmoe_repack.json"),
         "bpin2": load("bmoe_pin2.json"),
         "bcache": load("bmoe_cache.json"),
+        "qsizes": load("cache_qwen3_phone_sizes.json"),
         "cacheo": load("cache_OLMoE-1B-7B-0924.json"),
         "vcost": load("verify_cost.json"),
         "hr": load("headroom_sims.json"),

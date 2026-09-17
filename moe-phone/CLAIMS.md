@@ -118,6 +118,8 @@ internally consistent and wrong. That is what the property tests are for.
 | `cache4000_tok_s` | the same campaign's 4 GB cache: 5.76 tok/s median | `bmoe_cache.json` | 5.7640 | ok |
 | `cache5000_hit` | raising the cache from 4 GB to 5 GB lifts the hit rate from 78.0% to 85.3% | `bmoe_cache.json` | 85.3000 | ok |
 | `cache5000_read` | and cuts flash reads from 193.8 to 119.8 MiB per token | `bmoe_cache.json` | 119.8000 | ok |
+| `qwen3_sim_lru_5gb` | replayed on Qwen3-30B-A3B's own llama.cpp trace (wikitext, 8192 tokens), global LRU at the 5 GB cache's 30.7% of experts hits 86.4%, vs 85.3% measured on the phone (essay prompt) | `cache_qwen3_phone_sizes.json` | 0.8635 | ok |
+| `qwen3_sim_belady_5gb` | at the same cache size the offline optimum (Belady, global) hits 94.6%: eviction, not cache size, is the larger remaining I/O lever | `cache_qwen3_phone_sizes.json` | 0.9459 | ok |
 | `hr_pinned_steady_tok_s` | pinned t4/io4 decodes Qwen3-30B-A3B at 5.30 tok/s over tokens 65-256 (ESTIMAND §1 steady state; the 256-token mean the pin2 claims quote is 5.36) | `headroom_sims.json` | 5.3025 | ok |
 | `hr_unpinned_steady_tok_s` | unpinned t4/io4: 4.72 tok/s over tokens 65-256 | `headroom_sims.json` | 4.7219 | ok |
 | `hr_pinned_compute_ms` | pinned steady state: 100 ms/token of 'compute' RESIDUAL (wall - stall - mgmt; BigMoeOnEdge telemetry.md: 'a residual, not a measured quantity') | `headroom_sims.json` | 100.2324 | ok |
@@ -157,4 +159,4 @@ internally consistent and wrong. That is what the property tests are for.
 | `hr_q4_max_lossless_saving` | so an order-0 entropy coder can save at most 8.6% of expert bytes on flash (4.114 of 4.5 bits/weight): lossless expert compression is closed | `headroom_sims.json` | 0.0858 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-144 claims checked.
+146 claims checked.
