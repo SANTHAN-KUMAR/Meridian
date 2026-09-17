@@ -1,0 +1,154 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f, applied AFTER 0002 and 0003 (engine files only).
+# --recycle-pages: an evicted expert slice's physical pages are parked and mremap-moved under the next miss's slot,
+# instead of MADV_DONTNEED + first-touch zero-fill faults per 4 KB. Parked slots are tracked per entry and reused in place.
+diff --git a/cli/main.cpp b/cli/main.cpp
+index 7c4e911..89fe78f 100644
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -447,6 +447,7 @@ static void print_usage(const char * argv0) {
+         "      --io-threads N      parallel expert-read lanes [1..%d] (default 4)\n"
+         "      --cpu-mask HEX      pin the compute threadpool to these cores, strict (moe-phone)\n"
+         "      --io-cpu-mask HEX   pin the expert-read lanes to these cores (moe-phone)\n"
++        "      --recycle-pages     move evicted experts' pages into the next miss (mremap) instead of re-faulting (moe-phone)\n"
+         "      --no-odirect        do not bypass the page cache for expert reads\n"
+         "      --dense-weights M   dense (non-expert) weight policy: mmap | warm | anon (default) | ahwb\n"
+         "                          (warm = page-cache them at load, best when the model fits in RAM;\n"
+@@ -686,6 +687,8 @@ int main(int argc, char ** argv) {
+             cfg.moe.cache_ceil_mb = std::atoi(next("--cache-ceil-mb"));
+         else if (a == "--cpu-mask")
+             cfg.cpu_mask = std::strtoull(next("--cpu-mask"), nullptr, 16);
++        else if (a == "--recycle-pages")
++            cfg.moe.recycle_pages = true;
+         else if (a == "--io-cpu-mask")
+             cfg.moe.io_cpu_mask = std::strtoull(next("--io-cpu-mask"), nullptr, 16);
+         else if (a == "--io-threads")
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+index 0ed0564..0b7baca 100644
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -65,6 +65,12 @@ struct MoeStreamConfig {
+     // expert reads off the cores the compute threadpool is pinned to (RunConfig::cpu_mask).
+     uint64_t io_cpu_mask = 0;
+ 
++    // moe-phone: recycle an evicted expert's physical pages into the next miss's slot with mremap
++    // instead of MADV_DONTNEED + first-touch faults on fresh zeroed pages (one fault and one page
++    // zero-fill per 4 KB of every miss). Off by default; requires page-aligned expert slices,
++    // otherwise the engine falls back per slice and counts it.
++    bool recycle_pages = false;
++
+     bool o_direct = true;     // bypass the page cache (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+     bool load_all = false;    // debug/A-B: load ALL experts each token (full-sweep baseline)
+     bool force_cache = false; // allow a cache_mb in the pathological band (tests/experiments)
+diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
+index 95cd989..02a7d51 100644
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -14,6 +14,8 @@
+ #include <thread>
+ #if defined(__linux__)
+ #include <sched.h>
++#include <sys/mman.h>
++#include <cerrno>
+ #endif
+ #include <utility>
+ 
+@@ -59,6 +61,8 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+     cache_max_ = (size_t) std::max(0, cfg.cache_mb) * 1024ull * 1024ull;
+     io_threads_ = std::max(1, std::min(MoeStreamConfig::io_threads_max, cfg.io_threads));
+     io_cpu_mask_ = cfg.io_cpu_mask;
++    recycle_pages_ = cfg.recycle_pages;
++    if (recycle_pages_) parked_bits_.assign((size_t) n_layer_ * (size_t) n_expert_, 0);
+     page_ = pio::vm_page(); // the real OS page size, for the dense-residency probe in any cache mode
+ 
+     // Largest full-tensor byte size per projection, over all bound layers → shared-slot
+@@ -805,6 +809,16 @@ void ExpertStreamSource::release_entry_pages(int32_t id) {
+         const uint64_t slice = layers_[il].proj[p].nb2;
+         if (slice == 0) continue; // absent slot in a fused layout
+         char * s = (char *) lbuf_[p][il] + (uint64_t) e * slice;
++#if defined(__linux__)
++        if (recycle_pages_ && (parked_bits_[(size_t) id] & (1u << p))) continue; // already parked
++        if (recycle_pages_ && ((uintptr_t) s % page_) == 0 && (slice % page_) == 0 && recycle_free_n_ < recycle_cap_) {
++            recycle_free_[slice].push_back({id, (int8_t) p}); // pages stay populated; the next miss takes them
++            parked_bits_[(size_t) id] |= (uint8_t) (1u << p);
++            ++recycle_free_n_;
++            continue;
++        }
++        if (recycle_pages_) ++recycle_released_;
++#endif
+         uintptr_t a0 = ((uintptr_t) s + page_ - 1) & ~(uintptr_t) (page_ - 1);
+         uintptr_t a1 = ((uintptr_t) s + slice) & ~(uintptr_t) (page_ - 1);
+         if (a1 > a0) pio::vm_evict((void *) a0, (size_t) (a1 - a0));
+@@ -957,6 +971,42 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
+     const uint64_t slice = L.proj[p].nb2;
+     if (slice == 0) return true; // absent slot in a fused layout
+     char * dst = (char *) lbuf_[p][il] + (uint64_t) e * slice;
++#if defined(__linux__)
++    if (recycle_pages_) {
++        const int32_t did = il * n_expert_ + e;
++        auto it = recycle_free_.find(slice);
++        if (parked_bits_[(size_t) did] & (1u << p)) {
++            // This very slot is parked: its pages are still mapped here. Unpark and reuse in place.
++            auto & v = recycle_free_[slice];
++            for (size_t i = 0; i < v.size(); ++i)
++                if (v[i].first == did && v[i].second == p) { v[i] = v.back(); v.pop_back(); break; }
++            parked_bits_[(size_t) did] &= (uint8_t) ~(1u << p);
++            --recycle_free_n_;
++            ++recycle_inplace_;
++            return true;
++        }
++        if (it != recycle_free_.end() && !it->second.empty() && ((uintptr_t) dst % page_) == 0) {
++            const auto sp = it->second.back();
++            it->second.pop_back();
++            --recycle_free_n_;
++            parked_bits_[(size_t) sp.first] &= (uint8_t) ~(1u << sp.second);
++            const uintptr_t src = (uintptr_t) lbuf_[sp.second][sp.first / n_expert_] + (uintptr_t) (sp.first % n_expert_) * slice;
++            // Move the parked physical pages under the missing slot (no zero-fill, no first-touch
++            // faults: the reads overwrite every byte), then re-reserve the hole the move left so the
++            // evicted expert's slot stays addressable for its own later miss.
++            void * m = mremap((void *) src, slice, slice, MREMAP_MAYMOVE | MREMAP_FIXED, dst);
++            void * r = m == MAP_FAILED ? MAP_FAILED
++                     : mmap((void *) src, slice, PROT_READ | PROT_WRITE,
++                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED, -1, 0);
++            if (m == dst && r == (void *) src) { ++recycle_moved_; return true; }
++            ++recycle_errors_;
++            std::fprintf(stderr, "bmoe: recycle-pages: mremap/mmap failed (%s) at layer %d expert %d proj %d\n",
++                         std::strerror(errno), il, e, p);
++            return false; // the reservation may now have a hole: never compute over it
++        }
++        ++recycle_fresh_;
++    }
++#endif
+     uintptr_t a0 = (uintptr_t) dst & ~(uintptr_t) (page_ - 1);
+     uintptr_t a1 = ((uintptr_t) dst + slice + page_ - 1) & ~(uintptr_t) (page_ - 1);
+     if (!pio::vm_commit((void *) a0, (size_t) (a1 - a0))) {
+@@ -1451,6 +1501,9 @@ IExpertSource::Stats ExpertStreamSource::stats() const {
+ }
+ 
+ void ExpertStreamSource::shutdown() {
++    if (recycle_pages_)
++        std::fprintf(stderr, "bmoe: recycle-pages: moved %lld in-place %lld fresh %lld released %lld errors %lld\n",
++                     recycle_moved_, recycle_inplace_, recycle_fresh_, recycle_released_, recycle_errors_);
+     if (!active_) return;
+ #ifdef BMOE_HAVE_EXPERT_READY_HOOK
+     // Unregister the process-global hook FIRST: after this no compute thread can enter
+diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
+index 2877f7d..9fcc4c2 100644
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -339,6 +339,16 @@ private:
+     // I/O lane pool
+     int io_threads_ = 1;
+     uint64_t io_cpu_mask_ = 0; // moe-phone --io-cpu-mask
++    // moe-phone --recycle-pages: page ranges of evicted slices, keyed by slice size, awaiting reuse by
++    // the next miss of the same size. Eval-thread only, like the LRU. Bounded by recycle_cap_.
++    bool recycle_pages_ = false;
++    // Parked slices are (entry id, projection) pairs; parked_bits_[id] has bit p set while parked, so a
++    // miss on a parked slot reuses it in place instead of moving other pages over it.
++    std::unordered_map<uint64_t, std::vector<std::pair<int32_t, int8_t>>> recycle_free_;
++    std::vector<uint8_t> parked_bits_;
++    size_t recycle_free_n_ = 0;
++    static constexpr size_t recycle_cap_ = 64;
++    long long recycle_moved_ = 0, recycle_inplace_ = 0, recycle_fresh_ = 0, recycle_released_ = 0, recycle_errors_ = 0;
+     std::vector<std::thread> io_pool_;
+     std::vector<IoJob> jobs_;
+     std::mutex io_mtx_;
