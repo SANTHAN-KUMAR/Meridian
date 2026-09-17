@@ -1,0 +1,7 @@
+0.00.171.893 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 99, abort
+0.39.905.156 I 
+0.39.905.403 I system_info: n_threads = 4 (n_threads_batch = 4) / 8 | CPU : NEON = 1 | ARM_FMA = 1 | MATMUL_INT8 = 1 | DOTPROD = 1 | REPACK = 1 | 
+0.39.905.410 I perplexity: tokenizing the input ..
+0.39.949.330 I perplexity: tokenization took 43.892 ms
+0.39.949.353 I perplexity: calculating perplexity over 2 chunks, n_ctx=128, batch_size=128, n_seq=1
+0.40.735.758 I perplexity: 0.79 seconds per pass - ETA 0.41.524.697 I Final estimate: PPL = 11.5482 +/- 2.78708

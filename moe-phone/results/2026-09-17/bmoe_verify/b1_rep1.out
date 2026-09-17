@@ -1,0 +1,2 @@
+ppl: 9.6067  nll: 2.26246  next-token hits: 203/337 (60.2%)  135.17 s
+ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted

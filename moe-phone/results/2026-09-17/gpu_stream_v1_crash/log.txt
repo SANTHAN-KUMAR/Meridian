@@ -1,0 +1,4 @@
+=== gpu_full 14:22:48 memavail=5720296 BEFORE status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=36729 gate=timeout waited=300
+exit=0 AFTER status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=37121 Final estimate: PPL = 11.5482 +/- 2.78708 
+=== gpu_stream 14:28:19 memavail=5171000 BEFORE status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=36019 gate=timeout waited=300
+exit=134 AFTER status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=36141  

@@ -1,0 +1,8 @@
+=== gpu_full 14:42:00 memavail=4998424 BEFORE status=0 cap0=3321600 cap6=3801600 hw0=3321600 hw6=3801600 shell_front_mC=34830 gate=ok waited=60
+exit=0 AFTER status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=35775 Final estimate: PPL = 11.5482 +/- 2.78708 
+=== gpu_stream 14:56:50 memavail=4889668 BEFORE status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=33551 gate=timeout waited=300
+exit=134 AFTER status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=33751  
+=== cpu 15:13:13 memavail=5256896 BEFORE status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=33490 gate=timeout waited=300
+exit=0 AFTER status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=34488 Final estimate: PPL = 11.5128 +/- 2.76965 
+=== qwen_gpu_stream24 15:21:16 memavail=4040476 BEFORE status=0 cap0=3321600 cap6=3801600 hw0=3321600 hw6=3801600 shell_front_mC=35407 gate=ok waited=180
+exit=139 AFTER status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=38411 

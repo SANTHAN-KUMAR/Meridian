@@ -1,0 +1,16 @@
+=== b1_rep1 15:23:22 memavail=4724492 BEFORE status=1 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=38999 gate=timeout waited=30
+exit=0 AFTER status=1 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=38323 ppl: 9.6067  nll: 2.26246  next-token hits: 203/337 (60.2%)  135.17 s 
+=== b2_rep1 15:30:08 memavail=5500528 BEFORE status=1 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=38503 gate=timeout waited=30
+exit=0 AFTER status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=37203 ppl: 9.6378  nll: 2.26569  next-token hits: 202/337 (59.9%)  105.72 s 
+=== b3_rep1 15:37:37 memavail=6410560 BEFORE status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=36257 gate=timeout waited=30
+exit=0 AFTER status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=36375 ppl: 9.6420  nll: 2.26612  next-token hits: 203/337 (60.2%)  97.31 s 
+=== b5_rep1 15:45:34 memavail=6352564 BEFORE status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=36000 gate=timeout waited=30
+exit=0 AFTER status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=35923 ppl: 9.6420  nll: 2.26612  next-token hits: 203/337 (60.2%)  90.62 s 
+=== b1_rep2 15:53:25 memavail=6024192 BEFORE status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=35414 gate=timeout waited=30
+exit=0 AFTER status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=35298 ppl: 9.6067  nll: 2.26246  next-token hits: 203/337 (60.2%)  134.83 s 
+=== b2_rep2 16:03:38 memavail=4492616 BEFORE status=0 cap0=2361600 cap6=2227200 hw0=3321600 hw6=3801600 shell_front_mC=35195 gate=timeout waited=30
+exit=0 AFTER status=0 cap0=1900800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=38591 ppl: 9.6378  nll: 2.26569  next-token hits: 202/337 (59.9%)  67.10 s 
+=== b3_rep2 16:05:49 memavail=6372064 BEFORE status=1 cap0=1900800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=37765 gate=timeout waited=30
+exit=0 AFTER status=1 cap0=2361600 cap6=2112000 hw0=3321600 hw6=3801600 shell_front_mC=39678 ppl: 9.6420  nll: 2.26612  next-token hits: 203/337 (60.2%)  83.17 s 
+=== b5_rep2 16:08:11 memavail=5080312 BEFORE status=1 cap0=2361600 cap6=2112000 hw0=3321600 hw6=3801600 shell_front_mC=39953 gate=timeout waited=30
+exit=0 AFTER status=1 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=38756 ppl: 9.6420  nll: 2.26612  next-token hits: 203/337 (60.2%)  125.06 s 

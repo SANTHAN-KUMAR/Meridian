@@ -1,0 +1,18 @@
+0.00.064.859 I llama_completion: llama backend init
+0.00.064.872 I llama_completion: load the model and apply lora adapter, if any
+0.00.668.787 W llama_model_load: disabling mmap because MoE expert streaming is enabled
+0.00.798.217 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.46.164.063 I llama_completion: llama threadpool init, n_threads = 4
+0.46.171.751 I 
+0.46.187.577 I system_info: n_threads = 4 (n_threads_batch = 4) / 8 | CPU : NEON = 1 | ARM_FMA = 1 | MATMUL_INT8 = 1 | DOTPROD = 1 | REPACK = 1 | 
+0.46.187.596 I 
+0.46.276.051 I sampler seed: 286142776
+0.46.276.082 I sampler params: 
+	repeat_last_n = 64, repeat_penalty = 1.000, frequency_penalty = 0.000, presence_penalty = 0.000
+	dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = -1
+	top_k = 40, top_p = 0.950, min_p = 0.050, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 0.000
+	mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+0.46.276.146 I sampler chain: logits -> ?penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> min-p -> ?xtc -> temp-ext -> dist 
+0.46.276.148 I generate: n_ctx = 25600, n_batch = 2048, n_predict = 128, n_keep = 0
+0.46.276.148 I 
+Segmentation fault 

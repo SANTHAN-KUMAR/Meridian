@@ -1,0 +1,23 @@
+0.00.177.614 W llama_model_load: disabling mmap because MoE expert streaming is enabled
+0.14.232.361 I 
+0.14.232.537 I system_info: n_threads = 4 (n_threads_batch = 4) / 8 | CPU : NEON = 1 | ARM_FMA = 1 | MATMUL_INT8 = 1 | DOTPROD = 1 | REPACK = 1 | 
+0.14.232.551 I perplexity: tokenizing the input ..
+0.14.236.097 I perplexity: tokenization took 3.544 ms
+0.14.236.123 I perplexity: calculating perplexity over 2 chunks, n_ctx=128, batch_size=128, n_seq=1
+/home/santhankumar/moework/llama.cpp-stream/ggml/src/ggml-opencl/ggml-opencl.cpp:18207: GGML_ASSERT(0) failed
+0.15.238.155 E ggml_opencl: status error -30 at /home/santhankumar/moework/llama.cpp-stream/ggml/src/ggml-opencl/ggml-opencl.cpp:18207
+0: 0x581100e0cc 
+1: 0x581100dfd8 
+2: 0x581100e25c 
+3: 0x5810fb432c 
+4: 0x5810f79bc0 
+5: 0x5810fc6de4 
+6: 0x5811021044 
+7: 0x5810da30b0 
+8: 0x5810da2cb8 
+9: 0x5810da45bc 
+10: 0x5810da69b0 
+11: 0x5810b87628 
+12: 0x5810b7dc2c 
+13: 0x72bfa95b08 __libc_init
+Aborted 
