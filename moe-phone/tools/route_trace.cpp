@@ -106,6 +106,7 @@ int main(int argc, char ** argv) {
     llama_backend_init();
     llama_model_params mp = llama_model_default_params();
     mp.n_gpu_layers = 0;   // default load mode (mmap) keeps a 17 GB GGUF off the heap
+    mp.use_extra_bufts = false; // no CPU repack: on x86 it copies Q4_0 weights to the heap (OOM on a 15 GB laptop)
     llama_model * model = llama_model_load_from_file(model_path, mp);
     if (!model) { fprintf(stderr, "failed to load %s\n", model_path); return 1; }
     const llama_vocab * vocab = llama_model_get_vocab(model);
