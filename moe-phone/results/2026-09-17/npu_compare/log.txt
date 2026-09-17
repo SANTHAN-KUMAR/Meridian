@@ -1,0 +1,18 @@
+=== cpu_pinned_rep1 21:02:38 BEFORE quiesce: stopped=73 cpu_busy_of_800=49 top3=top:8.0,system_server:3.0,com.android.systemui:2.0, wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41788 gate=timeout waited=30 
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41880 pp0_tg0=1200150208 pp0_tg0=2692336405 
+=== gpu_opencl_rep1 21:03:43 BEFORE quiesce: stopped=73 cpu_busy_of_800=27 top3=top:9.0,system_server:6.0,[kworker/u33:4-hal_register_write_wq]:1.0, wake=Awake status=2 cap0=2361600 cap6=1862400 hw0=3321600 hw6=3801600 shell_front_mC=41317 gate=timeout waited=30 
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40955 pp0_tg0=912828593 pp0_tg0=1850633385 
+=== npu_htp0_rep1 21:04:43 BEFORE quiesce: stopped=73 cpu_busy_of_800=19 top3=top:7.0,system_server:2.0,[kworker/u32:6-memlat_wq]:1.0, wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40989 gate=timeout waited=30 
+exit=1 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40989 
+=== cpu_pinned_rep2 21:05:23 BEFORE quiesce: stopped=73 cpu_busy_of_800=33 top3=top:7.0,system_server:5.0,com.oplus.metis:4.0, wake=Awake status=2 cap0=1900800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40402 gate=timeout waited=30 
+exit=0 AFTER wake=Awake status=2 cap0=1900800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40849 pp0_tg0=1150883125 pp0_tg0=2105653332 
+=== gpu_opencl_rep2 21:06:26 BEFORE quiesce: stopped=73 cpu_busy_of_800=21 top3=top:8.0,system_server:3.0,[usbtemp_kthread]:2.0, wake=Awake status=2 cap0=1900800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40267 gate=timeout waited=30 
+exit=0 AFTER wake=Awake status=2 cap0=1900800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40599 pp0_tg0=625702135 pp0_tg0=1357755677 
+=== npu_htp0_rep2 21:07:24 BEFORE quiesce: stopped=73 cpu_busy_of_800=24 top3=top:8.0,system_server:4.0,[kworker/u33:4-hal_register_write_wq]:1.0, wake=Awake status=2 cap0=1900800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40148 gate=timeout waited=30 
+exit=1 AFTER wake=Awake status=2 cap0=1900800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40308 
+=== cpu_pinned_rep3 21:08:05 BEFORE quiesce: stopped=73 cpu_busy_of_800=23 top3=top:8.0,system_server:4.0,traced:2.0, wake=Awake status=1 cap0=2188800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=39936 gate=timeout waited=30 
+exit=0 AFTER wake=Awake status=1 cap0=2188800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40025 pp0_tg0=1152486978 pp0_tg0=2379866093 
+=== gpu_opencl_rep3 21:09:09 BEFORE quiesce: stopped=73 cpu_busy_of_800=23 top3=top:8.0,system_server:3.0,[kworker/u32:7-events_unbound]:1.0, wake=Awake status=1 cap0=2188800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=40023 gate=timeout waited=30 
+exit=0 AFTER wake=Awake status=1 cap0=2188800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=39964 pp0_tg0=626194896 pp0_tg0=1346093177 
+=== npu_htp0_rep3 21:10:08 BEFORE quiesce: stopped=73 cpu_busy_of_800=43 top3=system_server:16.0,top:7.0,traced_probes:2.0, wake=Awake status=1 cap0=2188800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=39813 gate=timeout waited=30 
+exit=1 AFTER wake=Awake status=1 cap0=2188800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=39813 
