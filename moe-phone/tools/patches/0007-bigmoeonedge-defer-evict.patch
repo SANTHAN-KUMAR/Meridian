@@ -1,0 +1,144 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f, applied AFTER 0002-0006 (engine files only).
+# --defer-evict: queue evicted slices' MADV_DONTNEED and release them in one batch after each decode (billed to it).
+diff --git a/cli/main.cpp b/cli/main.cpp
+index f7a054f..2ea09ea 100644
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -448,6 +448,7 @@ static void print_usage(const char * argv0) {
+         "      --cpu-mask HEX      pin the compute threadpool to these cores, strict (moe-phone)\n"
+         "      --io-cpu-mask HEX   pin the expert-read lanes to these cores (moe-phone)\n"
+         "      --ppl-batch N       with --ppl: N teacher-forced tokens per decode (prices a verify batch) (moe-phone)\n"
++        "      --defer-evict       batch evicted pages' release after each decode (moe-phone)\n"
+         "      --recycle-pages     move evicted experts' pages into the next miss (mremap) instead of re-faulting (moe-phone)\n"
+         "      --no-odirect        do not bypass the page cache for expert reads\n"
+         "      --dense-weights M   dense (non-expert) weight policy: mmap | warm | anon (default) | ahwb\n"
+@@ -690,6 +691,8 @@ int main(int argc, char ** argv) {
+             cfg.cpu_mask = std::strtoull(next("--cpu-mask"), nullptr, 16);
+         else if (a == "--ppl-batch")
+             cfg.ppl_batch = std::atoi(next("--ppl-batch"));
++        else if (a == "--defer-evict")
++            cfg.moe.defer_evict = true;
+         else if (a == "--recycle-pages")
+             cfg.moe.recycle_pages = true;
+         else if (a == "--io-cpu-mask")
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+index 3c8fb26..9c54c15 100644
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -71,6 +71,12 @@ struct MoeStreamConfig {
+     // otherwise the engine falls back per slice and counts it.
+     bool recycle_pages = false;
+ 
++    // moe-phone: queue evicted slices' MADV_DONTNEED and run them in one batch after each decode returns
++    // (flush_deferred_evictions), so the TLB-shootdown IPIs land on idle compute cores instead of
++    // interrupting a running graph. The entry is invalid immediately; only the page release is deferred,
++    // and a re-commit of a queued slice cancels its release. Billed inside the decode's wall time.
++    bool defer_evict = false;
++
+     bool o_direct = true;     // bypass the page cache (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+     bool load_all = false;    // debug/A-B: load ALL experts each token (full-sweep baseline)
+     bool force_cache = false; // allow a cache_mb in the pathological band (tests/experiments)
+diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
+index a2c252b..f33f810 100644
+--- a/core/src/engine/session.cpp
++++ b/core/src/engine/session.cpp
+@@ -1609,6 +1609,7 @@ RunResult Session::generate(const GenerateRequest & req,
+         loop_overhead_s += overhead;
+         trace_begin(n_past, /*n_tokens*/ 1 + n_draft, /*phase*/ 1);
+         int dec = llama_decode(ctx, step);
++        im.source.flush_deferred_evictions(); // moe-phone --defer-evict: billed to this token's wall time
+         auto s1 = clock_t_::now();
+         loop_mark = s1; // the next token's overhead is measured from here
+         const uint64_t f1 = pio::major_faults();
+diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
+index 02a7d51..3c958f8 100644
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -62,6 +62,8 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+     io_threads_ = std::max(1, std::min(MoeStreamConfig::io_threads_max, cfg.io_threads));
+     io_cpu_mask_ = cfg.io_cpu_mask;
+     recycle_pages_ = cfg.recycle_pages;
++    defer_evict_ = cfg.defer_evict;
++    if (defer_evict_) deferred_bits_.assign((size_t) n_layer_ * (size_t) n_expert_, 0);
+     if (recycle_pages_) parked_bits_.assign((size_t) n_layer_ * (size_t) n_expert_, 0);
+     page_ = pio::vm_page(); // the real OS page size, for the dense-residency probe in any cache mode
+ 
+@@ -819,10 +821,34 @@ void ExpertStreamSource::release_entry_pages(int32_t id) {
+         }
+         if (recycle_pages_) ++recycle_released_;
+ #endif
++        if (defer_evict_) {
++            if (!(deferred_bits_[(size_t) id] & (1u << p))) {
++                deferred_bits_[(size_t) id] |= (uint8_t) (1u << p);
++                deferred_.push_back({id, (int8_t) p});
++            }
++            if (deferred_.size() >= 512) flush_deferred_evictions(); // paths without a per-token flush (prefill, --ppl)
++            continue;
++        }
++        uintptr_t a0 = ((uintptr_t) s + page_ - 1) & ~(uintptr_t) (page_ - 1);
++        uintptr_t a1 = ((uintptr_t) s + slice) & ~(uintptr_t) (page_ - 1);
++        if (a1 > a0) pio::vm_evict((void *) a0, (size_t) (a1 - a0));
++    }
++}
++void ExpertStreamSource::flush_deferred_evictions() {
++    if (!defer_evict_ || deferred_.empty()) return;
++    const auto t0 = clock_t_::now();
++    for (const auto & dp : deferred_) {
++        const int il = dp.first / n_expert_, e = dp.first % n_expert_, p = dp.second;
++        deferred_bits_[(size_t) dp.first] &= (uint8_t) ~(1u << p);
++        const uint64_t slice = layers_[il].proj[p].nb2;
++        char * s = (char *) lbuf_[p][il] + (uint64_t) e * slice;
+         uintptr_t a0 = ((uintptr_t) s + page_ - 1) & ~(uintptr_t) (page_ - 1);
+         uintptr_t a1 = ((uintptr_t) s + slice) & ~(uintptr_t) (page_ - 1);
+         if (a1 > a0) pio::vm_evict((void *) a0, (size_t) (a1 - a0));
++        ++deferred_flushed_;
+     }
++    deferred_.clear();
++    mgmt_ns_.fetch_add((long long) std::chrono::duration_cast<std::chrono::nanoseconds>(clock_t_::now() - t0).count());
+ }
+ void ExpertStreamSource::evict_tail() {
+     const int32_t id = ctail_;
+@@ -971,6 +997,16 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
+     const uint64_t slice = L.proj[p].nb2;
+     if (slice == 0) return true; // absent slot in a fused layout
+     char * dst = (char *) lbuf_[p][il] + (uint64_t) e * slice;
++    if (defer_evict_) {
++        const int32_t cid = il * n_expert_ + e;
++        if (deferred_bits_[(size_t) cid] & (1u << p)) {
++            // queued for release but needed again: cancel, so the flush cannot wipe the new read
++            deferred_bits_[(size_t) cid] &= (uint8_t) ~(1u << p);
++            for (size_t i = 0; i < deferred_.size(); ++i)
++                if (deferred_[i].first == cid && deferred_[i].second == p) { deferred_[i] = deferred_.back(); deferred_.pop_back(); break; }
++            ++deferred_cancelled_;
++        }
++    }
+ #if defined(__linux__)
+     if (recycle_pages_) {
+         const int32_t did = il * n_expert_ + e;
+@@ -1501,6 +1537,8 @@ IExpertSource::Stats ExpertStreamSource::stats() const {
+ }
+ 
+ void ExpertStreamSource::shutdown() {
++    if (defer_evict_)
++        std::fprintf(stderr, "bmoe: defer-evict: flushed %lld cancelled %lld\n", deferred_flushed_, deferred_cancelled_);
+     if (recycle_pages_)
+         std::fprintf(stderr, "bmoe: recycle-pages: moved %lld in-place %lld fresh %lld released %lld errors %lld\n",
+                      recycle_moved_, recycle_inplace_, recycle_fresh_, recycle_released_, recycle_errors_);
+diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
+index 9fcc4c2..4e627d4 100644
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -342,6 +342,13 @@ private:
+     // moe-phone --recycle-pages: page ranges of evicted slices, keyed by slice size, awaiting reuse by
+     // the next miss of the same size. Eval-thread only, like the LRU. Bounded by recycle_cap_.
+     bool recycle_pages_ = false;
++    bool defer_evict_ = false;                                  // moe-phone --defer-evict
++    std::vector<std::pair<int32_t, int8_t>> deferred_;          // (entry id, projection) awaiting release
++    std::vector<uint8_t> deferred_bits_;                        // bit p set while (id, p) is queued
++    long long deferred_flushed_ = 0, deferred_cancelled_ = 0;
++public:
++    void flush_deferred_evictions();                            // eval thread, after llama_decode
++private:
+     // Parked slices are (entry id, projection) pairs; parked_bits_[id] has bit p set while parked, so a
+     // miss on a parked slot reuses it in place instead of moving other pages over it.
+     std::unordered_map<uint64_t, std::vector<std::pair<int32_t, int8_t>>> recycle_free_;
