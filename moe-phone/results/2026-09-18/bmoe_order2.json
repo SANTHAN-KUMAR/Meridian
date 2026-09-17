@@ -1,0 +1,404 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/bmoe_order2/bmoe_order2_20260918_0221",
+ "runs": [
+  {
+   "n_generated": 256,
+   "s_per_token": 0.169,
+   "decode_tok_s": 5.922,
+   "n_prompt": 34,
+   "prefill_s": 6.073,
+   "prefill_tok_s": 5.6,
+   "load_s": 19.156,
+   "ttft_s": 25.228,
+   "read_MiB": 32411.7,
+   "read_MiB_per_token": 126.61,
+   "compute_s_per_token": 0.095,
+   "cache_mgmt_s_per_token": 0.022,
+   "flash_io_s_per_token_summed": 0.17,
+   "io_lane_MiBps": 744.0,
+   "cache_hit_pct": 84.6,
+   "resident_MiB": 4893.3,
+   "budget_MiB": 4896.0,
+   "evictions": 13663,
+   "rereads": 11209,
+   "rereads_per_token": 43.8,
+   "tag": "idorder_rep1",
+   "cell": "idorder",
+   "rep": 1
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.172,
+   "decode_tok_s": 5.804,
+   "n_prompt": 34,
+   "prefill_s": 6.818,
+   "prefill_tok_s": 5.0,
+   "load_s": 19.811,
+   "ttft_s": 26.628,
+   "read_MiB": 31378.2,
+   "read_MiB_per_token": 122.57,
+   "compute_s_per_token": 0.093,
+   "cache_mgmt_s_per_token": 0.019,
+   "flash_io_s_per_token_summed": 0.16,
+   "io_lane_MiBps": 764.0,
+   "cache_hit_pct": 85.0,
+   "resident_MiB": 4951.9,
+   "budget_MiB": 4953.0,
+   "evictions": 13237,
+   "rereads": 10806,
+   "rereads_per_token": 42.2,
+   "tag": "idorder_rep2",
+   "cell": "idorder",
+   "rep": 2
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.178,
+   "decode_tok_s": 5.612,
+   "n_prompt": 34,
+   "prefill_s": 5.957,
+   "prefill_tok_s": 5.7,
+   "load_s": 20.884,
+   "ttft_s": 26.841,
+   "read_MiB": 31814.4,
+   "read_MiB_per_token": 124.27,
+   "compute_s_per_token": 0.105,
+   "cache_mgmt_s_per_token": 0.021,
+   "flash_io_s_per_token_summed": 0.172,
+   "io_lane_MiBps": 723.0,
+   "cache_hit_pct": 84.8,
+   "resident_MiB": 4926.6,
+   "budget_MiB": 4927.0,
+   "evictions": 13417,
+   "rereads": 10976,
+   "rereads_per_token": 42.9,
+   "tag": "idorder_rep3",
+   "cell": "idorder",
+   "rep": 3
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.162,
+   "decode_tok_s": 6.177,
+   "n_prompt": 34,
+   "prefill_s": 6.034,
+   "prefill_tok_s": 5.6,
+   "load_s": 20.124,
+   "ttft_s": 26.157,
+   "read_MiB": 32074.7,
+   "read_MiB_per_token": 125.29,
+   "compute_s_per_token": 0.094,
+   "cache_mgmt_s_per_token": 0.02,
+   "flash_io_s_per_token_summed": 0.168,
+   "io_lane_MiBps": 745.0,
+   "cache_hit_pct": 84.7,
+   "resident_MiB": 4911.4,
+   "budget_MiB": 4912.0,
+   "evictions": 13525,
+   "rereads": 11078,
+   "rereads_per_token": 43.3,
+   "probe_resident": 1101603,
+   "probe_inflight": 113157,
+   "probe_deferred_pct": 9.32,
+   "tag": "residentfirst_rep1",
+   "cell": "residentfirst",
+   "rep": 1
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.168,
+   "decode_tok_s": 5.961,
+   "n_prompt": 34,
+   "prefill_s": 6.31,
+   "prefill_tok_s": 5.4,
+   "load_s": 20.839,
+   "ttft_s": 27.149,
+   "read_MiB": 32360.5,
+   "read_MiB_per_token": 126.41,
+   "compute_s_per_token": 0.094,
+   "cache_mgmt_s_per_token": 0.021,
+   "flash_io_s_per_token_summed": 0.175,
+   "io_lane_MiBps": 723.0,
+   "cache_hit_pct": 84.6,
+   "resident_MiB": 4895.9,
+   "budget_MiB": 4898.0,
+   "evictions": 13642,
+   "rereads": 11189,
+   "rereads_per_token": 43.7,
+   "probe_resident": 1097216,
+   "probe_inflight": 117544,
+   "probe_deferred_pct": 9.68,
+   "tag": "residentfirst_rep2",
+   "cell": "residentfirst",
+   "rep": 2
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.163,
+   "decode_tok_s": 6.151,
+   "n_prompt": 34,
+   "prefill_s": 5.839,
+   "prefill_tok_s": 5.8,
+   "load_s": 21.242,
+   "ttft_s": 27.081,
+   "read_MiB": 32662.4,
+   "read_MiB_per_token": 127.59,
+   "compute_s_per_token": 0.094,
+   "cache_mgmt_s_per_token": 0.021,
+   "flash_io_s_per_token_summed": 0.164,
+   "io_lane_MiBps": 777.0,
+   "cache_hit_pct": 84.5,
+   "resident_MiB": 4885.4,
+   "budget_MiB": 4886.0,
+   "evictions": 13764,
+   "rereads": 11307,
+   "rereads_per_token": 44.2,
+   "probe_resident": 1094915,
+   "probe_inflight": 119845,
+   "probe_deferred_pct": 9.87,
+   "tag": "residentfirst_rep3",
+   "cell": "residentfirst",
+   "rep": 3
+  }
+ ],
+ "cells": [
+  {
+   "cell": "idorder",
+   "n": 3,
+   "failed": 0,
+   "decode_tok_s_all": [
+    5.922,
+    5.804,
+    5.612
+   ],
+   "decode_tok_s_median": 5.804,
+   "effective_tok_s_with_drafting_all": [
+    null,
+    null,
+    null
+   ],
+   "effective_tok_s_with_drafting_median": null,
+   "cache_hit_pct_all": [
+    84.6,
+    85.0,
+    84.8
+   ],
+   "cache_hit_pct_median": 84.8,
+   "read_MiB_per_token_all": [
+    126.61,
+    122.57,
+    124.27
+   ],
+   "read_MiB_per_token_median": 124.27,
+   "compute_s_per_token_all": [
+    0.095,
+    0.093,
+    0.105
+   ],
+   "compute_s_per_token_median": 0.095,
+   "cache_mgmt_s_per_token_all": [
+    0.022,
+    0.019,
+    0.021
+   ],
+   "cache_mgmt_s_per_token_median": 0.021,
+   "flash_io_s_per_token_summed_all": [
+    0.17,
+    0.16,
+    0.172
+   ],
+   "flash_io_s_per_token_summed_median": 0.17,
+   "rereads_per_token_all": [
+    43.8,
+    42.2,
+    42.9
+   ],
+   "rereads_per_token_median": 42.9,
+   "budget_MiB_all": [
+    4896.0,
+    4953.0,
+    4927.0
+   ],
+   "budget_MiB_median": 4927.0,
+   "draft_accept_pct_all": [
+    null,
+    null,
+    null
+   ],
+   "draft_accept_pct_median": null,
+   "tokens_per_verify_all": [
+    null,
+    null,
+    null
+   ],
+   "tokens_per_verify_median": null,
+   "prefill_tok_s_all": [
+    5.6,
+    5.0,
+    5.7
+   ],
+   "prefill_tok_s_median": 5.6,
+   "delta_pswpin_all": [
+    null,
+    null,
+    null
+   ],
+   "delta_pswpin_median": null,
+   "delta_pswpout_all": [
+    null,
+    null,
+    null
+   ],
+   "delta_pswpout_median": null,
+   "swap_used_MB_during_all": [
+    null,
+    null,
+    null
+   ],
+   "swap_used_MB_during_median": null,
+   "memavail_MB_before_all": [
+    null,
+    null,
+    null
+   ],
+   "memavail_MB_before_median": null,
+   "probe_deferred_pct_all": [
+    null,
+    null,
+    null
+   ],
+   "probe_deferred_pct_median": null,
+   "probe_resident_all": [
+    null,
+    null,
+    null
+   ],
+   "probe_resident_median": null,
+   "probe_inflight_all": [
+    null,
+    null,
+    null
+   ],
+   "probe_inflight_median": null
+  },
+  {
+   "cell": "residentfirst",
+   "n": 3,
+   "failed": 0,
+   "decode_tok_s_all": [
+    6.177,
+    5.961,
+    6.151
+   ],
+   "decode_tok_s_median": 6.151,
+   "effective_tok_s_with_drafting_all": [
+    null,
+    null,
+    null
+   ],
+   "effective_tok_s_with_drafting_median": null,
+   "cache_hit_pct_all": [
+    84.7,
+    84.6,
+    84.5
+   ],
+   "cache_hit_pct_median": 84.6,
+   "read_MiB_per_token_all": [
+    125.29,
+    126.41,
+    127.59
+   ],
+   "read_MiB_per_token_median": 126.41,
+   "compute_s_per_token_all": [
+    0.094,
+    0.094,
+    0.094
+   ],
+   "compute_s_per_token_median": 0.094,
+   "cache_mgmt_s_per_token_all": [
+    0.02,
+    0.021,
+    0.021
+   ],
+   "cache_mgmt_s_per_token_median": 0.021,
+   "flash_io_s_per_token_summed_all": [
+    0.168,
+    0.175,
+    0.164
+   ],
+   "flash_io_s_per_token_summed_median": 0.168,
+   "rereads_per_token_all": [
+    43.3,
+    43.7,
+    44.2
+   ],
+   "rereads_per_token_median": 43.7,
+   "budget_MiB_all": [
+    4912.0,
+    4898.0,
+    4886.0
+   ],
+   "budget_MiB_median": 4898.0,
+   "draft_accept_pct_all": [
+    null,
+    null,
+    null
+   ],
+   "draft_accept_pct_median": null,
+   "tokens_per_verify_all": [
+    null,
+    null,
+    null
+   ],
+   "tokens_per_verify_median": null,
+   "prefill_tok_s_all": [
+    5.6,
+    5.4,
+    5.8
+   ],
+   "prefill_tok_s_median": 5.6,
+   "delta_pswpin_all": [
+    null,
+    null,
+    null
+   ],
+   "delta_pswpin_median": null,
+   "delta_pswpout_all": [
+    null,
+    null,
+    null
+   ],
+   "delta_pswpout_median": null,
+   "swap_used_MB_during_all": [
+    null,
+    null,
+    null
+   ],
+   "swap_used_MB_during_median": null,
+   "memavail_MB_before_all": [
+    null,
+    null,
+    null
+   ],
+   "memavail_MB_before_median": null,
+   "probe_deferred_pct_all": [
+    9.32,
+    9.68,
+    9.87
+   ],
+   "probe_deferred_pct_median": 9.68,
+   "probe_resident_all": [
+    1101603,
+    1097216,
+    1094915
+   ],
+   "probe_resident_median": 1097216,
+   "probe_inflight_all": [
+    113157,
+    117544,
+    119845
+   ],
+   "probe_inflight_median": 117544
+  }
+ ]
+}

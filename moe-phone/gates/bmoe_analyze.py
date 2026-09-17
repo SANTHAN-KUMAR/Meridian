@@ -32,6 +32,8 @@ PATTERNS = {
                          r"\(compute ([\d.]+) \+ cache mgmt ([\d.]+) \+ flash I/O ([\d.]+) s/token, ([\d.]+) MiB/s\)"),
     "hit": re.compile(r"moe-cache: ([\d.]+)% hit, resident ([\d.]+) MiB, budget ([\d.]+) MiB"),
     "evict": re.compile(r"moe-cache: (\d+) evictions, (\d+) re-reads \(([\d.]+)/token\)"),
+    # moe-phone patch 0010: did the resident-first reordering actually fire?
+    "probes": re.compile(r"expert-order probes: (\d+) resident, (\d+) in flight \(([\d.]+)% deferred"),
     "drafts": re.compile(r"(\w+): (\d+)/(\d+) drafts accepted \(([\d.]+)%\), ([\d.]+) tokens per verify decode"),
     "draftcost": re.compile(r"(\w+): drafting costs ([\d.]+) s/token on top of decode .{1,4} ([\d.]+) tok/s effective"),
 }
@@ -57,6 +59,9 @@ def parse(text):
     m = PATTERNS["evict"].search(text)
     if m:
         r.update(evictions=int(m[1]), rereads=int(m[2]), rereads_per_token=float(m[3]))
+    m = PATTERNS["probes"].search(text)
+    if m:
+        r.update(probe_resident=int(m[1]), probe_inflight=int(m[2]), probe_deferred_pct=float(m[3]))
     m = PATTERNS["drafts"].search(text)
     if m:
         r.update(draft_source=m[1], drafts_accepted=int(m[2]), drafts_total=int(m[3]),
@@ -135,7 +140,8 @@ def main():
             "compute_s_per_token", "cache_mgmt_s_per_token", "flash_io_s_per_token_summed",
             "rereads_per_token", "budget_MiB",
             "draft_accept_pct", "tokens_per_verify", "prefill_tok_s",
-            "delta_pswpin", "delta_pswpout", "swap_used_MB_during", "memavail_MB_before")
+            "delta_pswpin", "delta_pswpout", "swap_used_MB_during", "memavail_MB_before",
+            "probe_deferred_pct", "probe_resident", "probe_inflight")
     for cell, rs in sorted(cells.items()):
         s = {"cell": cell, "n": len(rs), "failed": sum(1 for r in rs if "decode_tok_s" not in r)}
         for k in keys:

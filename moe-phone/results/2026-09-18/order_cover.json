@@ -1,0 +1,30 @@
+{
+ "target": "Qwen3-30B-A3B-Q4_0.gguf",
+ "cell": "residentfirst",
+ "device_arm": "olmoe_cpu",
+ "inputs": {
+  "expert_bytes_per_token": 1023934464.0,
+  "hit_rate": 0.846,
+  "device_GB_s": 31.010457306240003,
+  "flash_GB_s": 2.80619,
+  "n_layer": 48,
+  "n_proj": 3,
+  "decode_ms_per_token": 162.57519102584945
+ },
+ "per_layer": {
+  "expert_bytes": 21331968.0,
+  "resident_bytes": 18046844.928,
+  "miss_bytes": 3285123.0720000006,
+  "resident_compute_wall_ms": 0.5819599740107207,
+  "miss_read_ms": 1.170670222615005,
+  "resident_compute_wall_ms_per_projection": 0.1939866580035736,
+  "miss_read_ms_per_projection": 0.390223407538335,
+  "max_saving_ms": 0.5819599740107207
+ },
+ "per_token": {
+  "max_saving_ms": 27.934078752514594,
+  "max_saving_fraction_of_decode": 0.17182251840671728
+ },
+ "measured_deferred_pct": 9.68,
+ "note": "an upper bound: ascending-id order already collects part of this cover, because the ready hook returns immediately for a resident expert, so a miss at a random position among the selected experts is usually preceded by resident ones"
+}

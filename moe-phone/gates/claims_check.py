@@ -704,6 +704,18 @@ CLAIMS = [
          text="computing the already-resident experts first instead: 5.835 tok/s median, i.e. no measurable change (0.03%) against a within-arm spread of about 5%",
          artifact="bmoe_order.json", expected=5.835, tol=0.01,
          value=lambda A: next(c["decode_tok_s_median"] for c in A["border"]["cells"] if c["cell"] == "residentfirst")),
+    dict(id="order2_residentfirst_decode",
+         text="the instrumented repeat of the same A/B put resident-first ahead on every row, 6.151 tok/s against 5.804 (+6.0%) -- but that campaign's rotation was unbalanced and the effect is not believed; see bmoe_order/FINDING.md",
+         artifact="bmoe_order2.json", expected=6.151, tol=0.01,
+         value=lambda A: next(c["decode_tok_s_median"] for c in A["border2"]["cells"] if c["cell"] == "residentfirst")),
+    dict(id="order_probe_deferred_pct",
+         text="the reordering does fire: 9.68% of expert consumptions were deferred to the second pass (the three instrumented rows agree at 9.32 / 9.68 / 9.87%)",
+         artifact="bmoe_order2.json", expected=9.68, tol=0.01,
+         value=lambda A: next(c["probe_deferred_pct_median"] for c in A["border2"]["cells"] if c["cell"] == "residentfirst")),
+    dict(id="order_cover_bound_pct",
+         text="intra-layer reordering can buy at most 17.2% of a token: 0.58 ms of resident-expert compute per layer (wall time, at the CPU's measured 31.01 GB/s) against 1.17 ms of miss reads (at the measured 2.806 GB/s bulk flash rate)",
+         artifact="order_cover.json", expected=0.1716, tol=0.002,
+         value=lambda A: A["ocover"]["per_token"]["max_saving_fraction_of_decode"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -930,6 +942,8 @@ def load_all():
         "app18": load("app_engine.json"),
         "devbw": load("device_bandwidth.json"),
         "border": load("bmoe_order.json"),
+        "border2": load("bmoe_order2.json"),
+        "ocover": load("order_cover.json"),
         "posfx": load("position_effect.json"),
     }
 
