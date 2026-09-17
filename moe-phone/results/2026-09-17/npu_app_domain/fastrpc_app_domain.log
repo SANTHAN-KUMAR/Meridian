@@ -1,0 +1,2 @@
+09-17 23:42:01.821 23450 23450 I adbd    : adbd service requested 'shell,v2,raw:logcat -d 2>/dev/null | grep -iE "open_device_node|thru HAL|apps_dev_init|avc: *denied.*(fastrpc|qdsp)" | tail -8'
+09-17 23:42:55.274 23450 23450 I adbd    : adbd service requested 'shell,v2,raw:logcat -d 2>/dev/null | grep -iE "open_device_node|apps_dev_init|Unsigned PD|failed to open session|avc: *denied.*(fastrpc|qdsp)" | tail -30'

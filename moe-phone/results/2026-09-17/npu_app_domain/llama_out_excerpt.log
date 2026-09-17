@@ -1,0 +1,6 @@
+0.00.066.253 E ggml-hex: HTP0 failed to open session : uri file:///libggml-htp-v81.so?htp_iface_skel_handle_invoke&_modver=1.0&_dom=cdsp&_session=0 error 0x72
+0.00.071.924 E llama_model_load: error loading model: ggml-hex: failed to open session (see log for details)
+0.00.071.973 E common_fit_params: encountered an error while trying to fit params to free device memory: failed to load model
+0.00.112.411 E ggml-hex: HTP0 failed to open session : uri file:///libggml-htp-v81.so?htp_iface_skel_handle_invoke&_modver=1.0&_dom=cdsp&_session=0 error 0x72
+0.00.118.484 E llama_model_load: error loading model: ggml-hex: failed to open session (see log for details)
+0.00.118.522 E llama_completion: error: unable to create context
