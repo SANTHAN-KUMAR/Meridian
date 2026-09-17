@@ -592,6 +592,18 @@ CLAIMS = [
          text="pinned compute per token 0.0995 s median vs 0.1335 s unpinned",
          artifact="bmoe_pin2.json", expected=0.0995, tol=0.002,
          value=lambda A: next(c["compute_s_per_token_median"] for c in A["bpin2"]["cells"] if c["cell"] == "pin_t4c47_io4c03")),
+    dict(id="verify_cost_n2",
+         text="a streamed verify of 2 positions costs 1.71x a single-token decode (Qwen3-30B-A3B on the 15R, 3 repeats, awake)",
+         artifact="verify_cost.json", expected=1.7119, tol=0.01,
+         value=lambda A: next(x["c_median"] for x in A["vcost"]["cells"] if x["N"] == 2)),
+    dict(id="verify_cost_n3",
+         text="a streamed verify of 3 positions costs 2.37x a single-token decode",
+         artifact="verify_cost.json", expected=2.3716, tol=0.01,
+         value=lambda A: next(x["c_median"] for x in A["vcost"]["cells"] if x["N"] == 3)),
+    dict(id="verify_cost_n5",
+         text="a streamed verify of 5 positions costs 3.71x a single-token decode: a 4-token draft must average more than 3.71 accepted tokens per verify to break even",
+         artifact="verify_cost.json", expected=3.7098, tol=0.01,
+         value=lambda A: next(x["c_median"] for x in A["vcost"]["cells"] if x["N"] == 5)),
     # ------------------------------------------------------ instrument agreement
     dict(id="roofline_inputs_agree",
          text="the bandwidth constant used here is the one the engine_sim artifact was run with",
@@ -628,6 +640,7 @@ def load_all():
         "levers": load("bmoe_levers.json"),
         "repack": load("bmoe_repack.json"),
         "bpin2": load("bmoe_pin2.json"),
+        "vcost": load("verify_cost.json"),
     }
 
 

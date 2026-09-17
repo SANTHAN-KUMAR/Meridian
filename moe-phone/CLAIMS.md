@@ -110,6 +110,9 @@ internally consistent and wrong. That is what the property tests are for.
 | `pin2_unpinned` | the unpinned baseline in the same confirmation: 4.75 tok/s median | `bmoe_pin2.json` | 4.7470 | ok |
 | `pin2_recycle_not_a_gain` | page recycling on top of pinning: 5.10 tok/s median - cache management falls but compute rises, a net loss | `bmoe_pin2.json` | 5.1010 | ok |
 | `pin2_pinned_compute` | pinned compute per token 0.0995 s median vs 0.1335 s unpinned | `bmoe_pin2.json` | 0.0995 | ok |
+| `verify_cost_n2` | a streamed verify of 2 positions costs 1.71x a single-token decode (Qwen3-30B-A3B on the 15R, 3 repeats, awake) | `verify_cost.json` | 1.7119 | ok |
+| `verify_cost_n3` | a streamed verify of 3 positions costs 2.37x a single-token decode | `verify_cost.json` | 2.3716 | ok |
+| `verify_cost_n5` | a streamed verify of 5 positions costs 3.71x a single-token decode: a 4-token draft must average more than 3.71 accepted tokens per verify to break even | `verify_cost.json` | 3.7098 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-99 claims checked.
+102 claims checked.

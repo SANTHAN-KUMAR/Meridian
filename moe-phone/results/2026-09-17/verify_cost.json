@@ -1,0 +1,277 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-17/bmoe_verify_clean/log.txt",
+ "skip": 8,
+ "n_failed": 0,
+ "runs": [
+  {
+   "tag": "b1_rep1",
+   "N": 1,
+   "rep": 1,
+   "failed": false,
+   "wall_s": 69.21,
+   "n_tokens": 346,
+   "decodes": 346,
+   "s_per_decode": 0.20002890173410404,
+   "nll": 2.26246,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b2_rep1",
+   "N": 2,
+   "rep": 1,
+   "failed": false,
+   "wall_s": 59.36,
+   "n_tokens": 346,
+   "decodes": 173,
+   "s_per_decode": 0.343121387283237,
+   "nll": 2.26569,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b3_rep1",
+   "N": 3,
+   "rep": 1,
+   "failed": false,
+   "wall_s": 55.14,
+   "n_tokens": 346,
+   "decodes": 116,
+   "s_per_decode": 0.4753448275862069,
+   "nll": 2.26612,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b5_rep1",
+   "N": 5,
+   "rep": 1,
+   "failed": false,
+   "wall_s": 52.05,
+   "n_tokens": 346,
+   "decodes": 70,
+   "s_per_decode": 0.7435714285714285,
+   "nll": 2.26612,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b1_rep2",
+   "N": 1,
+   "rep": 2,
+   "failed": false,
+   "wall_s": 69.35,
+   "n_tokens": 346,
+   "decodes": 346,
+   "s_per_decode": 0.20043352601156067,
+   "nll": 2.26246,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b2_rep2",
+   "N": 2,
+   "rep": 2,
+   "failed": false,
+   "wall_s": 61.95,
+   "n_tokens": 346,
+   "decodes": 173,
+   "s_per_decode": 0.358092485549133,
+   "nll": 2.26569,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b3_rep2",
+   "N": 3,
+   "rep": 2,
+   "failed": false,
+   "wall_s": 54.94,
+   "n_tokens": 346,
+   "decodes": 116,
+   "s_per_decode": 0.4736206896551724,
+   "nll": 2.26612,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b5_rep2",
+   "N": 5,
+   "rep": 2,
+   "failed": false,
+   "wall_s": 51.83,
+   "n_tokens": 346,
+   "decodes": 70,
+   "s_per_decode": 0.7404285714285714,
+   "nll": 2.26612,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b1_rep3",
+   "N": 1,
+   "rep": 3,
+   "failed": false,
+   "wall_s": 93.05,
+   "n_tokens": 346,
+   "decodes": 346,
+   "s_per_decode": 0.2689306358381503,
+   "nll": 2.26246,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b2_rep3",
+   "N": 2,
+   "rep": 3,
+   "failed": false,
+   "wall_s": 59.23,
+   "n_tokens": 346,
+   "decodes": 173,
+   "s_per_decode": 0.3423699421965318,
+   "nll": 2.26569,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b3_rep3",
+   "N": 3,
+   "rep": 3,
+   "failed": false,
+   "wall_s": 55.75,
+   "n_tokens": 346,
+   "decodes": 116,
+   "s_per_decode": 0.48060344827586204,
+   "nll": 2.26612,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  },
+  {
+   "tag": "b5_rep3",
+   "N": 5,
+   "rep": 3,
+   "failed": false,
+   "wall_s": 53.14,
+   "n_tokens": 346,
+   "decodes": 70,
+   "s_per_decode": 0.7591428571428571,
+   "nll": 2.26612,
+   "wake": "Awake",
+   "thermal_status": 2,
+   "cap0_khz": 1747200,
+   "cap6_khz": 1651200
+  }
+ ],
+ "cells": [
+  {
+   "N": 1,
+   "n": 3,
+   "s_per_decode_all": [
+    0.20002890173410404,
+    0.20043352601156067,
+    0.2689306358381503
+   ],
+   "s_per_decode_median": 0.20043352601156067,
+   "c_median": 1.0,
+   "nll_all": [
+    2.26246,
+    2.26246,
+    2.26246
+   ],
+   "all_awake": true,
+   "thermal_status_all": [
+    2,
+    2,
+    2
+   ]
+  },
+  {
+   "N": 2,
+   "n": 3,
+   "s_per_decode_all": [
+    0.343121387283237,
+    0.358092485549133,
+    0.3423699421965318
+   ],
+   "s_per_decode_median": 0.343121387283237,
+   "c_median": 1.7118961788031726,
+   "nll_all": [
+    2.26569,
+    2.26569,
+    2.26569
+   ],
+   "all_awake": true,
+   "thermal_status_all": [
+    2,
+    2,
+    2
+   ]
+  },
+  {
+   "N": 3,
+   "n": 3,
+   "s_per_decode_all": [
+    0.4753448275862069,
+    0.4736206896551724,
+    0.48060344827586204
+   ],
+   "s_per_decode_median": 0.4753448275862069,
+   "c_median": 2.3715834224200085,
+   "nll_all": [
+    2.26612,
+    2.26612,
+    2.26612
+   ],
+   "all_awake": true,
+   "thermal_status_all": [
+    2,
+    2,
+    2
+   ]
+  },
+  {
+   "N": 5,
+   "n": 3,
+   "s_per_decode_all": [
+    0.7435714285714285,
+    0.7404285714285714,
+    0.7591428571428571
+   ],
+   "s_per_decode_median": 0.7435714285714285,
+   "c_median": 3.709815634977856,
+   "nll_all": [
+    2.26612,
+    2.26612,
+    2.26612
+   ],
+   "all_awake": true,
+   "thermal_status_all": [
+    2,
+    2,
+    2
+   ]
+  }
+ ]
+}

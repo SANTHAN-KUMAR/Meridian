@@ -1,0 +1,36 @@
+=== b1_rep1 20:25:54 memavail=6716356 BEFORE quiesce: stopped=73 cpu_busy_of_800=29 top3=top:9.0,system_server:3.0,[kworker/u33:0-hal_register_write_wq]:1.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41092 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=42930 ppl: 9.6067  nll: 2.26246  next-token hits: 203/337 (60.2%)  69.21 s 
+=== b2_rep1 20:28:04 memavail=6663088 BEFORE quiesce: stopped=73 cpu_busy_of_800=50 top3=com.google.android.gm:10.0,top:7.0,system_server:4.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41624 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=42701 ppl: 9.6378  nll: 2.26569  next-token hits: 202/337 (59.9%)  59.36 s 
+=== b3_rep1 20:30:04 memavail=6452544 BEFORE quiesce: stopped=73 cpu_busy_of_800=71 top3=system_server:16.0,top:7.0,com.facebook.services:7.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41750 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=43220 ppl: 9.6420  nll: 2.26612  next-token hits: 203/337 (60.2%)  55.14 s 
+=== b5_rep1 20:32:03 memavail=6750092 BEFORE quiesce: stopped=73 cpu_busy_of_800=23 top3=top:7.0,system_server:2.0,vendor.qti.hardware.display.composer-service:2.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41768 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=43217 ppl: 9.6420  nll: 2.26612  next-token hits: 203/337 (60.2%)  52.05 s 
+=== b1_rep2 20:34:00 memavail=6824236 BEFORE quiesce: stopped=73 cpu_busy_of_800=21 top3=top:8.0,system_server:3.0,traced_probes:2.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41875 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=42871 ppl: 9.6067  nll: 2.26246  next-token hits: 203/337 (60.2%)  69.35 s 
+=== b2_rep2 20:36:11 memavail=6902716 BEFORE quiesce: stopped=73 cpu_busy_of_800=23 top3=top:8.0,system_server:3.0,[kworker/u33:2-hal_register_write_wq]:1.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41366 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=42871 ppl: 9.6378  nll: 2.26569  next-token hits: 202/337 (59.9%)  61.95 s 
+=== b3_rep2 20:38:15 memavail=6735912 BEFORE quiesce: stopped=73 cpu_busy_of_800=28 top3=top:9.0,com.google.android.googlequicksearchbox:interactor:4.0,system_server:4.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41724 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=43165 ppl: 9.6420  nll: 2.26612  next-token hits: 203/337 (60.2%)  54.94 s 
+=== b5_rep2 20:40:12 memavail=6798020 BEFORE quiesce: stopped=73 cpu_busy_of_800=20 top3=top:7.0,system_server:3.0,traced_probes:2.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41654 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=42914 ppl: 9.6420  nll: 2.26612  next-token hits: 203/337 (60.2%)  51.83 s 
+=== b1_rep3 20:42:05 memavail=6839396 BEFORE quiesce: stopped=73 cpu_busy_of_800=39 top3=top:8.0,system_server:5.0,[kworker/u33:0-qc_ufs_qos_swq]:1.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41694 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=42945 ppl: 9.6067  nll: 2.26246  next-token hits: 203/337 (60.2%)  93.05 s 
+=== b2_rep3 20:44:42 memavail=6454412 BEFORE quiesce: stopped=73 cpu_busy_of_800=34 top3=system_server:15.0,top:8.0,com.heytap.accessory:2.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41699 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=42932 ppl: 9.6378  nll: 2.26569  next-token hits: 202/337 (59.9%)  59.23 s 
+=== b3_rep3 20:46:47 memavail=6617624 BEFORE quiesce: stopped=73 cpu_busy_of_800=30 top3=top:8.0,system_server:5.0,cnd:2.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41783 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=43009 ppl: 9.6420  nll: 2.26612  next-token hits: 203/337 (60.2%)  55.75 s 
+=== b5_rep3 20:48:45 memavail=6563860 BEFORE quiesce: stopped=73 cpu_busy_of_800=28 top3=top:8.0,system_server:5.0,traced_probes:2.0,
+wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=41959 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=2 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=43106 ppl: 9.6420  nll: 2.26612  next-token hits: 203/337 (60.2%)  53.14 s 
