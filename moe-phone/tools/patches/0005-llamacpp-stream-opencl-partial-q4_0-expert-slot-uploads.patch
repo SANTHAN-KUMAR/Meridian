@@ -1,9 +1,9 @@
 # moe-phone patch for llama.cpp PR #25294 (freedomljc/feat/moe-streaming-core @ 1248fd8), on top of 0001.
-# (1) OpenCL Q4_0 set_tensor: partial uploads of whole experts into the SoA layout (plain + Adreno MoE transposed),
-#     serialized by a mutex (the streaming I/O threads call set_tensor concurrently; cl_kernel args are not thread-safe).
+# (1) OpenCL set_tensor: partial uploads of whole experts into the SoA layouts of Q4_0 and Q4_1 (plain + Adreno MoE
+#     transposed), serialized by a mutex (streaming I/O threads call set_tensor concurrently).
 # (2) Adreno GEMM MUL_MAT_ID router reorder for streamed (CPU slot-remapped) ids.
 diff --git a/ggml/src/ggml-opencl/ggml-opencl.cpp b/ggml/src/ggml-opencl/ggml-opencl.cpp
-index 10f9cc2..39144a0 100644
+index 10f9cc2..fbdc67e 100644
 --- a/ggml/src/ggml-opencl/ggml-opencl.cpp
 +++ b/ggml/src/ggml-opencl/ggml-opencl.cpp
 @@ -526,6 +526,10 @@ struct ggml_backend_opencl_context {
@@ -17,15 +17,18 @@ index 10f9cc2..39144a0 100644
      ggml_cl_buffer prealloc_post_router;
      ggml_cl_buffer prealloc_emap;
      ggml_cl_buffer prealloc_hist;
-@@ -652,6 +656,7 @@ struct ggml_backend_opencl_context {
+@@ -652,8 +656,10 @@ struct ggml_backend_opencl_context {
      cl_kernel kernel_convert_block_q1_0, kernel_restore_block_q1_0;
      cl_kernel kernel_convert_block_q4_0, kernel_restore_block_q4_0;
      cl_kernel kernel_convert_block_q4_0_trans4_ns, kernel_restore_block_q4_0_trans4_ns;
 +    cl_kernel kernel_convert_block_q4_0_off, kernel_convert_block_q4_0_trans4_ns_off; // moe-phone partial uploads
      cl_kernel kernel_convert_block_q4_1, kernel_restore_block_q4_1;
      cl_kernel kernel_convert_block_q4_1_trans4_ns, kernel_restore_block_q4_1_trans4_ns;
++    cl_kernel kernel_convert_block_q4_1_off, kernel_convert_block_q4_1_trans4_ns_off; // moe-phone partial uploads
      cl_kernel kernel_convert_block_q5_0, kernel_restore_block_q5_0;
-@@ -1232,6 +1237,8 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+     cl_kernel kernel_convert_block_q5_0_trans4_ns, kernel_restore_block_q5_0_trans4_ns;
+     cl_kernel kernel_convert_block_q5_1, kernel_restore_block_q5_1;
+@@ -1232,12 +1238,16 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
          CL_CHECK((backend_ctx->kernel_convert_block_q4_0  = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_0", &err), err));
          CL_CHECK((backend_ctx->kernel_restore_block_q4_0  = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_0", &err), err));
          CL_CHECK((backend_ctx->kernel_convert_block_q4_0_trans4_ns = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_0_trans4_ns", &err), err));
@@ -34,7 +37,15 @@ index 10f9cc2..39144a0 100644
          CL_CHECK((backend_ctx->kernel_restore_block_q4_0_trans4_ns = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_0_trans4_ns", &err), err));
          CL_CHECK((backend_ctx->kernel_convert_block_q4_1_noshuffle = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_1_noshuffle", &err), err));
          CL_CHECK((backend_ctx->kernel_restore_block_q4_1_noshuffle = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_1_noshuffle", &err), err));
-@@ -5762,6 +5769,7 @@ static void ggml_opencl_op_norm_fused(ggml_backend_t backend, ggml_tensor * norm
+         CL_CHECK((backend_ctx->kernel_convert_block_q4_1  = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_1", &err), err));
+         CL_CHECK((backend_ctx->kernel_restore_block_q4_1  = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_1", &err), err));
+         CL_CHECK((backend_ctx->kernel_convert_block_q4_1_trans4_ns = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_1_trans4_ns", &err), err));
++        CL_CHECK((backend_ctx->kernel_convert_block_q4_1_off = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_1_off", &err), err));
++        CL_CHECK((backend_ctx->kernel_convert_block_q4_1_trans4_ns_off = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_1_trans4_ns_off", &err), err));
+         CL_CHECK((backend_ctx->kernel_restore_block_q4_1_trans4_ns = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_1_trans4_ns", &err), err));
+         CL_CHECK((backend_ctx->kernel_convert_block_q5_0  = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q5_0", &err), err));
+         CL_CHECK((backend_ctx->kernel_restore_block_q5_0  = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q5_0", &err), err));
+@@ -5762,6 +5772,7 @@ static void ggml_opencl_op_norm_fused(ggml_backend_t backend, ggml_tensor * norm
  static void ggml_opencl_op_group_norm_fused(ggml_backend_t backend, ggml_tensor * gn_tensor, ggml_tensor * mul_tensor, ggml_tensor * add_tensor);
  
  static ggml_status ggml_backend_opencl_graph_compute(ggml_backend_t backend, ggml_cgraph * cgraph) {
@@ -42,7 +53,23 @@ index 10f9cc2..39144a0 100644
      ggml_backend_opencl_context *backend_ctx = (ggml_backend_opencl_context *)backend->context;
  
      for (int i = 0; i < cgraph->n_nodes; i++) {
-@@ -6778,13 +6786,103 @@ static void ggml_backend_opencl_buffer_set_tensor(ggml_backend_buffer_t buffer,
+@@ -6574,6 +6585,7 @@ struct ggml_backend_opencl_buffer_context {
+ 
+         q8_0_soa_tensors.clear();
+         q4_0_soa_tensors.clear();
++        moe_q4_1_partial_soa_tensors.clear();
+     }
+ 
+     // Pools for extras. Available extras are in `temp_tensor_extras`. Extras
+@@ -6616,6 +6628,7 @@ struct ggml_backend_opencl_buffer_context {
+     // through set_tensor, so they stay AoS and aren't in this set.
+     // In Q4_0's case, in addition to normal weights, we have MoE weights.
+     std::unordered_set<const ggml_tensor *> q4_0_soa_tensors;
++    std::unordered_set<const ggml_tensor *> moe_q4_1_partial_soa_tensors; // moe-phone: Q4_1 SoA layouts built for partial uploads
+ 
+     // The buffer_context is initially created by ggml_backend_buft_alloc_buffer
+     // before any tensor is initialized (at the beginning of alloc_tensor_range).
+@@ -6778,13 +6791,103 @@ static void ggml_backend_opencl_buffer_set_tensor(ggml_backend_buffer_t buffer,
          if (tensor->view_src != nullptr || !ggml_is_contiguous(tensor)) {
              return;
          }
@@ -147,7 +174,99 @@ index 10f9cc2..39144a0 100644
          ggml_tensor_extra_cl_q4_0 * extra = ctx->ggml_opencl_alloc_temp_tensor_extra_q4_0();
  
          size_t size_d = ggml_nelements(tensor)/ggml_blck_size(tensor->type)*sizeof(ggml_fp16_t);
-@@ -17824,7 +17922,7 @@ static void ggml_cl_mul_mat(ggml_backend_t backend, const ggml_tensor * src0, co
+@@ -6917,6 +7020,91 @@ static void ggml_backend_opencl_buffer_set_tensor(ggml_backend_buffer_t buffer,
+ #endif // GGML_OPENCL_USE_ADRENO_KERNELS
+         return;
+     }
++    if (tensor->type == GGML_TYPE_Q4_1 && !(offset == 0 && size == ggml_nbytes(tensor))) {
++        // moe-phone: PARTIAL write of whole experts (MoE expert streaming cache slot), Q4_1. Same design as
++        // the Q4_0 partial path: build the SoA layout once without data, convert only the uploaded experts.
++        static std::mutex moe_partial_upload_q41_mtx;
++        std::lock_guard<std::mutex> lock(moe_partial_upload_q41_mtx);
++        GGML_ASSERT(tensor->view_src == nullptr && ggml_is_contiguous(tensor));
++        GGML_ASSERT(tensor->ne[2] > 1 && tensor->ne[3] == 1 && "partial Q4_1 upload is only supported for 3-D expert tensors");
++        ggml_backend_opencl_buffer_context * ctx = (ggml_backend_opencl_buffer_context *) buffer->context;
++        const size_t bs = ggml_type_size(tensor->type); // 20 bytes per block
++        const size_t blocks_per_expert = (size_t) (tensor->ne[0] / ggml_blck_size(tensor->type)) * (size_t) tensor->ne[1];
++        GGML_ASSERT(offset % (bs * blocks_per_expert) == 0 && size % (bs * blocks_per_expert) == 0 && "partial Q4_1 upload must cover whole experts");
++        ggml_tensor_extra_cl_q4_1 * extra;
++        cl_int err;
++        if (ctx->moe_q4_1_partial_soa_tensors.count(tensor)) {
++            extra = (ggml_tensor_extra_cl_q4_1 *) tensor->extra;
++        } else {
++            ggml_tensor_extra_cl * extra_orig = (ggml_tensor_extra_cl *)tensor->extra;
++            GGML_ASSERT(extra_orig && "Tesnors in OpenCL backend should have been allocated and initialized");
++            extra = ctx->ggml_opencl_alloc_temp_tensor_extra_q4_1();
++            size_t nb = ggml_nelements(tensor)/ggml_blck_size(tensor->type);
++            size_t size_d = nb*sizeof(ggml_fp16_t), size_m = nb*sizeof(ggml_fp16_t), size_q = nb*ggml_blck_size(tensor->type)/2;
++            cl_buffer_region region;
++            region.origin = align_to(extra_orig->offset + tensor->view_offs, backend_ctx->alignment);
++            region.size = size_d;
++            extra->d = clCreateSubBuffer(extra_orig->data_device, CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
++            CL_CHECK(err);
++            region.origin = align_to(region.origin + size_d, backend_ctx->alignment);
++            region.size = size_m;
++            extra->m = clCreateSubBuffer(extra_orig->data_device, CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
++            CL_CHECK(err);
++            region.origin = align_to(region.origin + size_m, backend_ctx->alignment);
++            region.size = size_q;
++            extra->q = clCreateSubBuffer(extra_orig->data_device, CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
++            CL_CHECK(err);
++#ifdef GGML_OPENCL_USE_ADRENO_KERNELS
++            if (use_adreno_moe_kernels(backend_ctx, tensor)) {
++                cl_image_format img_format_q = {CL_R, CL_UNSIGNED_INT32};
++                cl_image_desc img_desc_q = { CL_MEM_OBJECT_IMAGE1D_BUFFER, static_cast<size_t>(ggml_nelements(tensor) / 8), 0, 0, 0, 0, 0, 0, 0, { extra->q } };
++                extra->q_img = clCreateImage(context, CL_MEM_READ_ONLY, &img_format_q, &img_desc_q, NULL, &err);
++                CL_CHECK(err);
++            }
++#endif
++            tensor->extra = extra;
++            ctx->moe_q4_1_partial_soa_tensors.insert(tensor);
++        }
++        cl_mem data_device = clCreateBuffer(context, CL_MEM_READ_WRITE, size, NULL, &err);
++        CL_CHECK(err);
++        CL_CHECK(clEnqueueWriteBuffer(queue, data_device, CL_TRUE, 0, size, data, 0, NULL, NULL));
++        const size_t n_blocks = size / bs;
++        cl_event evt;
++#ifdef GGML_OPENCL_USE_ADRENO_KERNELS
++        if (use_adreno_moe_kernels(backend_ctx, tensor)) {
++            cl_kernel kernel = backend_ctx->kernel_convert_block_q4_1_trans4_ns_off;
++            int ne00 = tensor->ne[0];
++            int ne01 = tensor->ne[1];
++            cl_uint expert_off = (cl_uint) (offset / (bs * blocks_per_expert));
++            size_t n_exp = n_blocks / blocks_per_expert;
++            CL_CHECK(clSetKernelArg(kernel, 0, sizeof(cl_mem), &data_device));
++            CL_CHECK(clSetKernelArg(kernel, 1, sizeof(cl_mem), &extra->q));
++            CL_CHECK(clSetKernelArg(kernel, 2, sizeof(cl_mem), &extra->d));
++            CL_CHECK(clSetKernelArg(kernel, 3, sizeof(cl_mem), &extra->m));
++            CL_CHECK(clSetKernelArg(kernel, 4, sizeof(int), &ne00));
++            CL_CHECK(clSetKernelArg(kernel, 5, sizeof(int), &ne01));
++            CL_CHECK(clSetKernelArg(kernel, 6, sizeof(cl_uint), &expert_off));
++            size_t global_work_size[3] = {static_cast<size_t>(((ne01 + 63) / 64) * 64), static_cast<size_t>(ne00 / 32), n_exp};
++            size_t local_work_size[3] = {64, 2, 1};
++            CL_CHECK(clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global_work_size, local_work_size, 0, NULL, &evt));
++        } else
++#endif
++        {
++            cl_kernel kernel = backend_ctx->kernel_convert_block_q4_1_off;
++            cl_ulong blk_off = (cl_ulong) (offset / bs);
++            CL_CHECK(clSetKernelArg(kernel, 0, sizeof(cl_mem), &data_device));
++            CL_CHECK(clSetKernelArg(kernel, 1, sizeof(cl_mem), &extra->q));
++            CL_CHECK(clSetKernelArg(kernel, 2, sizeof(cl_mem), &extra->d));
++            CL_CHECK(clSetKernelArg(kernel, 3, sizeof(cl_mem), &extra->m));
++            CL_CHECK(clSetKernelArg(kernel, 4, sizeof(cl_ulong), &blk_off));
++            size_t global_work_size[] = {n_blocks, 1, 1};
++            CL_CHECK(clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global_work_size, NULL, 0, NULL, &evt));
++        }
++        CL_CHECK(clWaitForEvents(1, &evt));
++        CL_CHECK(clReleaseEvent(evt));
++        CL_CHECK(clReleaseMemObject(data_device));
++        return;
++    }
+     if (tensor->type == GGML_TYPE_Q4_1) {
+         ggml_tensor_extra_cl * extra_orig = (ggml_tensor_extra_cl *)tensor->extra;
+         GGML_ASSERT(extra_orig && "Tesnors in OpenCL backend should have been allocated and initialized");
+@@ -17824,7 +18012,7 @@ static void ggml_cl_mul_mat(ggml_backend_t backend, const ggml_tensor * src0, co
      }
  }
  
@@ -156,7 +275,7 @@ index 10f9cc2..39144a0 100644
      cl_int err;
      ggml_backend_opencl_context *backend_ctx = (ggml_backend_opencl_context *)backend->context;
  
-@@ -17833,7 +17931,10 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
+@@ -17833,7 +18021,10 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
  
      const int ne21 = src->ne[1];
      const int nb21 = src->nb[1];
@@ -168,7 +287,7 @@ index 10f9cc2..39144a0 100644
      const int n_tile_size = 32;
      const int max_post_router_tile = (ne20 * ne21 / n_tile_size) + ne02;
  
-@@ -17886,6 +17987,8 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
+@@ -17886,6 +18077,8 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
      CL_CHECK(clSetKernelArg(kernel, 2, sizeof(int), &ne21));
      CL_CHECK(clSetKernelArg(kernel, 3, sizeof(int), &ne20));
      CL_CHECK(clSetKernelArg(kernel, 4, sizeof(int), &ne02));
@@ -177,7 +296,7 @@ index 10f9cc2..39144a0 100644
  
      size_t histogram_global_size[] = {(size_t)(((ne21 + 63) / 64) * 64), static_cast<size_t>(ne20), 1};
      size_t histogram_local_size[] = {64, 1, 1};
-@@ -17924,6 +18027,7 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
+@@ -17924,6 +18117,7 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
      CL_CHECK(clSetKernelArg(kernel, 5, sizeof(int), &ne21));
      CL_CHECK(clSetKernelArg(kernel, 6, sizeof(int), &ne20));
      CL_CHECK(clSetKernelArg(kernel, 7, sizeof(int), &ne02));
@@ -185,7 +304,7 @@ index 10f9cc2..39144a0 100644
  
      backend_ctx->enqueue_ndrange_kernel(kernel, 3, histogram_global_size, histogram_local_size, src);
  
-@@ -18104,9 +18208,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -18104,9 +18298,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -198,7 +317,7 @@ index 10f9cc2..39144a0 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -18329,9 +18434,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -18329,9 +18524,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -211,7 +330,7 @@ index 10f9cc2..39144a0 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -18510,9 +18616,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -18510,9 +18706,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -224,7 +343,7 @@ index 10f9cc2..39144a0 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -18686,9 +18793,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -18686,9 +18883,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -237,7 +356,7 @@ index 10f9cc2..39144a0 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -18943,9 +19051,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -18943,9 +19141,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -250,7 +369,7 @@ index 10f9cc2..39144a0 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -19122,9 +19231,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -19122,9 +19321,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -263,7 +382,7 @@ index 10f9cc2..39144a0 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -19299,9 +19409,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -19299,9 +19499,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -276,7 +395,7 @@ index 10f9cc2..39144a0 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -19475,9 +19586,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -19475,9 +19676,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -290,10 +409,10 @@ index 10f9cc2..39144a0 100644
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
 diff --git a/ggml/src/ggml-opencl/kernels/cvt.cl b/ggml/src/ggml-opencl/kernels/cvt.cl
-index bf0335a..89c0f7a 100644
+index bf0335a..ba277d0 100644
 --- a/ggml/src/ggml-opencl/kernels/cvt.cl
 +++ b/ggml/src/ggml-opencl/kernels/cvt.cl
-@@ -2372,3 +2372,68 @@ kernel void kernel_restore_block_iq4_nl_noshuffle(
+@@ -2372,3 +2372,136 @@ kernel void kernel_restore_block_iq4_nl_noshuffle(
          b->qs[2*i + 1] = convert_uchar(((x0 & mask_F0) >> 4) | (x1 & mask_F0));
      }
  }
@@ -352,6 +471,74 @@ index bf0335a..89c0f7a 100644
 +
 +        post_block_ptr[i + 0        ] = convert_uchar(x0 & 0x0F) | convert_uchar((x1 & 0x0F) << 4);
 +        post_block_ptr[i + QK4_0 / 4] = convert_uchar((x0 & 0xF0) >> 4) | convert_uchar(x1 & 0xF0);
++    }
++
++    uint4 q_block = as_uint4(post_block);
++
++    uint offset = (i02 + expert_off) * ne00_blk * ne01 * 4 + i00 * ne01 * 4 + i01;
++    dst_q[offset] = q_block.x;
++    dst_q[offset + ne01] = q_block.y;
++    dst_q[offset + ne01 * 2] = q_block.z;
++    dst_q[offset + ne01 * 3] = q_block.w;
++}
++
++// moe-phone: offset variants for PARTIAL uploads of whole experts into an already SoA-converted Q4_1 tensor.
++kernel void kernel_convert_block_q4_1_off(
++    global struct block_q4_1 * src0,
++    global uchar * dst_q,
++    global half  * dst_d,
++    global half  * dst_m,
++    ulong blk_off
++) {
++    global struct block_q4_1 * b = (global struct block_q4_1 *) src0 + get_global_id(0);
++    global uchar * q = (global uchar *) dst_q + QK4_1/2*(get_global_id(0) + blk_off);
++    global half  * d = (global half *) dst_d + (get_global_id(0) + blk_off);
++    global half  * m = (global half *) dst_m + (get_global_id(0) + blk_off);
++
++    *d = b->d;
++    *m = b->m;
++
++    for (int i = 0; i < QK4_1/2; ++i) {
++        q[i] = b->qs[i];
++    }
++}
++
++kernel void kernel_convert_block_q4_1_trans4_ns_off(
++    __global struct block_q4_1 * src0,
++    __global uint * dst_q,
++    __global half * dst_d,
++    __global half * dst_m,
++    uint ne00,
++    uint ne01,
++    uint expert_off
++) {
++    uint i00 = get_global_id(1);
++    uint i01 = get_global_id(0);
++    uint i02 = get_global_id(2);
++
++    if (i01 >= ne01) {
++        return;
++    }
++
++    uint ne00_blk = ne00 / QK4_1;
++    uint src_blk_offset = i00 + i01 * ne00_blk + i02 * ne00_blk * ne01;
++    uint dst_blk_offset = i01 + i00 * ne01 + (i02 + expert_off) * ne00_blk * ne01;
++
++    global struct block_q4_1 * b = src0 + src_blk_offset;
++    dst_d[dst_blk_offset] = b->d;
++    dst_m[dst_blk_offset] = b->m;
++
++    ushort8 pre_block = ((global ushort8 *)(&(b->qs[0])))[0];
++    ushort8 post_block = (ushort8)(0);
++    uchar * pre_block_ptr = (uchar *)(&pre_block);
++    uchar * post_block_ptr = (uchar *)(&post_block);
++
++    for (int i = 0; i < QK4_1 / 4; ++i) {
++        uchar x0 = pre_block_ptr[2*i + 0];
++        uchar x1 = pre_block_ptr[2*i + 1];
++
++        post_block_ptr[i + 0        ] = convert_uchar(x0 & 0x0F) | convert_uchar((x1 & 0x0F) << 4);
++        post_block_ptr[i + QK4_1 / 4] = convert_uchar((x0 & 0xF0) >> 4) | convert_uchar(x1 & 0xF0);
 +    }
 +
 +    uint4 q_block = as_uint4(post_block);
