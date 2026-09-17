@@ -1,0 +1,4 @@
+=== gpu_stream 19:05:00 memavail=5043688 BEFORE wake=Awake status=0 cap0=2265600 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=35704 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=0 cap0=2265600 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=36345 Final estimate: PPL = 11.5482 +/- 2.78708 
+=== qwen_gpu_stream24 19:06:05 memavail=4871076 BEFORE wake=Dozing status=0 cap0=2016000 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=36578 gate=timeout waited=30
+exit=139 AFTER wake=Awake status=0 cap0=2265600 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=38621 

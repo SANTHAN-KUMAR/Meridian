@@ -1,0 +1,26 @@
+0.00.030.698 I llama_completion: llama backend init
+0.00.030.711 I llama_completion: load the model and apply lora adapter, if any
+0.00.427.073 W llama_model_load: disabling mmap because MoE expert streaming is enabled
+0.00.648.000 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.969.483 W llama_context: disabling op offload: the expert streaming cache is in host memory
+0.02.019.171 I llama_completion: llama threadpool init, n_threads = 4
+0.02.019.347 I 
+0.02.019.434 I system_info: n_threads = 4 (n_threads_batch = 4) / 8 | CPU : NEON = 1 | ARM_FMA = 1 | MATMUL_INT8 = 1 | DOTPROD = 1 | REPACK = 1 | 
+0.02.019.435 I 
+0.02.019.762 I sampler seed: 2355442459
+0.02.019.770 I sampler params: 
+	repeat_last_n = 64, repeat_penalty = 1.000, frequency_penalty = 0.000, presence_penalty = 0.000
+	dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = -1
+	top_k = 40, top_p = 0.950, min_p = 0.050, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 0.000
+	mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+0.02.019.780 I sampler chain: logits -> ?penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> min-p -> ?xtc -> temp-ext -> dist 
+0.02.019.781 I generate: n_ctx = 1024, n_batch = 32, n_predict = 128, n_keep = 0
+0.02.019.782 I 
+5.58.120.669 I common_perf_print:    sampling time =      27.38 ms
+5.58.120.676 I common_perf_print:    samplers time =      17.42 ms /   154 tokens
+5.58.120.677 I common_perf_print:        load time =   29046.30 ms
+5.58.120.678 I common_perf_print: prompt eval time =   29045.63 ms /    26 tokens ( 1117.14 ms per token,     0.90 tokens per second)
+5.58.120.681 I common_perf_print:        eval time =  327021.31 ms /   127 runs   ( 2574.97 ms per token,     0.39 tokens per second)
+5.58.120.693 I common_perf_print:       total time =  356101.51 ms /   153 tokens
+5.58.120.727 I common_perf_print: unaccounted time =       7.18 ms /   0.0 %      (total - sampling - prompt eval - eval) / (total)
+5.58.120.727 I common_perf_print:    graphs reused =        126
