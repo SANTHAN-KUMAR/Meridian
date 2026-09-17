@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# bmoe_lanes.sh — I/O lane count on top of the best configuration (pinned t4 cores 4-7 + --recycle-pages):
+# bmoe_lanes.sh — I/O lane count on top of the best configuration (pinned t4 cores 4-7  (no recycling: bmoe_pin2 found it a net loss)):
 # the flash stall is ~0.069 s/token at 4 lanes while G1 measured storage scaling to 8 threads (3.2 GB/s at
 # 1 MB x 8). Lanes mostly block in the kernel, so 6-8 lanes share cores 0-3.
 # Cells differ only in --io-threads (4 / 6 / 8), all on --io-cpu-mask 0f.
@@ -12,7 +12,7 @@ H=/data/local/tmp/moe-stream
 M=$H/Qwen3-30B-A3B-Q4_0.gguf
 O=$H/bmoe_lanes_$(date +%Y%m%d_%H%M); mkdir -p "$O"
 P="Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field"
-BASE="--chatml -n 256 --ubatch 512 --moe-stream --cache-mb auto --cache-ceil-mb 4000 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-cpu-mask 0f --recycle-pages"
+BASE="--chatml -n 256 --ubatch 512 --moe-stream --cache-mb auto --cache-ceil-mb 4000 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-cpu-mask 0f"
 run() {
   tag=$1_rep$3
   g=$(thermal_wait 30)

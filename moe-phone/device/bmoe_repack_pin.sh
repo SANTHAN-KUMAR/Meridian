@@ -2,7 +2,7 @@
 # bmoe_repack_pin.sh — retest of the repacked-kernel lever ON TOP of the best measured configuration.
 # The first repack A/B (bmoe_repack.sh, 2026-09-17 11:50) ran unpinned, before page recycling existed, on a
 # throttled CPU, and found no compute gain. Here both cells use pinned t4 (cores 4-7) + I/O on cores 0-3
-# + --recycle-pages; the only difference is --repack-experts. Same binary (patches 0002-0006), 3 repeats,
+#  (no recycling: bmoe_pin2 found it a net loss); the only difference is --repack-experts. Same binary (patches 0002-0006), 3 repeats,
 # order alternating per repeat, quiesce + thermal/wake state per row.
 #   sh bmoe_repack_pin.sh REPS
 set -u
@@ -12,7 +12,7 @@ H=/data/local/tmp/moe-stream
 M=$H/Qwen3-30B-A3B-Q4_0.gguf
 O=$H/bmoe_repack_pin_$(date +%Y%m%d_%H%M); mkdir -p "$O"
 P="Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field"
-BASE="--chatml -n 256 --ubatch 512 --moe-stream --cache-mb auto --cache-ceil-mb 4000 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-threads 4 --io-cpu-mask 0f --recycle-pages"
+BASE="--chatml -n 256 --ubatch 512 --moe-stream --cache-mb auto --cache-ceil-mb 4000 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-threads 4 --io-cpu-mask 0f"
 run() {
   tag=$1_rep$3
   g=$(thermal_wait 30)

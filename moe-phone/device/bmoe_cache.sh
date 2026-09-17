@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# bmoe_cache.sh — expert cache size on top of the best configuration (pinned t4 cores 4-7 + --recycle-pages):
+# bmoe_cache.sh — expert cache size on top of the best configuration (pinned t4 cores 4-7  (no recycling: bmoe_pin2 found it a net loss)):
 # every earlier run capped the auto budget at 4000 MiB and left 1536 MiB free; after quiescing ~6 GB is available.
 # The only lever that beat reference in bmoe_levers was a larger cache. Cells differ only in --cache-ceil-mb
 # (4000 / 5000 / 6000) with --cache-floor-mb 1024; the budget actually granted is in each row (moe-cache: budget).
@@ -12,7 +12,7 @@ H=/data/local/tmp/moe-stream
 M=$H/Qwen3-30B-A3B-Q4_0.gguf
 O=$H/bmoe_cache_$(date +%Y%m%d_%H%M); mkdir -p "$O"
 P="Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field"
-BASE="--chatml -n 256 --ubatch 512 --moe-stream --cache-mb auto --cache-floor-mb 1024 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-threads 4 --io-cpu-mask 0f --recycle-pages"
+BASE="--chatml -n 256 --ubatch 512 --moe-stream --cache-mb auto --cache-floor-mb 1024 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-threads 4 --io-cpu-mask 0f"
 run() {
   tag=$1_rep$3
   g=$(thermal_wait 30)

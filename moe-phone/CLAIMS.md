@@ -106,8 +106,10 @@ internally consistent and wrong. That is what the property tests are for.
 | `levers_t6_collapse` | 6 compute threads on top of 4 I/O lanes collapse decode to 1.10 tok/s median (oversubscribed cores) | `bmoe_levers.json` | 1.0985 | ok |
 | `repack_plain` | i8mm build, generic kernels: 4.11 tok/s median, the fastest cell of the repack A/B | `bmoe_repack.json` | 4.1145 | ok |
 | `repack_compute` | repacked kernels on streamed experts: compute 0.170 s/token median vs 0.146 generic - no compute gain | `bmoe_repack.json` | 0.1700 | ok |
-| `pin_recycle_best` | pinned 4 compute threads + separate I/O cores + page recycling: 5.04 tok/s median (n=2, fixed cell order, throttled CPU) | `bmoe_pin.json` | 5.0360 | ok |
-| `pin_unpinned_median` | the unpinned baseline in the same campaign: 3.13 tok/s median, one repeat collapsed to 1.58 | `bmoe_pin.json` | 3.1325 | ok |
+| `pin2_pinned_best` | rotated-order confirmation (4 repeats, awake, throttled SoC): pinned 4 compute threads on cores 4-7 with I/O on cores 0-3 decode Qwen3-30B-A3B at 5.36 tok/s median, the best cell | `bmoe_pin2.json` | 5.3590 | ok |
+| `pin2_unpinned` | the unpinned baseline in the same confirmation: 4.75 tok/s median | `bmoe_pin2.json` | 4.7470 | ok |
+| `pin2_recycle_not_a_gain` | page recycling on top of pinning: 5.10 tok/s median - cache management falls but compute rises, a net loss | `bmoe_pin2.json` | 5.1010 | ok |
+| `pin2_pinned_compute` | pinned compute per token 0.0995 s median vs 0.1335 s unpinned | `bmoe_pin2.json` | 0.0995 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-97 claims checked.
+99 claims checked.

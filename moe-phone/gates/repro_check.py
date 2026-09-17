@@ -111,6 +111,8 @@ JOBS_NEW += [
     ("bmoe_analyze.py", [f"{D17}/bmoe_repro", "--out-name", "bmoe_repro.json"], "bmoe_repro.json", "2026-09-17"),
     ("bmoe_analyze.py", [f"{D17}/bmoe_levers", "--out-name", "bmoe_levers.json"], "bmoe_levers.json", "2026-09-17"),
     ("bmoe_analyze.py", [f"{D17}/bmoe_repack", "--out-name", "bmoe_repack.json"], "bmoe_repack.json", "2026-09-17"),
+    ("bmoe_analyze.py", [f"{D17}/bmoe_pin", "--out-name", "bmoe_pin.json"], "bmoe_pin.json", "2026-09-17"),
+    ("bmoe_analyze.py", [f"{D17}/bmoe_pin2", "--out-name", "bmoe_pin2.json"], "bmoe_pin2.json", "2026-09-17"),
 ]
 
 SHIM = ("import os,sys,runpy; sys.path.insert(0,{g!r}); import _paths; "
