@@ -1,0 +1,136 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f, applied AFTER 0002-0008.
+# Two changes, both needed to run OUR engine on the Hexagon NPU:
+#   --attn-device NAME  put the attention weights (attn_q/k/v/output) on another ggml device via
+#                       llama.cpp's tensor_buft_overrides, while the routed experts keep streaming
+#                       into host memory and running on the CPU under --overlap. The output head
+#                       cannot move: it is Q6_K here and ggml-hexagon refuses ne[1] > 32768 anyway.
+#   bmoe_main()         the CLI as a shared library symbol, because the DSP session only opens inside
+#                       an app's own process (results/2026-09-17/npu_inprocess), so the app shim
+#                       dlsyms the engine instead of exec'ing it.
+# ===== engine (BigMoeOnEdge root) =====
+diff --git a/cli/CMakeLists.txt b/cli/CMakeLists.txt
+--- a/cli/CMakeLists.txt
++++ b/cli/CMakeLists.txt
+@@ -1,2 +1,8 @@
+ add_executable(bmoe-cli main.cpp)
+ target_link_libraries(bmoe-cli PRIVATE bmoe_core)
++
++# moe-phone: the same CLI as a shared library exporting bmoe_main(argc, argv), so an app process (the only
++# place the Hexagon NPU session opens) can run the engine in-process via dlsym instead of exec'ing it.
++add_library(bmoe_entry SHARED main.cpp)
++target_link_libraries(bmoe_entry PRIVATE bmoe_core)
++set_target_properties(bmoe_entry PROPERTIES OUTPUT_NAME bmoe_entry)
+diff --git a/cli/main.cpp b/cli/main.cpp
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -448,6 +448,7 @@
+         "      --cpu-mask HEX      pin the compute threadpool to these cores, strict (moe-phone)\n"
+         "      --io-cpu-mask HEX   pin the expert-read lanes to these cores (moe-phone)\n"
+         "      --ppl-batch N       with --ppl: N teacher-forced tokens per decode (prices a verify batch) (moe-phone)\n"
++        "      --attn-device N     run the attention matmuls on ggml device N (HTP0 / GPUOpenCL), experts stay streamed on CPU (moe-phone)\n"
+         "      --slot-arena        expert slices in never-released pool slots read via a MUL_MAT_ID pointer hook (moe-phone)\n"
+         "      --defer-evict       batch evicted pages' release after each decode (moe-phone)\n"
+         "      --recycle-pages     move evicted experts' pages into the next miss (mremap) instead of re-faulting (moe-phone)\n"
+@@ -592,7 +593,15 @@
+     }
+ }
+ 
++// moe-phone: the same entry point as a callable symbol. The Hexagon NPU session only opens inside an
++// app's own process, so the app shim (results/2026-09-17/npu_inprocess) dlsyms this instead of exec'ing.
++extern "C" int bmoe_main(int argc, char ** argv);
++
+ int main(int argc, char ** argv) {
++    return bmoe_main(argc, argv);
++}
++
++extern "C" int bmoe_main(int argc, char ** argv) {
+     RunConfig cfg;
+     std::string csv_path;
+     std::string route_trace_path;
+@@ -692,6 +701,8 @@
+             cfg.cpu_mask = std::strtoull(next("--cpu-mask"), nullptr, 16);
+         else if (a == "--ppl-batch")
+             cfg.ppl_batch = std::atoi(next("--ppl-batch"));
++        else if (a == "--attn-device")
++            cfg.attn_device = next("--attn-device");
+         else if (a == "--slot-arena")
+             cfg.moe.slot_arena = true;
+         else if (a == "--defer-evict")
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -378,6 +378,14 @@
+     // Unpinned ggml workers migrate across the 15R's clusters and every barrier waits for the
+     // slowest one; see moe-phone/results/2026-09-17/decode_15r_pin.json.
+     uint64_t cpu_mask = 0;
++
++    // moe-phone: compute the ATTENTION matmuls (attn_q/k/v/output, Q4_0) on this ggml device -- "HTP0" for
++    // the Hexagon NPU, "GPUOpenCL" for the Adreno -- while the routed experts keep streaming into host
++    // memory and running on the CPU under --overlap. The expert FFN stays where the streaming engine can
++    // hide flash I/O behind it; only the dense attention block moves. Empty = everything on the CPU.
++    // The NPU session only opens inside an app process (results/2026-09-17/npu_inprocess), so this is
++    // meaningful when the engine is called in-process through the app shim.
++    std::string attn_device;
+     // moe-phone: decode width for --ppl (teacher-forced tokens per llama_decode, all logits). 0 = n_ctx.
+     // --ppl-batch N prices a speculative verify of N positions with real routing and a real cache.
+     int ppl_batch = 0;
+diff --git a/core/include/bmoe/session.h b/core/include/bmoe/session.h
+--- a/core/include/bmoe/session.h
++++ b/core/include/bmoe/session.h
+@@ -36,6 +36,7 @@
+     std::string model_path;
+     int n_threads = 4;
+     uint64_t cpu_mask = 0; // moe-phone: see RunConfig::cpu_mask
++    std::string attn_device;  // moe-phone: see RunConfig::attn_device
+     int n_ctx = 2048;
+     int n_batch = 512; // prefill chunk capacity; longer prompts are prefilled in n_batch slices
+     // Widest graph actually computed at once. 0 = follow n_batch. Sizing this down trades prefill
+diff --git a/core/src/engine/runtime.cpp b/core/src/engine/runtime.cpp
+--- a/core/src/engine/runtime.cpp
++++ b/core/src/engine/runtime.cpp
+@@ -11,6 +11,7 @@
+     sc.model_path = cfg.model_path;
+     sc.n_threads = cfg.n_threads;
+     sc.cpu_mask = cfg.cpu_mask;
++    sc.attn_device = cfg.attn_device;
+     sc.n_ctx = cfg.n_ctx;
+     sc.n_batch = cfg.ppl_batch > 0 ? cfg.ppl_batch : cfg.n_ctx; // moe-phone --ppl-batch; else one-batch prefill
+     sc.n_ubatch = cfg.n_ubatch; // 0 = follow n_batch; smaller trades prefill speed for memory
+diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
+--- a/core/src/engine/session.cpp
++++ b/core/src/engine/session.cpp
+@@ -5,6 +5,7 @@
+ #include "bmoe/version.h"
+ #include "bmoe/ngram_draft.h"
+ #include "ggml-cpu.h"
++#include "ggml-backend.h"
+ #include "chat_parse.h"
+ #include "thinking_control.h"
+ #include "../moe/router_hook.h"
+@@ -619,6 +620,26 @@
+     mparams.load_mode = LLAMA_LOAD_MODE_MMAP;
+     mparams.use_extra_bufts = false;
+     mparams.n_gpu_layers = 0;
++    // moe-phone --attn-device: send only the attention weights to another ggml device. Kept in a static
++    // vector because llama.cpp reads this array during llama_model_load_from_file.
++    static std::vector<llama_model_tensor_buft_override> bmoe_attn_overrides;
++    if (!cfg.attn_device.empty()) {
++        ggml_backend_dev_t adev = ggml_backend_dev_by_name(cfg.attn_device.c_str());
++        if (!adev) {
++            return fail("--attn-device " + cfg.attn_device + ": no such ggml device (devices are listed by "
++                        "llama-bench --list-devices; HTP0 needs an app process)");
++        }
++        ggml_backend_buffer_type_t abuft = ggml_backend_dev_buffer_type(adev);
++        static const char * pats[] = { "attn_q.weight", "attn_k.weight", "attn_v.weight", "attn_output.weight" };
++        bmoe_attn_overrides.clear();
++        for (const char * p : pats) {
++            bmoe_attn_overrides.push_back({ p, abuft });
++        }
++        bmoe_attn_overrides.push_back({ nullptr, nullptr });
++        mparams.tensor_buft_overrides = bmoe_attn_overrides.data();
++        std::fprintf(stderr, "bmoe: attention weights -> %s (%s)\n", cfg.attn_device.c_str(),
++                     ggml_backend_buft_name(abuft));
++    }
+     // The nextn/MTP block is skipped at load unless asked for: llama.cpp marks its tensors
+     // TENSOR_SKIP by default, and only --mtp builds a graph over them. n_layer_nextn comes from
+     // the gguf metadata either way, so the "this model has no trained head" check below is
