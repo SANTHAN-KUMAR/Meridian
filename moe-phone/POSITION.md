@@ -344,6 +344,20 @@ on-device scheduling). DraftExpert and S2-MoE re-read here from their arXiv abst
   gpt-oss-120b figure; "Minimind-MoE"; Edge0 and NPUMoE presented as phone results; llm.npu presented as
   a decode speed-up.
 
+**Added 2026-09-17 evening — CLOSEST PRIOR ART, missed by the third search (paper is 4 days old).**
+[BigMoMo](https://arxiv.org/abs/2609.14643) (arXiv 2609.14643v1, 2026-09-13, cs.AR; read from the arXiv HTML
+full text): llama.cpp + its Hexagon backend (+~5,000 LOC), run in **Termux** on OnePlus 15 (8 Elite Gen 5,
+16 GB, 11.52 GB available), OnePlus 13 (8 Elite, 24 GB, 18.23 GB available) and OnePlus Ace 5 (8 Gen 3). Q4_0
+targets incl. **Qwen3-30B-A3B** with a Qwen3-0.6B draft (D=2, B=2); experts on **HMX**; flash reorganisation
+by runtime co-loading; VTCM double buffering to overlap movement with HMX compute. Table 9 TPOT (ms/token):
+OnePlus 15 304.4, OnePlus 13 74.1, Ace 5 579.4 (the table does not restate which model). **Not lossless:**
+its expert pruning under a routing-impact budget changes outputs (Table 5: GSM8K 90.70 -> 90.57, HumanEval
+89.60 -> 89.55, MMLU-Pro 69.70 -> 69.52). No code link found in the paper. Consequences for this project:
+(1) an NPU session from Termux is achievable on these SoCs, so our AEE_ECONNREFUSED is a setup gap, not a
+platform wall; (2) their breakdown puts HMX expert computation at ~31.5 ms/token (Fig. 14, platform not
+restated), far below our CPU compute term; (3) a head-to-head needs the same model, prompt set, memory
+budget and a lossless configuration — their OnePlus 15 number is not directly comparable to our 15R runs.
+
 ## 10. Venues
 
 Systems/mobile: **MobiSys, MobiCom, SenSys, EuroSys, ASPLOS, OSDI** (PowerInfer-2's lineage and
