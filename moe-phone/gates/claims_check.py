@@ -693,6 +693,22 @@ CLAIMS = [
          text="upstream llama.cpp's expert-streaming branch, run in the same app process on the same model, reaches 2.36 tok/s at best (on the GPU); its CPU path reaches 0.12",
          artifact="app_engine.json", expected=2.36, tol=0.01,
          value=lambda A: max(x["decode_tok_s_median"] for x in A["app18"]["arms"] if x["arm"].startswith("qwen_"))),
+    # ------------------- EXPERT CONSUMPTION ORDER (device/bmoe_order.sh, patch 0010, 2026-09-18)
+    # A NEGATIVE, kept because the arithmetic that motivated it was right and the lever still was not
+    # there: the two arms agree to within a fraction of their own spread.
+    dict(id="order_idorder_decode",
+         text="consuming a layer's experts in ascending expert id (the stock ggml order): 5.837 tok/s median over 3 rotated repeats",
+         artifact="bmoe_order.json", expected=5.837, tol=0.01,
+         value=lambda A: next(c["decode_tok_s_median"] for c in A["border"]["cells"] if c["cell"] == "idorder")),
+    dict(id="order_residentfirst_decode",
+         text="computing the already-resident experts first instead: 5.835 tok/s median, i.e. no measurable change (0.03%) against a within-arm spread of about 5%",
+         artifact="bmoe_order.json", expected=5.835, tol=0.01,
+         value=lambda A: next(c["decode_tok_s_median"] for c in A["border"]["cells"] if c["cell"] == "residentfirst")),
+    # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
+    dict(id="position_drift_median",
+         text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
+         artifact="position_effect.json", expected=0.9922, tol=0.002,
+         value=lambda A: A["posfx"]["median_last_over_first"]),
     # ------------------------------------------------------ instrument agreement
     # ------------------------------------------- HEADROOM (gates/headroom_sims.py, 2026-09-17)
     # The offline verdicts re-run at the phone's operating point (rho 2-4), plus the per-token
@@ -913,6 +929,8 @@ def load_all():
         "act18": load("gguf_active_qwen_olmoe.json"),
         "app18": load("app_engine.json"),
         "devbw": load("device_bandwidth.json"),
+        "border": load("bmoe_order.json"),
+        "posfx": load("position_effect.json"),
     }
 
 
