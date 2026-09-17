@@ -1,0 +1,8 @@
+0.00.403.242 W llama_model_load: disabling mmap because MoE expert streaming is enabled
+0.01.203.014 W llama_context: disabling op offload: the expert streaming cache is in host memory
+0.01.221.545 I 
+0.01.221.665 I system_info: n_threads = 4 (n_threads_batch = 4) / 8 | CPU : NEON = 1 | ARM_FMA = 1 | MATMUL_INT8 = 1 | DOTPROD = 1 | REPACK = 1 | 
+0.01.221.679 I perplexity: tokenizing the input ..
+0.01.222.978 I perplexity: tokenization took 1.296 ms
+0.01.222.996 I perplexity: calculating perplexity over 2 chunks, n_ctx=128, batch_size=128, n_seq=1
+0.13.153.959 I perplexity: 11.93 seconds per pass - ETA 0.25.201.586 I Final estimate: PPL = 11.5188 +/- 2.77123

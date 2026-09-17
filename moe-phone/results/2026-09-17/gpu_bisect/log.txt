@@ -1,0 +1,8 @@
+=== cpu_stream32 18:19:22 memavail=5753104 BEFORE wake=Awake status=0 cap0=2265600 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=36523 gate=timeout waited=30
+exit=0 AFTER wake=Awake status=0 cap0=2265600 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=37451 Final estimate: PPL = 11.5188 +/- 2.77123
+=== gpu_stream64 18:20:10 memavail=5724728 BEFORE wake=Awake status=0 cap0=3321600 cap6=3801600 hw0=3321600 hw6=3801600 shell_front_mC=38015 gate=ok waited=20
+exit=0 AFTER wake=Dozing status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=37536 Final estimate: PPL = 11.5482 +/- 2.78708
+=== gpu_full_ub1 18:21:09 memavail=6224472 BEFORE wake=Dozing status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=37063 gate=timeout waited=30
+exit=0 AFTER wake=Dozing status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=37424 Final estimate: PPL = 11.5208 +/- 2.77889
+=== gpu_stream32_ub1 18:22:13 memavail=6108252 BEFORE wake=Dozing status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=37392 gate=timeout waited=30
+exit=137 AFTER wake=Awake status=0 cap0=2265600 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=35704 

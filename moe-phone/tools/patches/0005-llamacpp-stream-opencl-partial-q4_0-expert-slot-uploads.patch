@@ -1,9 +1,9 @@
 # moe-phone patch for llama.cpp PR #25294 (freedomljc/feat/moe-streaming-core @ 1248fd8), on top of 0001.
-# (1) OpenCL Q4_0 set_tensor: partial uploads of whole experts into the SoA layout (plain + Adreno MoE transposed).
-# (2) Adreno GEMM MUL_MAT_ID router reorder for streamed (CPU slot-remapped) ids: reorder on every new ids tensor
-#     per graph; expert count from the weight tensor; ids row stride passed separately from the expert count.
+# (1) OpenCL Q4_0 set_tensor: partial uploads of whole experts into the SoA layout (plain + Adreno MoE transposed),
+#     serialized by a mutex (the streaming I/O threads call set_tensor concurrently; cl_kernel args are not thread-safe).
+# (2) Adreno GEMM MUL_MAT_ID router reorder for streamed (CPU slot-remapped) ids.
 diff --git a/ggml/src/ggml-opencl/ggml-opencl.cpp b/ggml/src/ggml-opencl/ggml-opencl.cpp
-index 10f9cc2..f05153a 100644
+index 10f9cc2..39144a0 100644
 --- a/ggml/src/ggml-opencl/ggml-opencl.cpp
 +++ b/ggml/src/ggml-opencl/ggml-opencl.cpp
 @@ -526,6 +526,10 @@ struct ggml_backend_opencl_context {
@@ -42,13 +42,18 @@ index 10f9cc2..f05153a 100644
      ggml_backend_opencl_context *backend_ctx = (ggml_backend_opencl_context *)backend->context;
  
      for (int i = 0; i < cgraph->n_nodes; i++) {
-@@ -6778,13 +6786,98 @@ static void ggml_backend_opencl_buffer_set_tensor(ggml_backend_buffer_t buffer,
+@@ -6778,13 +6786,103 @@ static void ggml_backend_opencl_buffer_set_tensor(ggml_backend_buffer_t buffer,
          if (tensor->view_src != nullptr || !ggml_is_contiguous(tensor)) {
              return;
          }
 +        ggml_backend_opencl_buffer_context * ctx = (ggml_backend_opencl_buffer_context *) buffer->context;
 +        const bool partial = !(offset == 0 && size == ggml_nbytes(tensor));
 +        if (partial) {
++            // moe-phone: MoE expert streaming calls this from several I/O threads at once, and the
++            // conversion kernels below are shared cl_kernel objects whose clSetKernelArg state is not
++            // thread-safe (nor is the first-time SoA layout creation). Serialize partial uploads.
++            static std::mutex moe_partial_upload_mtx;
++            std::lock_guard<std::mutex> moe_partial_upload_lock(moe_partial_upload_mtx);
 +            // moe-phone: a PARTIAL write of whole experts (MoE expert streaming fills one cache slot at a
 +            // time). Build the SoA layout once for the whole tensor (no data), then convert only the
 +            // uploaded blocks into their place. Only 3-D expert stacks reach here; anything else aborts
@@ -142,7 +147,7 @@ index 10f9cc2..f05153a 100644
          ggml_tensor_extra_cl_q4_0 * extra = ctx->ggml_opencl_alloc_temp_tensor_extra_q4_0();
  
          size_t size_d = ggml_nelements(tensor)/ggml_blck_size(tensor->type)*sizeof(ggml_fp16_t);
-@@ -17824,7 +17917,7 @@ static void ggml_cl_mul_mat(ggml_backend_t backend, const ggml_tensor * src0, co
+@@ -17824,7 +17922,7 @@ static void ggml_cl_mul_mat(ggml_backend_t backend, const ggml_tensor * src0, co
      }
  }
  
@@ -151,7 +156,7 @@ index 10f9cc2..f05153a 100644
      cl_int err;
      ggml_backend_opencl_context *backend_ctx = (ggml_backend_opencl_context *)backend->context;
  
-@@ -17833,7 +17926,10 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
+@@ -17833,7 +17931,10 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
  
      const int ne21 = src->ne[1];
      const int nb21 = src->nb[1];
@@ -163,7 +168,7 @@ index 10f9cc2..f05153a 100644
      const int n_tile_size = 32;
      const int max_post_router_tile = (ne20 * ne21 / n_tile_size) + ne02;
  
-@@ -17886,6 +17982,8 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
+@@ -17886,6 +17987,8 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
      CL_CHECK(clSetKernelArg(kernel, 2, sizeof(int), &ne21));
      CL_CHECK(clSetKernelArg(kernel, 3, sizeof(int), &ne20));
      CL_CHECK(clSetKernelArg(kernel, 4, sizeof(int), &ne02));
@@ -172,7 +177,7 @@ index 10f9cc2..f05153a 100644
  
      size_t histogram_global_size[] = {(size_t)(((ne21 + 63) / 64) * 64), static_cast<size_t>(ne20), 1};
      size_t histogram_local_size[] = {64, 1, 1};
-@@ -17924,6 +18022,7 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
+@@ -17924,6 +18027,7 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
      CL_CHECK(clSetKernelArg(kernel, 5, sizeof(int), &ne21));
      CL_CHECK(clSetKernelArg(kernel, 6, sizeof(int), &ne20));
      CL_CHECK(clSetKernelArg(kernel, 7, sizeof(int), &ne02));
@@ -180,7 +185,7 @@ index 10f9cc2..f05153a 100644
  
      backend_ctx->enqueue_ndrange_kernel(kernel, 3, histogram_global_size, histogram_local_size, src);
  
-@@ -18104,9 +18203,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -18104,9 +18208,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -193,7 +198,7 @@ index 10f9cc2..f05153a 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -18329,9 +18429,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -18329,9 +18434,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -206,7 +211,7 @@ index 10f9cc2..f05153a 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -18510,9 +18611,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -18510,9 +18616,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -219,7 +224,7 @@ index 10f9cc2..f05153a 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -18686,9 +18788,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -18686,9 +18793,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -232,7 +237,7 @@ index 10f9cc2..f05153a 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -18943,9 +19046,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -18943,9 +19051,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -245,7 +250,7 @@ index 10f9cc2..f05153a 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -19122,9 +19226,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -19122,9 +19231,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -258,7 +263,7 @@ index 10f9cc2..f05153a 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -19299,9 +19404,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -19299,9 +19409,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.
@@ -271,7 +276,7 @@ index 10f9cc2..f05153a 100644
                      }
  
                      cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
-@@ -19475,9 +19581,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+@@ -19475,9 +19586,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
  
                      // Reorder router if called from test-backend-ops or when new router is generated.
                      // Otherwise reuse the reordered result from previous mul_mat_id call.

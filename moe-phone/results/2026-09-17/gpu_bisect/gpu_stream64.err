@@ -1,0 +1,9 @@
+0.00.180.106 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 99, abort
+0.00.180.119 W llama_model_load: disabling mmap because MoE expert streaming is enabled
+0.00.221.446 W llama_moe_stream_resolve_slots: MoE expert cache of 64 slots covers all 64 experts -- streaming disabled, loading normally
+0.24.618.901 I 
+0.24.619.304 I system_info: n_threads = 4 (n_threads_batch = 4) / 8 | CPU : NEON = 1 | ARM_FMA = 1 | MATMUL_INT8 = 1 | DOTPROD = 1 | REPACK = 1 | 
+0.24.619.307 I perplexity: tokenizing the input ..
+0.24.639.845 I perplexity: tokenization took 20.533 ms
+0.24.640.001 I perplexity: calculating perplexity over 2 chunks, n_ctx=128, batch_size=128, n_seq=1
+0.26.374.550 I perplexity: 1.73 seconds per pass - ETA 0.27.172.092 I Final estimate: PPL = 11.5482 +/- 2.78708
