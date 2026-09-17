@@ -90,7 +90,11 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
 | 6 | I/O lanes 4/6/8 (pinned, no recycle) | bmoe_lanes.sh | queued |
 | 7 | cache ceiling 4/5/6 GB | bmoe_cache.sh | queued |
 Every row: quiesce (third-party apps force-stopped), wake, thermal status, cpufreq caps logged.
-Queue order on the phone now: repack_pin -> npu_compare -> gptoss20b -> defer -> lanes -> cache.
+Queue order on the phone now (22:40): arena (running) -> boost (perfmode / predict-prefetch / floor768 / ub64) -> profile (simpleperf E1).
+Latest results: cache 5 GB = 6.20 tok/s median (best; claims cache5000_*); lanes no effect; defer-evict lossless but -30%;
+arena lossless, mgmt 0.034 -> 0.002 s/token but residual +10 ms (early reps); Qwen3 cache sim matches phone
+(86.4 vs 85.3% at 5 GB), Belady 94.6% at the same size. Phone under AC since 21:48: thermal status 0, cpufreq caps
+unchanged (governor, not temperature). NPU 0x72 fix: research agent running.
 
 **Housekeeping when the queue is done:** restore the phone's screen timeout (`settings put system screen_off_timeout 1800000`,
 its original value), `svc power stayon false`, `dumpsys deviceidle enable`, stop keep_awake.sh (`rm /data/local/tmp/moe-stream/keep_awake.run`).
