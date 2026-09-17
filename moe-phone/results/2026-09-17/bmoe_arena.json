@@ -1,0 +1,407 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-17/bmoe_arena",
+ "runs": [
+  {
+   "n_generated": 256,
+   "s_per_token": 0.189,
+   "decode_tok_s": 5.302,
+   "n_prompt": 34,
+   "prefill_s": 6.642,
+   "prefill_tok_s": 5.1,
+   "load_s": 20.024,
+   "ttft_s": 26.665,
+   "read_MiB": 49608.6,
+   "read_MiB_per_token": 193.78,
+   "compute_s_per_token": 0.105,
+   "cache_mgmt_s_per_token": 0.002,
+   "flash_io_s_per_token_summed": 0.273,
+   "io_lane_MiBps": 710.0,
+   "cache_hit_pct": 78.0,
+   "resident_MiB": 3999.3,
+   "budget_MiB": 4000.0,
+   "evictions": 20731,
+   "rereads": 17927,
+   "rereads_per_token": 70.0,
+   "tag": "pinned_arena_rep1",
+   "cell": "pinned_arena",
+   "rep": 1
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.185,
+   "decode_tok_s": 5.394,
+   "n_prompt": 34,
+   "prefill_s": 5.956,
+   "prefill_tok_s": 5.7,
+   "load_s": 19.334,
+   "ttft_s": 25.29,
+   "read_MiB": 49608.6,
+   "read_MiB_per_token": 193.78,
+   "compute_s_per_token": 0.105,
+   "cache_mgmt_s_per_token": 0.002,
+   "flash_io_s_per_token_summed": 0.285,
+   "io_lane_MiBps": 680.0,
+   "cache_hit_pct": 78.0,
+   "resident_MiB": 3999.3,
+   "budget_MiB": 4000.0,
+   "evictions": 20731,
+   "rereads": 17927,
+   "rereads_per_token": 70.0,
+   "tag": "pinned_arena_rep2",
+   "cell": "pinned_arena",
+   "rep": 2
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.182,
+   "decode_tok_s": 5.508,
+   "n_prompt": 34,
+   "prefill_s": 5.811,
+   "prefill_tok_s": 5.9,
+   "load_s": 20.639,
+   "ttft_s": 26.449,
+   "read_MiB": 49608.6,
+   "read_MiB_per_token": 193.78,
+   "compute_s_per_token": 0.105,
+   "cache_mgmt_s_per_token": 0.002,
+   "flash_io_s_per_token_summed": 0.284,
+   "io_lane_MiBps": 683.0,
+   "cache_hit_pct": 78.0,
+   "resident_MiB": 3999.3,
+   "budget_MiB": 4000.0,
+   "evictions": 20731,
+   "rereads": 17927,
+   "rereads_per_token": 70.0,
+   "tag": "pinned_arena_rep3",
+   "cell": "pinned_arena",
+   "rep": 3
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.19,
+   "decode_tok_s": 5.256,
+   "n_prompt": 34,
+   "prefill_s": 4.793,
+   "prefill_tok_s": 7.1,
+   "load_s": 20.449,
+   "ttft_s": 25.242,
+   "read_MiB": 49608.6,
+   "read_MiB_per_token": 193.78,
+   "compute_s_per_token": 0.095,
+   "cache_mgmt_s_per_token": 0.034,
+   "flash_io_s_per_token_summed": 0.261,
+   "io_lane_MiBps": 743.0,
+   "cache_hit_pct": 78.0,
+   "resident_MiB": 3999.3,
+   "budget_MiB": 4000.0,
+   "evictions": 20731,
+   "rereads": 17927,
+   "rereads_per_token": 70.0,
+   "tag": "pinned_rep1",
+   "cell": "pinned",
+   "rep": 1
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.175,
+   "decode_tok_s": 5.703,
+   "n_prompt": 34,
+   "prefill_s": 5.858,
+   "prefill_tok_s": 5.8,
+   "load_s": 18.948,
+   "ttft_s": 24.806,
+   "read_MiB": 49608.6,
+   "read_MiB_per_token": 193.78,
+   "compute_s_per_token": 0.089,
+   "cache_mgmt_s_per_token": 0.035,
+   "flash_io_s_per_token_summed": 0.26,
+   "io_lane_MiBps": 745.0,
+   "cache_hit_pct": 78.0,
+   "resident_MiB": 3999.3,
+   "budget_MiB": 4000.0,
+   "evictions": 20731,
+   "rereads": 17927,
+   "rereads_per_token": 70.0,
+   "tag": "pinned_rep2",
+   "cell": "pinned",
+   "rep": 2
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.179,
+   "decode_tok_s": 5.577,
+   "n_prompt": 34,
+   "prefill_s": 4.607,
+   "prefill_tok_s": 7.4,
+   "load_s": 19.845,
+   "ttft_s": 24.452,
+   "read_MiB": 49608.6,
+   "read_MiB_per_token": 193.78,
+   "compute_s_per_token": 0.091,
+   "cache_mgmt_s_per_token": 0.034,
+   "flash_io_s_per_token_summed": 0.258,
+   "io_lane_MiBps": 751.0,
+   "cache_hit_pct": 78.0,
+   "resident_MiB": 3999.3,
+   "budget_MiB": 4000.0,
+   "evictions": 20731,
+   "rereads": 17927,
+   "rereads_per_token": 70.0,
+   "tag": "pinned_rep3",
+   "cell": "pinned",
+   "rep": 3
+  },
+  {
+   "tag": "ppl",
+   "cell": "ppl",
+   "rep": null
+  },
+  {
+   "tag": "ppl_arena",
+   "cell": "ppl_arena",
+   "rep": null
+  }
+ ],
+ "cells": [
+  {
+   "cell": "pinned",
+   "n": 3,
+   "failed": 0,
+   "decode_tok_s_all": [
+    5.256,
+    5.703,
+    5.577
+   ],
+   "decode_tok_s_median": 5.577,
+   "effective_tok_s_with_drafting_all": [
+    null,
+    null,
+    null
+   ],
+   "effective_tok_s_with_drafting_median": null,
+   "cache_hit_pct_all": [
+    78.0,
+    78.0,
+    78.0
+   ],
+   "cache_hit_pct_median": 78.0,
+   "read_MiB_per_token_all": [
+    193.78,
+    193.78,
+    193.78
+   ],
+   "read_MiB_per_token_median": 193.78,
+   "compute_s_per_token_all": [
+    0.095,
+    0.089,
+    0.091
+   ],
+   "compute_s_per_token_median": 0.091,
+   "flash_io_s_per_token_summed_all": [
+    0.261,
+    0.26,
+    0.258
+   ],
+   "flash_io_s_per_token_summed_median": 0.26,
+   "rereads_per_token_all": [
+    70.0,
+    70.0,
+    70.0
+   ],
+   "rereads_per_token_median": 70.0,
+   "budget_MiB_all": [
+    4000.0,
+    4000.0,
+    4000.0
+   ],
+   "budget_MiB_median": 4000.0,
+   "draft_accept_pct_all": [
+    null,
+    null,
+    null
+   ],
+   "draft_accept_pct_median": null,
+   "tokens_per_verify_all": [
+    null,
+    null,
+    null
+   ],
+   "tokens_per_verify_median": null,
+   "prefill_tok_s_all": [
+    7.1,
+    5.8,
+    7.4
+   ],
+   "prefill_tok_s_median": 7.1
+  },
+  {
+   "cell": "pinned_arena",
+   "n": 3,
+   "failed": 0,
+   "decode_tok_s_all": [
+    5.302,
+    5.394,
+    5.508
+   ],
+   "decode_tok_s_median": 5.394,
+   "effective_tok_s_with_drafting_all": [
+    null,
+    null,
+    null
+   ],
+   "effective_tok_s_with_drafting_median": null,
+   "cache_hit_pct_all": [
+    78.0,
+    78.0,
+    78.0
+   ],
+   "cache_hit_pct_median": 78.0,
+   "read_MiB_per_token_all": [
+    193.78,
+    193.78,
+    193.78
+   ],
+   "read_MiB_per_token_median": 193.78,
+   "compute_s_per_token_all": [
+    0.105,
+    0.105,
+    0.105
+   ],
+   "compute_s_per_token_median": 0.105,
+   "flash_io_s_per_token_summed_all": [
+    0.273,
+    0.285,
+    0.284
+   ],
+   "flash_io_s_per_token_summed_median": 0.284,
+   "rereads_per_token_all": [
+    70.0,
+    70.0,
+    70.0
+   ],
+   "rereads_per_token_median": 70.0,
+   "budget_MiB_all": [
+    4000.0,
+    4000.0,
+    4000.0
+   ],
+   "budget_MiB_median": 4000.0,
+   "draft_accept_pct_all": [
+    null,
+    null,
+    null
+   ],
+   "draft_accept_pct_median": null,
+   "tokens_per_verify_all": [
+    null,
+    null,
+    null
+   ],
+   "tokens_per_verify_median": null,
+   "prefill_tok_s_all": [
+    5.1,
+    5.7,
+    5.9
+   ],
+   "prefill_tok_s_median": 5.7
+  },
+  {
+   "cell": "ppl",
+   "n": 1,
+   "failed": 1,
+   "decode_tok_s_all": [
+    null
+   ],
+   "decode_tok_s_median": null,
+   "effective_tok_s_with_drafting_all": [
+    null
+   ],
+   "effective_tok_s_with_drafting_median": null,
+   "cache_hit_pct_all": [
+    null
+   ],
+   "cache_hit_pct_median": null,
+   "read_MiB_per_token_all": [
+    null
+   ],
+   "read_MiB_per_token_median": null,
+   "compute_s_per_token_all": [
+    null
+   ],
+   "compute_s_per_token_median": null,
+   "flash_io_s_per_token_summed_all": [
+    null
+   ],
+   "flash_io_s_per_token_summed_median": null,
+   "rereads_per_token_all": [
+    null
+   ],
+   "rereads_per_token_median": null,
+   "budget_MiB_all": [
+    null
+   ],
+   "budget_MiB_median": null,
+   "draft_accept_pct_all": [
+    null
+   ],
+   "draft_accept_pct_median": null,
+   "tokens_per_verify_all": [
+    null
+   ],
+   "tokens_per_verify_median": null,
+   "prefill_tok_s_all": [
+    null
+   ],
+   "prefill_tok_s_median": null
+  },
+  {
+   "cell": "ppl_arena",
+   "n": 1,
+   "failed": 1,
+   "decode_tok_s_all": [
+    null
+   ],
+   "decode_tok_s_median": null,
+   "effective_tok_s_with_drafting_all": [
+    null
+   ],
+   "effective_tok_s_with_drafting_median": null,
+   "cache_hit_pct_all": [
+    null
+   ],
+   "cache_hit_pct_median": null,
+   "read_MiB_per_token_all": [
+    null
+   ],
+   "read_MiB_per_token_median": null,
+   "compute_s_per_token_all": [
+    null
+   ],
+   "compute_s_per_token_median": null,
+   "flash_io_s_per_token_summed_all": [
+    null
+   ],
+   "flash_io_s_per_token_summed_median": null,
+   "rereads_per_token_all": [
+    null
+   ],
+   "rereads_per_token_median": null,
+   "budget_MiB_all": [
+    null
+   ],
+   "budget_MiB_median": null,
+   "draft_accept_pct_all": [
+    null
+   ],
+   "draft_accept_pct_median": null,
+   "tokens_per_verify_all": [
+    null
+   ],
+   "tokens_per_verify_median": null,
+   "prefill_tok_s_all": [
+    null
+   ],
+   "prefill_tok_s_median": null
+  }
+ ]
+}
