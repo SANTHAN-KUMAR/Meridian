@@ -81,24 +81,26 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
 | # | step | script | status |
 |---|---|---|---|
 | 1 | GPU slot cache speed vs CPU, same engine | gpu_speed.sh | DONE -> results/2026-09-17/gpu_speed (GPU 1.5-1.9, CPU 0.17-0.39 tok/s) |
-| 2 | rotated confirmation, pin/recycle, 5 cells x 4 | bmoe_pin2.sh | RUNNING |
-| 3 | CPU vs Adreno vs Hexagon HTP v81 compute, OLMoE | npu_compare.sh | queued |
-| 4 | verify cost c(N), best config, 3 reps | bmoe_verify_cost.sh | queued |
+| 2 | rotated confirmation, pin/recycle, 5 cells x 4 | bmoe_pin2.sh | DONE -> bmoe_pin2.json: pinned 5.36 median (best), unpinned 4.75; recycle a net loss (retracted) |
+| 3 | CPU vs Adreno vs Hexagon HTP v81 compute, OLMoE | npu_compare.sh | first attempt broke on a global LD_LIBRARY_PATH; fixed, requeued after step 5 |
+| 4 | verify cost c(N), 3 reps | bmoe_verify_cost.sh | RUNNING (base includes --recycle-pages; c(N) is a ratio within it) |
 | 5 | repacked kernels on pin+recycle, 3 reps | bmoe_repack_pin.sh | queued |
-| 6 | I/O lanes 4/6/8 | bmoe_lanes.sh | queued |
+| 5b | --defer-evict correctness (ppl) + speed vs pinned | bmoe_defer.sh | queued |
+| 6 | I/O lanes 4/6/8 (pinned, no recycle) | bmoe_lanes.sh | queued |
 | 7 | cache ceiling 4/5/6 GB | bmoe_cache.sh | queued |
 Every row: quiesce (third-party apps force-stopped), wake, thermal status, cpufreq caps logged.
 
 ### Earlier failures — fix status
 | failure | status |
 |---|---|
-| S9 transfer (hit-rate curves across expert counts) | granite-3b scored: neither rule validated (H_floor 0.0302 vs tol 0.0291; within-family H_rho 0.0401 vs 0.0119). gpt-oss-20b tracing, Qwen3-30B-A3B next (laptop, tools/s9_run_targets.sh, capped) |
-| thread collapse / unpinned variance | confirmation running (step 2) |
+| S9 transfer (hit-rate curves across expert counts) | granite-3b: neither rule validated; gpt-oss-20b family CONTROL FAILS (RMSE 0.1423 vs tol 0.0291): curves are model-specific. Qwen3-30B-A3B tracing (laptop) |
+| thread collapse / unpinned variance | CONFIRMED FIXED by pinning: 5.36 vs 4.75 tok/s median, n=4 rotated |
+| page recycling (new failure) | net loss end to end (mm lock/IPIs on compute cores); fix attempt: patch 0007 --defer-evict, step 5b |
 | repacked kernels no gain | retest queued (step 5) |
 | verify cost inconclusive (doze) | clean retest queued (step 4) |
 | GPU expert cache abort / wrong ppl | FIXED (0005 v4): ppl 11.5482 = whole-model GPU; engine speed low -> move GPU compute into an overlap engine |
 | PR engine slow on phone | diagnosed: per-layer load stall, no overlap |
-| NPU unreachable (old reading) | reachable as HTP v81 with GGML_HEXAGON_ARCH=v81; compute test queued (step 3) |
+| NPU unreachable (old reading) | reachable as HTP v81 with GGML_HEXAGON_ARCH=v81; compute test requeued (step 3) |
 | "flash I/O wall" claim | retracted (bmoe MiB/s is per lane-second); lanes + cache tests queued |
 | G-VALID-3 formula over-predicts | deferred until speed work lands; refit with measured compute term |
 | G3 sparsity outside margin | lossy by design; not pursued for headline |
