@@ -11,16 +11,16 @@ H=/data/local/tmp/moe-stream
 X=$H/hex
 O=$H/npu_compare_$(date +%Y%m%d_%H%M); mkdir -p "$O"
 M=$H/olmoe-1b-7b-0924-q4_0.gguf
-export LD_LIBRARY_PATH=$X/lib:/vendor/lib64 ADSP_LIBRARY_PATH=$X/lib
+ENVX="LD_LIBRARY_PATH=$X/lib:/vendor/lib64 ADSP_LIBRARY_PATH=$X/lib GGML_HEXAGON_ARCH=v81" # per command only: a global
+# LD_LIBRARY_PATH breaks the system's own binaries (seq/date/tee fail to link)
 # the FastRPC capability query fails from the shell domain (err 114) and the backend would assume v73;
 # the 15R is HTP v81 (G0-NPU, 2026-09-14), so the architecture is set explicitly
-export GGML_HEXAGON_ARCH=v81
-$X/bin/llama-bench --list-devices > "$O/devices.txt" 2>&1
+env $ENVX $X/bin/llama-bench --list-devices > "$O/devices.txt" 2>&1
 cell() {
   tag=$1_rep$3
   g=$(thermal_wait 30)
   echo "=== $tag $(date +%H:%M:%S) BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
-  $X/bin/llama-bench -m $M -p 64 -n 64 -r 1 -o csv $2 > "$O/$tag.csv" 2> "$O/$tag.err"
+  env $ENVX $X/bin/llama-bench -m $M -p 64 -n 64 -r 1 -o csv $2 > "$O/$tag.csv" 2> "$O/$tag.err"
   echo "exit=$? AFTER $(thermal_state) $(awk -F, 'NR==1{for(i=1;i<=NF;i++){g=$i;gsub(/"/,"",g); if(g=="avg_ts")c=i; if(g=="n_gen")ng=i; if(g=="n_prompt")np=i}} NR>1{v=$c;gsub(/"/,"",v); a=$ng;gsub(/"/,"",a); b=$np;gsub(/"/,"",b); printf "pp%s_tg%s=%s ", b, a, v}' "$O/$tag.csv")" | tee -a "$O/log.txt"
 }
 for r in $(seq 1 "$REPS"); do
