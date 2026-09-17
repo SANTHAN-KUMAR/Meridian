@@ -16,7 +16,7 @@ BASE="--moe-stream --cache-mb auto --cache-ceil-mb 4000 --overlap --dense-weight
 for r in $(seq 1 "$REPS"); do
   for n in 1 2 3 5; do
     tag=b${n}_rep$r
-    g=$(thermal_wait 300)
+    g=$(thermal_wait 30)
     echo "=== $tag $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) BEFORE $g" | tee -a "$O/log.txt"
     ( cd $H/bmoe-i8mm-verify && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE --ppl-batch $n > "$O/$tag.out" 2> "$O/$tag.err" )
     echo "exit=$? AFTER $(thermal_state) $(grep -h '^ppl:' "$O/$tag.out" | tr '\n' ' ')" | tee -a "$O/log.txt"

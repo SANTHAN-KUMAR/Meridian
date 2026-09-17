@@ -19,13 +19,13 @@ OL=$H/olmoe-1b-7b-0924-q4_0.gguf
 Q=$H/Qwen3-30B-A3B-Q4_0.gguf
 T=$H/verify_cost_text.txt
 ppl() { # name flags
-  g=$(thermal_wait 300)
+  g=$(thermal_wait 30)
   echo "=== $1 $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) BEFORE $g" | tee -a "$O/log.txt"
   LD_LIBRARY_PATH=/vendor/lib64 $B/llama-perplexity -m $OL -f $T -c 128 -b 128 -t 4 $2 > "$O/$1.out" 2> "$O/$1.err"
   echo "exit=$? AFTER $(thermal_state) $(grep -hoE 'Final estimate: PPL = [0-9.]+ \+/- [0-9.]+' "$O/$1.out" "$O/$1.err") $(grep -hE 'expert cache size|disabling op offload' "$O/$1.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
 }
 gen() { # name flags
-  g=$(thermal_wait 300)
+  g=$(thermal_wait 30)
   echo "=== $1 $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) BEFORE $g" | tee -a "$O/log.txt"
   LD_LIBRARY_PATH=/vendor/lib64 $B/llama-completion -m $Q -p "Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field" -n 128 -no-cnv --temp 0 $2 < /dev/null > "$O/$1.out" 2> "$O/$1.err"
   echo "exit=$? AFTER $(thermal_state) $(grep -hE 'eval time|expert cache size|disabling op offload' "$O/$1.err" | tr '\n' ' ')" | tee -a "$O/log.txt"

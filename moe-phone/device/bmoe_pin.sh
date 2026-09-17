@@ -22,7 +22,7 @@ P="Write a long detailed essay about the history of computing including its orig
 BASE="--chatml -n 256 --ubatch 512 --moe-stream --cache-mb auto --cache-ceil-mb 4000 --overlap --dense-weights anon"
 run() { # name extra rep
   tag=$1_rep$3
-  g=$(thermal_wait 300)
+  g=$(thermal_wait 30)
   echo "=== $tag $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) BEFORE $g" | tee -a "$O/log.txt"
   ( cd $H/bmoe-i8mm-recycle && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" )
   rc=$?
