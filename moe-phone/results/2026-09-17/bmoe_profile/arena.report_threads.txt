@@ -1,0 +1,1 @@
+simpleperf E record_file_reader.cpp:88] failed to open record file '/data/local/tmp/moe-stream/bmoe_profile_20260917_2251/arena.perf.data': No such file or directory
