@@ -1,0 +1,182 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f, applied AFTER 0002 (engine files only).
+# Adds --cpu-mask (strict pinned ggml threadpool for compute) and --io-cpu-mask (sched_setaffinity on the expert-read lanes).
+diff --git a/cli/main.cpp b/cli/main.cpp
+index 06e2213..7c4e911 100644
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -445,6 +445,8 @@ static void print_usage(const char * argv0) {
+         "      --cache-floor-mb N  with --cache-mb auto: RAM to leave free (default 1536)\n"
+         "      --cache-ceil-mb N   with --cache-mb auto: upper bound on the budget (0 = no cap)\n"
+         "      --io-threads N      parallel expert-read lanes [1..%d] (default 4)\n"
++        "      --cpu-mask HEX      pin the compute threadpool to these cores, strict (moe-phone)\n"
++        "      --io-cpu-mask HEX   pin the expert-read lanes to these cores (moe-phone)\n"
+         "      --no-odirect        do not bypass the page cache for expert reads\n"
+         "      --dense-weights M   dense (non-expert) weight policy: mmap | warm | anon (default) | ahwb\n"
+         "                          (warm = page-cache them at load, best when the model fits in RAM;\n"
+@@ -682,6 +684,10 @@ int main(int argc, char ** argv) {
+             cfg.moe.cache_floor_mb = std::atoi(next("--cache-floor-mb"));
+         else if (a == "--cache-ceil-mb")
+             cfg.moe.cache_ceil_mb = std::atoi(next("--cache-ceil-mb"));
++        else if (a == "--cpu-mask")
++            cfg.cpu_mask = std::strtoull(next("--cpu-mask"), nullptr, 16);
++        else if (a == "--io-cpu-mask")
++            cfg.moe.io_cpu_mask = std::strtoull(next("--io-cpu-mask"), nullptr, 16);
+         else if (a == "--io-threads")
+             cfg.moe.io_threads = std::atoi(next("--io-threads"));
+         else if (a == "--no-odirect")
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+index 05e1f8e..0ed0564 100644
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -61,6 +61,10 @@ struct MoeStreamConfig {
+     // Clamped to [1, io_threads_max]. 4 is the measured sweet spot on UFS4 phones.
+     int io_threads = 4;
+ 
++    // moe-phone: CPU affinity mask of the I/O lanes (bit i = core i; 0 = OS placement). Keeps
++    // expert reads off the cores the compute threadpool is pinned to (RunConfig::cpu_mask).
++    uint64_t io_cpu_mask = 0;
++
+     bool o_direct = true;     // bypass the page cache (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+     bool load_all = false;    // debug/A-B: load ALL experts each token (full-sweep baseline)
+     bool force_cache = false; // allow a cache_mb in the pathological band (tests/experiments)
+@@ -351,6 +355,10 @@ struct RunConfig {
+     std::string prompt = "The capital of Japan is";
+     int n_predict = 128;
+     int n_threads = 4;
++    // moe-phone: pin the compute threadpool (bit i = core i, strict placement; 0 = OS placement).
++    // Unpinned ggml workers migrate across the 15R's clusters and every barrier waits for the
++    // slowest one; see moe-phone/results/2026-09-17/decode_15r_pin.json.
++    uint64_t cpu_mask = 0;
+     int n_ctx = 2048;
+ 
+     // Largest batch computed in one graph, i.e. the prefill chunk size. 0 (the default) means
+diff --git a/core/include/bmoe/session.h b/core/include/bmoe/session.h
+index 1587d80..5014209 100644
+--- a/core/include/bmoe/session.h
++++ b/core/include/bmoe/session.h
+@@ -35,6 +35,7 @@ class IIoTraceSink;
+ struct SessionConfig {
+     std::string model_path;
+     int n_threads = 4;
++    uint64_t cpu_mask = 0; // moe-phone: see RunConfig::cpu_mask
+     int n_ctx = 2048;
+     int n_batch = 512; // prefill chunk capacity; longer prompts are prefilled in n_batch slices
+     // Widest graph actually computed at once. 0 = follow n_batch. Sizing this down trades prefill
+diff --git a/core/src/engine/runtime.cpp b/core/src/engine/runtime.cpp
+index 75ef409..4a3bc2f 100644
+--- a/core/src/engine/runtime.cpp
++++ b/core/src/engine/runtime.cpp
+@@ -10,6 +10,7 @@ SessionConfig session_config_from(const RunConfig & cfg) {
+     SessionConfig sc;
+     sc.model_path = cfg.model_path;
+     sc.n_threads = cfg.n_threads;
++    sc.cpu_mask = cfg.cpu_mask;
+     sc.n_ctx = cfg.n_ctx;
+     sc.n_batch = cfg.n_ctx;     // one-batch prefill for any prompt that fits the context
+     sc.n_ubatch = cfg.n_ubatch; // 0 = follow n_batch; smaller trades prefill speed for memory
+diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
+index f484ca9..a2c252b 100644
+--- a/core/src/engine/session.cpp
++++ b/core/src/engine/session.cpp
+@@ -4,6 +4,7 @@
+ #include "bmoe/decode_trace.h"
+ #include "bmoe/version.h"
+ #include "bmoe/ngram_draft.h"
++#include "ggml-cpu.h"
+ #include "chat_parse.h"
+ #include "thinking_control.h"
+ #include "../moe/router_hook.h"
+@@ -284,6 +285,7 @@ struct Session::Impl {
+     // why it costs no context, no memory and no expert read. Everything below this pair is shared by
+     // both sources, because the verify half of the loop does not care who drafted.
+     std::unique_ptr<llama_context, void (*)(llama_context *)> ctx_dft{nullptr, llama_free};
++    ggml_threadpool_t threadpool = nullptr; // moe-phone --cpu-mask: pinned compute pool, freed after the contexts
+     common_speculative_ptr mtp;
+     // Serves both roles on the speculative path, never both at once: a prefill chunk (up to
+     // n_batch tokens, logits on the last) and a verify pass (1 + draft_max tokens, logits on all).
+@@ -373,6 +375,7 @@ struct Session::Impl {
+         if (mtp_batch_owned) llama_batch_free(mtp_batch);
+         ctx_dft.reset();
+         ctx.reset();
++        if (threadpool) ggml_threadpool_free(threadpool);
+         hook.reset();
+         model.reset();
+         mapping_placeholders.release();
+@@ -726,6 +729,18 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
+     if (!ctx) return fail("failed to create context");
+     im.ctx.reset(ctx);
+     llama_set_n_threads(ctx, cfg.n_threads, cfg.n_threads);
++    if (cfg.cpu_mask) {
++        ggml_threadpool_params tpp = ggml_threadpool_params_default(cfg.n_threads);
++        int n_cores = 0;
++        for (int i = 0; i < 64 && i < GGML_MAX_N_THREADS; ++i)
++            if ((cfg.cpu_mask >> i) & 1ULL) { tpp.cpumask[i] = true; ++n_cores; }
++        tpp.strict_cpu = true;
++        im.threadpool = ggml_threadpool_new(&tpp);
++        if (!im.threadpool) return fail("--cpu-mask: failed to create the pinned threadpool");
++        llama_attach_threadpool(ctx, im.threadpool, im.threadpool);
++        std::fprintf(stderr, "bmoe: compute threadpool pinned: %d threads, strict, mask 0x%llx (%d cores)\n",
++                     cfg.n_threads, (unsigned long long) cfg.cpu_mask, n_cores);
++    }
+ 
+     // The MTP draft context: same model, same eval callback, but ctx_type = MTP so llama.cpp builds
+     // the nextn graph. It keeps its own (single-position) KV, hence n_rs_seq = 0 — nothing is ever
+@@ -750,6 +765,7 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
+         if (!ctx_dft) return fail("failed to create the MTP draft context");
+         im.ctx_dft.reset(ctx_dft);
+         llama_set_n_threads(ctx_dft, cfg.n_threads, cfg.n_threads);
++        if (im.threadpool) llama_attach_threadpool(ctx_dft, im.threadpool, im.threadpool);
+     }
+ 
+     // Opt-in sampling. temp <= 0 leaves smpl null and the decode loop on argmax — the deterministic
+diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
+index 24e362f..95cd989 100644
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -12,6 +12,9 @@
+ #include <cstdio>
+ #include <cstring>
+ #include <thread>
++#if defined(__linux__)
++#include <sched.h>
++#endif
+ #include <utility>
+ 
+ #if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
+@@ -55,6 +58,7 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+     spec_adopt_ = cfg.route_ahead > 0;
+     cache_max_ = (size_t) std::max(0, cfg.cache_mb) * 1024ull * 1024ull;
+     io_threads_ = std::max(1, std::min(MoeStreamConfig::io_threads_max, cfg.io_threads));
++    io_cpu_mask_ = cfg.io_cpu_mask;
+     page_ = pio::vm_page(); // the real OS page size, for the dense-residency probe in any cache mode
+ 
+     // Largest full-tensor byte size per projection, over all bound layers → shared-slot
+@@ -407,6 +411,16 @@ void ExpertStreamSource::io_drain(int lane, uint64_t my_gen) {
+ }
+ 
+ void ExpertStreamSource::io_worker(int lane) {
++#if defined(__linux__)
++    if (io_cpu_mask_) { // moe-phone: keep expert reads off the pinned compute cores
++        cpu_set_t set;
++        CPU_ZERO(&set);
++        for (int i = 0; i < 64 && i < CPU_SETSIZE; ++i)
++            if ((io_cpu_mask_ >> i) & 1ULL) CPU_SET(i, &set);
++        if (sched_setaffinity(0, sizeof(set), &set) != 0)
++            std::fprintf(stderr, "bmoe: io lane %d: sched_setaffinity(0x%llx) failed\n", lane, (unsigned long long) io_cpu_mask_);
++    }
++#endif
+     uint64_t seen = 0;
+     for (;;) {
+         {
+diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
+index acd6b80..2877f7d 100644
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -338,6 +338,7 @@ private:
+ 
+     // I/O lane pool
+     int io_threads_ = 1;
++    uint64_t io_cpu_mask_ = 0; // moe-phone --io-cpu-mask
+     std::vector<std::thread> io_pool_;
+     std::vector<IoJob> jobs_;
+     std::mutex io_mtx_;
