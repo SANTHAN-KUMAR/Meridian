@@ -132,7 +132,8 @@ def main():
         cells.setdefault(r["cell"], []).append(r)
     summary = []
     keys = ("decode_tok_s", "effective_tok_s_with_drafting", "cache_hit_pct", "read_MiB_per_token",
-            "compute_s_per_token", "flash_io_s_per_token_summed", "rereads_per_token", "budget_MiB",
+            "compute_s_per_token", "cache_mgmt_s_per_token", "flash_io_s_per_token_summed",
+            "rereads_per_token", "budget_MiB",
             "draft_accept_pct", "tokens_per_verify", "prefill_tok_s",
             "delta_pswpin", "delta_pswpout", "swap_used_MB_during", "memavail_MB_before")
     for cell, rs in sorted(cells.items()):

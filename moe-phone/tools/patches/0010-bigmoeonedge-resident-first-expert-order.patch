@@ -1,0 +1,250 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f (+ its llama.cpp fork), applied AFTER 0002-0009.
+# --expert-resident-first: compute a layer's ALREADY-RESIDENT experts before the ones still being read.
+#
+# WHY. gates/decode_budget.py splits the best measured cell (results/2026-09-17/bmoe_cache.json,
+# ceil5000) into 93.0 ms compute residual + 20.0 ms cache management + 48.3 ms stall per token, and that
+# stall is almost exactly the whole of the cell's miss traffic (119.8 MiB/token at the measured ~2.8 GB/s
+# aggregate flash bandwidth = ~43 ms), i.e. essentially NONE of it is hidden by --overlap. The reason is
+# in ggml: mul_mat_id consumes a layer's selected experts in ascending expert id and the expert-ready
+# hook blocks on each in turn, so a layer waits on its lowest-id miss while its other seven experts --
+# already in memory, ~2.4 ms of compute -- sit unused behind it.
+#
+# WHAT IT CHANGES. A non-blocking residency probe hook, and a two-pass loop in mul_mat_id: pass 0 takes
+# the experts the probe reports resident, pass 1 the rest. Threads may order them differently and the
+# result is still exact -- every thread visits every selected expert exactly once and each expert's
+# chunks are claimed from its own atomic counter -- so no shared publication and no extra work buffer is
+# needed. The ready hook still blocks before any expert's bytes are read, so a stale probe cannot make
+# the result wrong: a false negative costs only ordering, a false positive is caught by the hook.
+# Lossless by construction, and checked: identical generated text at temp 0 (laptop, Qwen3-30B-A3B).
+# ===== fork (third_party/llama.cpp) =====
+diff --git a/ggml/include/ggml-cpu.h b/ggml/include/ggml-cpu.h
+--- a/ggml/include/ggml-cpu.h
++++ b/ggml/include/ggml-cpu.h
+@@ -155,6 +155,15 @@
+     typedef const char * (*ggml_cpu_expert_data_hook_t)(const struct ggml_tensor * src0, int expert, void * user_data);
+     GGML_BACKEND_API void ggml_cpu_set_expert_data_hook(ggml_cpu_expert_data_hook_t hook, void * user_data);
+ 
++    // moe-phone: non-blocking residency query. mul_mat_id consumes a layer's selected experts in
++    // ASCENDING EXPERT ID, and the ready hook blocks on each in turn, so one expert still in flight
++    // stalls the layer even when every other selected expert is already in memory. With this hook set,
++    // each thread computes the experts this returns true for FIRST and the rest afterwards, which gives
++    // the reads still in flight the resident experts' compute time to land. It must not block, and it is
++    // allowed to be wrong in either direction: a false negative only costs ordering, and a false
++    // positive is caught by the ready hook, which still blocks before any bytes are read.
++    typedef bool (*ggml_cpu_expert_probe_hook_t)(const struct ggml_tensor * src0, int expert, void * user_data);
++    GGML_BACKEND_API void ggml_cpu_set_expert_probe_hook(ggml_cpu_expert_probe_hook_t hook, void * user_data);
+ 
+     // moe-phone: repacked (interleaved, i8mm/dotprod/AVX2) kernels for expert tensors whose data an
+     // external engine streams in. bind tags the tensor for the repacked MUL_MAT_ID kernel (false if
+diff --git a/ggml/src/ggml-cpu/ggml-cpu.c b/ggml/src/ggml-cpu/ggml-cpu.c
+--- a/ggml/src/ggml-cpu/ggml-cpu.c
++++ b/ggml/src/ggml-cpu/ggml-cpu.c
+@@ -71,6 +71,18 @@
+     g_expert_ready_hook_data = user_data;
+ }
+ 
++static ggml_cpu_expert_probe_hook_t g_expert_probe_hook      = NULL; // moe-phone
++static void *                       g_expert_probe_hook_data = NULL;
++void ggml_cpu_set_expert_probe_hook(ggml_cpu_expert_probe_hook_t hook, void * user_data) {
++    g_expert_probe_hook      = hook;
++    g_expert_probe_hook_data = user_data;
++}
++
++// moe-phone: the largest expert count this reordering supports without heap allocation. Every model
++// measured here is far below it (Qwen3-30B-A3B has 128, OLMoE 64); above it the kernel keeps the
++// original ascending order, which is always correct.
++#define GGML_MMID_MAX_REORDER_EXPERTS 512
++
+ // moe-phone: the repacked MUL_MAT_ID kernel (repack.cpp) calls this at the same point the generic
+ // kernel calls the hook, so an overlapping streaming engine still gets to block until the expert
+ // has landed before its bytes are read.
+@@ -1670,6 +1682,18 @@
+ 
+     ggml_barrier(params->threadpool);
+ 
++    // moe-phone: two passes over the selected experts when a residency probe is installed -- pass 0
++    // takes the ones already in memory, pass 1 the remainder. Each THREAD may order the experts
++    // differently and the result is still exact: every thread visits every selected expert exactly once,
++    // and each expert's chunks are claimed from its own atomic counter, so no chunk is computed twice or
++    // skipped. `done` records what pass 0 took, because an expert can become resident between the
++    // passes and must not then be computed again.
++    const bool reorder = g_expert_probe_hook && n_as <= GGML_MMID_MAX_REORDER_EXPERTS;
++    unsigned char done[GGML_MMID_MAX_REORDER_EXPERTS];
++    if (reorder) {
++        memset(done, 0, (size_t) n_as);
++    }
++    for (int pass = 0; pass < (reorder ? 2 : 1); ++pass) {
+     for (int cur_a = 0; cur_a < n_as; ++cur_a) {
+         const int64_t cne1 = matrix_row_counts[cur_a];
+ 
+@@ -1677,6 +1701,17 @@
+             continue;
+         }
+ 
++        if (reorder) {
++            if (pass == 0) {
++                if (!g_expert_probe_hook(src0, cur_a, g_expert_probe_hook_data)) {
++                    continue; // still in flight: come back to it in pass 1
++                }
++                done[cur_a] = 1;
++            } else if (done[cur_a]) {
++                continue; // already computed in pass 0
++            }
++        }
++
+         // Signal an external expert-streaming engine that this expert is about to be
+         // consumed; the hook may block until src0's expert weights are resident.
+         if (g_expert_ready_hook) {
+@@ -1740,6 +1775,7 @@
+             current_chunk = atomic_fetch_add_explicit(current_chunk_ctr, 1, memory_order_relaxed);
+         }
+     }
++    } // moe-phone: end of the resident-first pass loop
+ }
+ 
+ /////////////////////////////////
+# ===== engine (BigMoeOnEdge root) =====
+diff --git a/cli/main.cpp b/cli/main.cpp
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -450,6 +450,7 @@
+         "      --ppl-batch N       with --ppl: N teacher-forced tokens per decode (prices a verify batch) (moe-phone)\n"
+         "      --attn-device N     run the attention matmuls on ggml device N (HTP0 / GPUOpenCL), experts stay streamed on CPU (moe-phone)\n"
+         "      --slot-arena        expert slices in never-released pool slots read via a MUL_MAT_ID pointer hook (moe-phone)\n"
++        "      --expert-resident-first  compute a layer's resident experts before the ones still being read (moe-phone)\n"
+         "      --defer-evict       batch evicted pages' release after each decode (moe-phone)\n"
+         "      --recycle-pages     move evicted experts' pages into the next miss (mremap) instead of re-faulting (moe-phone)\n"
+         "      --no-odirect        do not bypass the page cache for expert reads\n"
+@@ -705,6 +706,8 @@
+             cfg.attn_device = next("--attn-device");
+         else if (a == "--slot-arena")
+             cfg.moe.slot_arena = true;
++        else if (a == "--expert-resident-first")
++            cfg.moe.expert_resident_first = true;
+         else if (a == "--defer-evict")
+             cfg.moe.defer_evict = true;
+         else if (a == "--recycle-pages")
+diff --git a/core/CMakeLists.txt b/core/CMakeLists.txt
+--- a/core/CMakeLists.txt
++++ b/core/CMakeLists.txt
+@@ -60,6 +60,14 @@
+         if(_ggml_cpu_src MATCHES "ggml_cpu_set_expert_ready_hook")
+             target_compile_definitions(bmoe_core PUBLIC BMOE_HAVE_EXPERT_READY_HOOK=1)
+             message(STATUS "bmoe: expert-ready hook present (I/O–compute overlap available)")
++            # moe-phone: the residency PROBE is a separate, later hook -- detect it separately so a
++            # tree with the overlap hook but not the probe still builds and just declines the flag.
++            if(_ggml_cpu_src MATCHES "ggml_cpu_set_expert_probe_hook")
++                target_compile_definitions(bmoe_core PUBLIC BMOE_HAVE_EXPERT_PROBE_HOOK=1)
++                message(STATUS "bmoe: expert residency probe present (--expert-resident-first available)")
++            else()
++                message(STATUS "bmoe: expert residency probe absent (--expert-resident-first unavailable)")
++            endif()
+         else()
+             message(STATUS "bmoe: expert-ready hook absent (overlap unavailable)")
+         endif()
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -83,6 +83,12 @@
+     // --defer-evict and --repack-experts (checked at init).
+     bool slot_arena = false;
+ 
++    // moe-phone: let the MUL_MAT_ID kernel compute a layer's already-resident experts BEFORE the ones
++    // still being read, instead of consuming them in ascending expert id. Needs the fork's
++    // ggml_cpu_set_expert_probe_hook. Lossless: only the order of the same sum changes, and the ready
++    // hook still blocks before any expert's bytes are read. Off by default.
++    bool expert_resident_first = false;
++
+ 
+     bool o_direct = true;     // bypass the page cache (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+     bool load_all = false;    // debug/A-B: load ALL experts each token (full-sweep baseline)
+diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -188,6 +188,12 @@
+ 
+     static void c_expert_ready(const ggml_tensor * src0, int expert, void * user_data);
+     void on_expert_ready(const ggml_tensor * src0, int expert);
++    // moe-phone --expert-resident-first: the same residency test on_expert_ready makes before it waits,
++    // exposed without the wait so the MUL_MAT_ID kernel can compute resident experts first and give the
++    // slices still in flight that compute time to land. Lock-free and allowed to be stale: a stale
++    // "false" only costs ordering, and a stale "true" is caught by the ready hook, which still waits.
++    static bool c_expert_probe(const ggml_tensor * src0, int expert, void * user_data);
++    bool expert_resident(const ggml_tensor * src0, int expert) const;
+ 
+     // One expert's cache accounting for the layer being staged: the lookup, the hit/miss decision,
+     // and the residency bookkeeping that follows. Both load paths need exactly this and used to spell
+@@ -223,6 +229,7 @@
+     bool load_all_ = false;
+     bool overlap_ = false;
+     bool repack_experts_ = false; // moe-phone
++    bool resident_first_ = false;  // moe-phone --expert-resident-first (see c_expert_probe)
+     bool two_wave_ = false;                  // publish the first projection's jobs before committing the rest (#118)
+     bool prefetch_sync_ = false;             // test only: drain prefetch reads synchronously (serial mode)
+     bool spec_adopt_ = false;                // route-ahead: staged layers adopt committed spec reads (see quiesce_spec)
+diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -51,6 +51,7 @@
+     n_layer_ = (int) layers_.size();
+     load_all_ = cfg.load_all;
+     overlap_ = cfg.overlap;
++    resident_first_ = cfg.expert_resident_first; // moe-phone
+     two_wave_ = cfg.io_two_wave;
+     prefetch_sync_ = cfg.prefetch_sync && !cfg.overlap; // serial only: overlap lane 0 is a worker
+     // Under route-ahead the speculated ids of a layer ARE the ids its topk will commit, so the
+@@ -1494,6 +1495,25 @@
+ 
+ // Called from EVERY compute thread, for each routed expert, before it reads that expert's rows.
+ // Blocks until the expert's slice for the layer in flight is resident (or the run goes fatal).
++bool ExpertStreamSource::c_expert_probe(const ggml_tensor * src0, int expert, void * user_data) {
++    return static_cast<ExpertStreamSource *>(user_data)->expert_resident(src0, expert);
++}
++
++bool ExpertStreamSource::expert_resident(const ggml_tensor * src0, int expert) const {
++    const void * key = (const void *) src0;
++    auto it = std::lower_bound(texp_.begin(), texp_.end(), key,
++                               [](const std::pair<const void *, uint32_t> & a, const void * k) { return a.first < k; });
++    if (it == texp_.end() || it->first != key) return true; // not ours: never reorder around it
++    const uint32_t packed = it->second;
++    const int il = (int) (packed >> 8);
++    const int p = (int) (packed & 0xff);
++    // A layer mismatch is on_expert_ready's fail-fast path, so claim residency and let it handle it
++    // rather than silently reordering a graph we did not stage.
++    if (il != cur_il_.load(std::memory_order_relaxed) || expert < 0 || expert >= n_expert_) return true;
++    const size_t idx = (size_t) p * (size_t) n_expert_ + (size_t) expert;
++    return ready_[idx].gen.load(std::memory_order_acquire) == async_gen_.load(std::memory_order_relaxed);
++}
++
+ void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
+     const void * key = (const void *) src0;
+     auto it = std::lower_bound(texp_.begin(), texp_.end(), key,
+@@ -1550,6 +1570,18 @@
+ void ExpertStreamSource::enable_overlap_hook() {
+ #ifdef BMOE_HAVE_EXPERT_READY_HOOK
+     ggml_cpu_set_expert_ready_hook(&ExpertStreamSource::c_expert_ready, this);
++#ifdef BMOE_HAVE_EXPERT_PROBE_HOOK
++    if (resident_first_) {
++        ggml_cpu_set_expert_probe_hook(&ExpertStreamSource::c_expert_probe, this);
++        std::fprintf(stderr, "bmoe: expert order = resident-first (MUL_MAT_ID computes experts already "
++                             "in memory before the ones still in flight)\n");
++    }
++#else
++    if (resident_first_) {
++        std::fprintf(stderr, "bmoe: --expert-resident-first needs the ggml_cpu_set_expert_probe_hook "
++                             "fork patch; ignoring\n");
++    }
++#endif
+     if (arena_) ggml_cpu_set_expert_data_hook(&ExpertStreamSource::c_expert_data, this);
+     hook_registered_ = true;
+ #endif
+@@ -1602,6 +1634,9 @@
+     // on_expert_ready and touch members we are about to tear down.
+     if (hook_registered_) {
+         ggml_cpu_set_expert_ready_hook(nullptr, nullptr);
++#ifdef BMOE_HAVE_EXPERT_PROBE_HOOK
++        ggml_cpu_set_expert_probe_hook(nullptr, nullptr);
++#endif
+         ggml_cpu_set_expert_data_hook(nullptr, nullptr);
+         hook_registered_ = false;
+     }

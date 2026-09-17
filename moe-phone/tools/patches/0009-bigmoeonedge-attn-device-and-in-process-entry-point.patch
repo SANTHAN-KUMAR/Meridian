@@ -24,15 +24,17 @@ diff --git a/cli/CMakeLists.txt b/cli/CMakeLists.txt
 diff --git a/cli/main.cpp b/cli/main.cpp
 --- a/cli/main.cpp
 +++ b/cli/main.cpp
-@@ -448,6 +448,7 @@
+@@ -448,7 +448,9 @@
          "      --cpu-mask HEX      pin the compute threadpool to these cores, strict (moe-phone)\n"
          "      --io-cpu-mask HEX   pin the expert-read lanes to these cores (moe-phone)\n"
          "      --ppl-batch N       with --ppl: N teacher-forced tokens per decode (prices a verify batch) (moe-phone)\n"
 +        "      --attn-device N     run the attention matmuls on ggml device N (HTP0 / GPUOpenCL), experts stay streamed on CPU (moe-phone)\n"
          "      --slot-arena        expert slices in never-released pool slots read via a MUL_MAT_ID pointer hook (moe-phone)\n"
++        "      --expert-resident-first  compute a layer's resident experts before the ones still being read (moe-phone)\n"
          "      --defer-evict       batch evicted pages' release after each decode (moe-phone)\n"
          "      --recycle-pages     move evicted experts' pages into the next miss (mremap) instead of re-faulting (moe-phone)\n"
-@@ -592,7 +593,15 @@
+         "      --no-odirect        do not bypass the page cache for expert reads\n"
+@@ -592,7 +594,15 @@
      }
  }
  
@@ -48,7 +50,7 @@ diff --git a/cli/main.cpp b/cli/main.cpp
      RunConfig cfg;
      std::string csv_path;
      std::string route_trace_path;
-@@ -692,6 +701,8 @@
+@@ -692,8 +702,12 @@
              cfg.cpu_mask = std::strtoull(next("--cpu-mask"), nullptr, 16);
          else if (a == "--ppl-batch")
              cfg.ppl_batch = std::atoi(next("--ppl-batch"));
@@ -56,11 +58,28 @@ diff --git a/cli/main.cpp b/cli/main.cpp
 +            cfg.attn_device = next("--attn-device");
          else if (a == "--slot-arena")
              cfg.moe.slot_arena = true;
++        else if (a == "--expert-resident-first")
++            cfg.moe.expert_resident_first = true;
          else if (a == "--defer-evict")
+             cfg.moe.defer_evict = true;
+         else if (a == "--recycle-pages")
 diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
 --- a/core/include/bmoe/config.h
 +++ b/core/include/bmoe/config.h
-@@ -378,6 +378,14 @@
+@@ -83,6 +83,12 @@
+     // --defer-evict and --repack-experts (checked at init).
+     bool slot_arena = false;
+ 
++    // moe-phone: let the MUL_MAT_ID kernel compute a layer's already-resident experts BEFORE the ones
++    // still being read, instead of consuming them in ascending expert id. Needs the fork's
++    // ggml_cpu_set_expert_probe_hook. Lossless: only the order of the same sum changes, and the ready
++    // hook still blocks before any expert's bytes are read. Off by default.
++    bool expert_resident_first = false;
++
+ 
+     bool o_direct = true;     // bypass the page cache (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+     bool load_all = false;    // debug/A-B: load ALL experts each token (full-sweep baseline)
+@@ -378,6 +384,14 @@
      // Unpinned ggml workers migrate across the 15R's clusters and every barrier waits for the
      // slowest one; see moe-phone/results/2026-09-17/decode_15r_pin.json.
      uint64_t cpu_mask = 0;
@@ -108,7 +127,24 @@ diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
  #include "chat_parse.h"
  #include "thinking_control.h"
  #include "../moe/router_hook.h"
-@@ -619,6 +620,26 @@
+@@ -286,6 +287,7 @@
+     // both sources, because the verify half of the loop does not care who drafted.
+     std::unique_ptr<llama_context, void (*)(llama_context *)> ctx_dft{nullptr, llama_free};
+     ggml_threadpool_t threadpool = nullptr; // moe-phone --cpu-mask: pinned compute pool, freed after the contexts
++    ggml_backend_t attn_backend = nullptr; // moe-phone --attn-device: owns the buffers the weights live in
+     common_speculative_ptr mtp;
+     // Serves both roles on the speculative path, never both at once: a prefill chunk (up to
+     // n_batch tokens, logits on the last) and a verify pass (1 + draft_max tokens, logits on all).
+@@ -378,6 +380,8 @@
+         if (threadpool) ggml_threadpool_free(threadpool);
+         hook.reset();
+         model.reset();
++        // after the model, because its weight buffers were allocated from this backend's buffer type
++        if (attn_backend) ggml_backend_free(attn_backend);
+         mapping_placeholders.release();
+         if (backend_inited) llama_backend_free();
+     }
+@@ -619,6 +623,40 @@
      mparams.load_mode = LLAMA_LOAD_MODE_MMAP;
      mparams.use_extra_bufts = false;
      mparams.n_gpu_layers = 0;
@@ -121,7 +157,21 @@ diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
 +            return fail("--attn-device " + cfg.attn_device + ": no such ggml device (devices are listed by "
 +                        "llama-bench --list-devices; HTP0 needs an app process)");
 +        }
++        // The device's backend must be initialised BEFORE its buffer type is used: ggml-opencl builds
++        // the context that its buffer type reads only at device init, so allocating weights into that
++        // buft first dereferences null inside ggml_backend_opencl_buffer_type_get_alignment (measured:
++        // SIGSEGV at model load, fault addr 0x60, results/2026-09-18/bmoe_attn_ab GPU arm). The backend
++        // is kept for the session's lifetime because the weight buffers belong to it.
++        im.attn_backend = ggml_backend_dev_init(adev, nullptr);
++        if (!im.attn_backend) {
++            return fail("--attn-device " + cfg.attn_device + ": the device exists but its backend failed "
++                        "to initialise (for HTP0 this is the FastRPC session: it only opens inside an "
++                        "app process)");
++        }
 +        ggml_backend_buffer_type_t abuft = ggml_backend_dev_buffer_type(adev);
++        if (!abuft) {
++            return fail("--attn-device " + cfg.attn_device + ": no buffer type for this device");
++        }
 +        static const char * pats[] = { "attn_q.weight", "attn_k.weight", "attn_v.weight", "attn_output.weight" };
 +        bmoe_attn_overrides.clear();
 +        for (const char * p : pats) {
@@ -135,7 +185,7 @@ diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
      // The nextn/MTP block is skipped at load unless asked for: llama.cpp marks its tensors
      // TENSOR_SKIP by default, and only --mtp builds a graph over them. n_layer_nextn comes from
      // the gguf metadata either way, so the "this model has no trained head" check below is
-@@ -897,6 +918,12 @@
+@@ -897,6 +935,12 @@
              // one entry's alias list so the bytes are still read and allocated exactly once.
              std::vector<DenseTensorRef> dense, rows;
              std::unordered_map<uint64_t, size_t> dense_at; // (shard, file offset) -> index in `dense`
@@ -148,7 +198,7 @@ diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
              for (ggml_tensor * t : im.hook->captured_weight_objects()) {
                  if (!t) continue;
                  const std::string name = t->name;
-@@ -904,6 +931,15 @@
+@@ -904,6 +948,15 @@
                  auto off = offs.off_by_name.find(name);
                  auto sz = offs.size_by_name.find(name);
                  if (off == offs.off_by_name.end() || sz == offs.size_by_name.end()) continue; // not a file tensor
@@ -164,7 +214,7 @@ diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
                  const int file_idx = offs.file_by_name.at(name);
                  const uint64_t key = ((uint64_t) (uint32_t) file_idx << 48) ^ off->second;
                  auto seen = dense_at.find(key);
-@@ -922,6 +958,11 @@
+@@ -922,6 +975,11 @@
                  // qualified as row-gathered; the guard costs nothing and keeps that coupling explicit.
                  if (row_names.count(name)) rows.push_back(d);
              }

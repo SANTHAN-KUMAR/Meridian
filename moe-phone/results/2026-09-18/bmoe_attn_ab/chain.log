@@ -1,0 +1,13 @@
+2026-09-18T01:24:21+05:30 waiting for app-engine driver
+2026-09-18T01:46:21+05:30 driver done
+2026-09-18T01:46:21+05:30 stopping bmoe_mem pids: 10343
+10348
+2026-09-18T01:46:31+05:30 stopping bmoe_mem pids: 10343
+10348
+2026-09-18T01:46:41+05:30 model in app storage: 0 of 17379988032 bytes
+2026-09-18T01:46:41+05:30 copying model
+2071+1 records in
+2071+1 records out
+17379988032 bytes (16 G) copied, 21.472 s, 772 M/s
+2026-09-18T01:47:03+05:30 copy finished in 22s, size 17379988032 (want 17379988032)
+2026-09-18T01:47:03+05:30 starting attention-device A/B
