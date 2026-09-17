@@ -20,7 +20,28 @@ thermal_ok() {
   st=$(dumpsys thermalservice 2>/dev/null | awk -F': ' '/^Thermal Status/{print $2; exit}')
   [ "${st:-9}" = 0 ] && [ "$(cat $P0/scaling_max_freq)" = "$(cat $P0/cpuinfo_max_freq)" ] && [ "$(cat $P6/scaling_max_freq)" = "$(cat $P6/cpuinfo_max_freq)" ]
 }
+# quiesce — before every measured run: force-stop every third-party app (all users), stop the clone
+# profile (user 10), kill cached background processes. Prints "quiesce: stopped=<n> top_other_cpu=<pct>"
+# where cpu_busy_of_800 is total busy CPU (8 cores) in a 1-s sample after quiescing, with the 3 busiest
+# processes, so residual interference is part of the row. System services cannot be stopped without
+# root; they stay visible in that number. (Added 2026-09-17 on user direction.)
+quiesce() {
+  n=0
+  for pkg in $(pm list packages -3 2>/dev/null | sed 's/^package://'); do
+    am force-stop "$pkg" >/dev/null 2>&1; am force-stop --user 10 "$pkg" >/dev/null 2>&1; n=$((n + 1))
+  done
+  am stop-user -f 10 >/dev/null 2>&1
+  am kill-all >/dev/null 2>&1
+  sleep 2
+  # second 1-s sample of toybox top (the first sample has no CPU deltas): busy = 800 - idle over 8 cores,
+  # plus the three busiest processes by name
+  t=$(top -b -n 2 -d 1 -s 1 -o %CPU,NAME 2>/dev/null)
+  busy=$(echo "$t" | awk '/%idle/{i=$0} END{sub(/%idle.*/,"",i); n=split(i,a," "); printf "%d", 800-a[n]}')
+  top3=$(echo "$t" | awk '$1 ~ /^%CPU/ {blk++; c=0; next} blk==2 && c<3 {printf "%s:%s,", $2, $1; c++}')
+  echo "quiesce: stopped=$n cpu_busy_of_800=$busy top3=$top3"
+}
 thermal_wait() {
+  quiesce
   max=${1:-900}; w=0
   while ! thermal_ok; do
     [ "$w" -ge "$max" ] && { echo "$(thermal_state) gate=timeout waited=$w"; return 1; }
