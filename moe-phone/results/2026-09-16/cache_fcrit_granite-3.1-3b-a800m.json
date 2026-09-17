@@ -1,0 +1,147 @@
+{
+ "tokens": 32768,
+ "moe_layers": 32,
+ "top_k": 8,
+ "num_experts": 40,
+ "requests": 8388608,
+ "scopes": [
+  "per_layer"
+ ],
+ "replays": [
+  "atomic"
+ ],
+ "f_crit": 0.2,
+ "rows": [
+  {
+   "cache_fraction": 0.1,
+   "cache_experts": 128,
+   "cap_per_layer_min": 4,
+   "cap_per_layer_max": 4,
+   "rho_per_layer": 0.5,
+   "rho_per_layer_min_int": 0.5,
+   "floor_hit": 0.1,
+   "lru_hit__per_layer_atomic": 0.20700180530548096,
+   "lru_misses_per_token__per_layer_atomic": 203.00753784179688,
+   "belady_hit__per_layer": 0.3439350128173828,
+   "belady_misses_per_token__per_layer": 167.95263671875
+  },
+  {
+   "cache_fraction": 0.15,
+   "cache_experts": 192,
+   "cap_per_layer_min": 6,
+   "cap_per_layer_max": 6,
+   "rho_per_layer": 0.75,
+   "rho_per_layer_min_int": 0.75,
+   "floor_hit": 0.15,
+   "lru_hit__per_layer_atomic": 0.3329966068267822,
+   "lru_misses_per_token__per_layer_atomic": 170.75286865234375,
+   "belady_hit__per_layer": 0.4974163770675659,
+   "belady_misses_per_token__per_layer": 128.66140747070312
+  },
+  {
+   "cache_fraction": 0.18,
+   "cache_experts": 230,
+   "cap_per_layer_min": 7,
+   "cap_per_layer_max": 8,
+   "rho_per_layer": 0.8999999999999999,
+   "rho_per_layer_min_int": 0.875,
+   "floor_hit": 0.1796875,
+   "lru_hit__per_layer_atomic": 0.41368019580841064,
+   "lru_misses_per_token__per_layer_atomic": 150.09786987304688,
+   "belady_hit__per_layer": 0.5652689933776855,
+   "belady_misses_per_token__per_layer": 111.2911376953125
+  },
+  {
+   "cache_fraction": 0.2,
+   "cache_experts": 256,
+   "cap_per_layer_min": 8,
+   "cap_per_layer_max": 8,
+   "rho_per_layer": 1.0,
+   "rho_per_layer_min_int": 1.0,
+   "floor_hit": 0.2,
+   "lru_hit__per_layer_atomic": 0.4750025272369385,
+   "lru_misses_per_token__per_layer_atomic": 134.39935302734375,
+   "belady_hit__per_layer": 0.6046377420425415,
+   "belady_misses_per_token__per_layer": 101.21273803710938
+  },
+  {
+   "cache_fraction": 0.22,
+   "cache_experts": 282,
+   "cap_per_layer_min": 8,
+   "cap_per_layer_max": 9,
+   "rho_per_layer": 1.1,
+   "rho_per_layer_min_int": 1.0,
+   "floor_hit": 0.2203125,
+   "lru_hit__per_layer_atomic": 0.4935126304626465,
+   "lru_misses_per_token__per_layer_atomic": 129.6607666015625,
+   "belady_hit__per_layer": 0.6376630067825317,
+   "belady_misses_per_token__per_layer": 92.75827026367188
+  },
+  {
+   "cache_fraction": 0.25,
+   "cache_experts": 320,
+   "cap_per_layer_min": 10,
+   "cap_per_layer_max": 10,
+   "rho_per_layer": 1.25,
+   "rho_per_layer_min_int": 1.25,
+   "floor_hit": 0.25,
+   "lru_hit__per_layer_atomic": 0.5223565101623535,
+   "lru_misses_per_token__per_layer_atomic": 122.2767333984375,
+   "belady_hit__per_layer": 0.6802417039871216,
+   "belady_misses_per_token__per_layer": 81.85812377929688
+  },
+  {
+   "cache_fraction": 0.3,
+   "cache_experts": 384,
+   "cap_per_layer_min": 12,
+   "cap_per_layer_max": 12,
+   "rho_per_layer": 1.5,
+   "rho_per_layer_min_int": 1.5,
+   "floor_hit": 0.3,
+   "lru_hit__per_layer_atomic": 0.573739767074585,
+   "lru_misses_per_token__per_layer_atomic": 109.12261962890625,
+   "belady_hit__per_layer": 0.7391037940979004,
+   "belady_misses_per_token__per_layer": 66.7894287109375
+  },
+  {
+   "cache_fraction": 0.4,
+   "cache_experts": 512,
+   "cap_per_layer_min": 16,
+   "cap_per_layer_max": 16,
+   "rho_per_layer": 2.0,
+   "rho_per_layer_min_int": 2.0,
+   "floor_hit": 0.4,
+   "lru_hit__per_layer_atomic": 0.6741725206375122,
+   "lru_misses_per_token__per_layer_atomic": 83.41183471679688,
+   "belady_hit__per_layer": 0.8261231184005737,
+   "belady_misses_per_token__per_layer": 44.512481689453125
+  },
+  {
+   "cache_fraction": 0.6,
+   "cache_experts": 768,
+   "cap_per_layer_min": 24,
+   "cap_per_layer_max": 24,
+   "rho_per_layer": 3.0,
+   "rho_per_layer_min_int": 3.0,
+   "floor_hit": 0.6,
+   "lru_hit__per_layer_atomic": 0.8411585092544556,
+   "lru_misses_per_token__per_layer_atomic": 40.663421630859375,
+   "belady_hit__per_layer": 0.9291001558303833,
+   "belady_misses_per_token__per_layer": 18.150360107421875
+  },
+  {
+   "cache_fraction": 0.8,
+   "cache_experts": 1024,
+   "cap_per_layer_min": 32,
+   "cap_per_layer_max": 32,
+   "rho_per_layer": 4.0,
+   "rho_per_layer_min_int": 4.0,
+   "floor_hit": 0.8,
+   "lru_hit__per_layer_atomic": 0.9475864171981812,
+   "lru_misses_per_token__per_layer_atomic": 13.417877197265625,
+   "belady_hit__per_layer": 0.9799504280090332,
+   "belady_misses_per_token__per_layer": 5.1326904296875
+  }
+ ],
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-16/traces_granite-3.1-3b-a800m-q4_0-llamacpp.npz"
+}

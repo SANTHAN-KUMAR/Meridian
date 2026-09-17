@@ -1,0 +1,93 @@
+{
+ "prereg": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-16/s9_prereg_granite-3.1-3b-a800m_within-family.json",
+ "tolerance": 0.011854807535807366,
+ "grid_rho": [
+  1.0,
+  1.1,
+  1.25,
+  1.5,
+  2.0,
+  3.0,
+  4.0
+ ],
+ "test": {
+  "curve": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-16/cache_fcrit_granite-3.1-3b-a800m.json",
+  "rows": [
+   {
+    "rho": 1.0,
+    "observed": 0.4750025272369385,
+    "H_rho": 0.49318281809488934,
+    "H_floor": 0.44318281809488935,
+    "degenerate": false,
+    "err_H_rho": -0.018180290857950865,
+    "err_H_floor": 0.031819709142049124
+   },
+   {
+    "rho": 1.1,
+    "observed": 0.4935126304626465,
+    "H_rho": 0.5133333206176758,
+    "H_floor": 0.4583333206176758,
+    "degenerate": false,
+    "err_H_rho": -0.019820690155029297,
+    "err_H_floor": 0.035179309844970696
+   },
+   {
+    "rho": 1.25,
+    "observed": 0.5223565101623535,
+    "H_rho": 0.5466475486755371,
+    "H_floor": 0.4841475486755371,
+    "degenerate": false,
+    "err_H_rho": -0.024291038513183594,
+    "err_H_floor": 0.038208961486816406
+   },
+   {
+    "rho": 1.5,
+    "observed": 0.573739767074585,
+    "H_rho": 0.6044702529907227,
+    "H_floor": 0.5294702529907227,
+    "degenerate": false,
+    "err_H_rho": -0.030730485916137695,
+    "err_H_floor": 0.04426951408386226
+   },
+   {
+    "rho": 2.0,
+    "observed": 0.6741725206375122,
+    "H_rho": 0.7197745641072592,
+    "H_floor": 0.6197745641072592,
+    "degenerate": false,
+    "err_H_rho": -0.045602043469746945,
+    "err_H_floor": 0.05439795653025303
+   },
+   {
+    "rho": 3.0,
+    "observed": 0.8411585092544556,
+    "H_rho": 0.9056824048360189,
+    "H_floor": 0.7556824048360189,
+    "degenerate": false,
+    "err_H_rho": -0.06452389558156335,
+    "err_H_floor": 0.08547610441843667
+   },
+   {
+    "rho": 4.0,
+    "observed": 0.9475864171981812,
+    "H_rho": 0.9998779296875,
+    "H_floor": 0.7998779296875,
+    "degenerate": false,
+    "err_H_rho": -0.05229151248931885,
+    "err_H_floor": 0.1477084875106811
+   }
+  ],
+  "rmse": {
+   "H_rho": 0.04006259708907343,
+   "H_floor": 0.07343888783985847
+  },
+  "n_scored": 7,
+  "n_degenerate_excluded": 0,
+  "supported": {
+   "H_rho": false,
+   "H_floor": false
+  },
+  "preferred": "H_rho",
+  "verdict": "neither validated; H_rho preferred (lower RMSE)"
+ }
+}
