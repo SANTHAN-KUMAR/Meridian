@@ -12,6 +12,9 @@ X=$H/hex
 O=$H/npu_compare_$(date +%Y%m%d_%H%M); mkdir -p "$O"
 M=$H/olmoe-1b-7b-0924-q4_0.gguf
 export LD_LIBRARY_PATH=$X/lib:/vendor/lib64 ADSP_LIBRARY_PATH=$X/lib
+# the FastRPC capability query fails from the shell domain (err 114) and the backend would assume v73;
+# the 15R is HTP v81 (G0-NPU, 2026-09-14), so the architecture is set explicitly
+export GGML_HEXAGON_ARCH=v81
 $X/bin/llama-bench --list-devices > "$O/devices.txt" 2>&1
 cell() {
   tag=$1_rep$3
