@@ -3,6 +3,8 @@
 H=/data/local/tmp/moe-stream
 cd $H || exit 1
 until grep -q "ALL DONE 4" $H/phone_queue.log 2>/dev/null; do sleep 30; done
+echo "npu_compare start $(date)" >> $H/phone_queue.log
+sh npu_compare.sh 3 > npu_compare_nohup.log 2>&1 < /dev/null
 echo "verify_cost clean start $(date)" >> $H/phone_queue.log
 sh bmoe_verify_cost.sh 3 > bmoe_verify_nohup.log 2>&1 < /dev/null
 echo "repack_pin start $(date)" >> $H/phone_queue.log
