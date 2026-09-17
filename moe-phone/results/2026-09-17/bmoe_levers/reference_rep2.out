@@ -1,0 +1,17 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field<think>
+Okay, I need to write a long detailed essay about the history of computing, including its origins, key milestones, the people involved, and future directions. Let me start by breaking down the question. The user wants a comprehensive overview, so I should make sure to cover all these aspects thoroughly.
+
+First, the origins of computing. I remember that early computing concepts date back to ancient times. Maybe start with the abacus? That's one of the earliest calculating tools. Then there's the Antikythera mechanism, which is an ancient Greek device. I should mention those. Also, the development of number systems, like the Hindu-Arabic numerals, which were crucial for later computing.
+
+Next, key milestones. The 19th century had Charles Babbage and his Analytical Engine. Ada Lovelace is important here as the first programmer. Then the 20th century: World War II and the development of machines like the Colossus and ENIAC. Then the transition to transistors, integrated circuits, the rise of personal computers with Apple and IBM. The internet and the World Wide Web by Tim Berners-Lee. Also, the development of programming languages and operating systems.
+
+People involved: Babbage, Lovel
+
+generation: 256 tokens, 0.276 s/token (3.628 tok/s)
+compute: 64.7% CPU occupancy (0.7134 cpu-s/token over 4 threads), 76.25 major faults/token
+prefill: 34 tokens, 11.793 s (2.9 tok/s) | model load 37.070 s | TTFT 48.863 s
+mode: expert streaming, cache auto, dense anon, overlap
+moe-stream: read 69037.5 MiB (269.68 MiB/token), decode 0.276 s/token (compute 0.172 + cache mgmt 0.047 + flash I/O 0.357 s/token, 754 MiB/s)
+moe-cache: 70.5% hit, resident 3279.3 MiB, budget 3282 MiB (auto)
+moe-cache: 28605 evictions, 25588 re-reads (100.0/token) — bytes the cache had already paid for once
+moe-overlap: stall 0.057 s/token (flash reads overlapped with FFN compute)
