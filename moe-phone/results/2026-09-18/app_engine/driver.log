@@ -1,0 +1,17 @@
+2026-09-18T00:45:14+05:30 START
+2026-09-18T00:48:49+05:30 done qwen_htp_24s_rep1 rate=eval time =  196687.69 ms /   127 runs   ( 1548.72 ms per token,     0.65 tokens per second
+2026-09-18T00:53:24+05:30 done qwen_htp_32s_rep1 rate=eval time =  242817.35 ms /   127 runs   ( 1911.95 ms per token,     0.52 tokens per second
+2026-09-18T00:54:57+05:30 done qwen_gpu_32s_rep1 rate=eval time =   53209.90 ms /   127 runs   (  418.98 ms per token,     2.39 tokens per second
+2026-09-18T01:12:39+05:30 done qwen_cpu_32s_rep1 rate=eval time = 1027010.83 ms /   127 runs   ( 8086.70 ms per token,     0.12 tokens per second
+2026-09-18T01:17:44+05:30 done qwen_htp_24s_rep2 rate=eval time =  255774.80 ms /   127 runs   ( 2013.97 ms per token,     0.50 tokens per second
+2026-09-18T01:23:05+05:30 done qwen_htp_32s_rep2 rate=eval time =  274679.76 ms /   127 runs   ( 2162.83 ms per token,     0.46 tokens per second
+2026-09-18T01:24:54+05:30 done qwen_gpu_32s_rep2 rate=eval time =   54490.39 ms /   127 runs   (  429.06 ms per token,     2.33 tokens per second
+2026-09-18T01:42:52+05:30 done qwen_cpu_32s_rep2 rate=eval time = 1036695.55 ms /   127 runs   ( 8162.96 ms per token,     0.12 tokens per second
+2026-09-18T01:43:10+05:30 done olmoe_htp_rep1 rate=
+2026-09-18T01:43:58+05:30 done olmoe_gpu_rep1 rate=
+2026-09-18T01:44:32+05:30 done olmoe_cpu_rep1 rate=
+2026-09-18T01:44:50+05:30 done olmoe_htp_rep2 rate=
+2026-09-18T01:45:22+05:30 done olmoe_gpu_rep2 rate=
+2026-09-18T01:45:55+05:30 done olmoe_cpu_rep2 rate=
+2026-09-18T01:45:55+05:30 APP RUNS DONE
+2026-09-18T01:45:55+05:30 bmoe_mem launched

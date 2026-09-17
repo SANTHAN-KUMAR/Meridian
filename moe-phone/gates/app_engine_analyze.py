@@ -103,6 +103,31 @@ def parse_row(path, producer):
     return row
 
 
+# The engine prints the generated text before its report lines, so the text is everything up to the first
+# report line. Two arms that differ only in WHERE a matmul ran should agree token for token until
+# accumulated numerical differences flip a sampling decision; the divergence point is therefore the
+# honest correctness measure at temp 0, not exact equality (a different device is not bit-identical).
+RE_TEXT_END = re.compile(r"\n(generation:|prefill:|moe-stream:|moe-cache:)", re.M)
+
+
+def generated_text(path):
+    txt = open(path, encoding="utf-8", errors="replace").read()
+    m = RE_TEXT_END.search(txt)
+    body = txt[:m.start()] if m else txt
+    # drop the engine's own startup lines, which are prefixed and not part of the completion
+    return "\n".join(l for l in body.splitlines()
+                      if not l.startswith(("bmoe:", "~llama", "llama_", "load", "print_info",
+                                           "init:", "main:", "build:", "config")))
+
+
+def common_prefix_len(a, b):
+    n = min(len(a), len(b))
+    i = 0
+    while i < n and a[i] == b[i]:
+        i += 1
+    return i
+
+
 def arm_of(name):
     stem = name[:-4] if name.endswith(".txt") else name
     return re.sub(r"_rep\d+$", "", stem)
@@ -113,6 +138,9 @@ def main():
     p.add_argument("dir", help="a results directory of <arm>_rep<k>.txt files")
     p.add_argument("--producer", choices=["upstream", "bmoe"], default="upstream")
     p.add_argument("--reference", default=None, help="arm whose median other arms are divided by")
+    p.add_argument("--text-compare", action="store_true",
+                   help="also report how far each row's generated text agrees with the reference arm's "
+                        "first repeat (characters of common prefix, and the full lengths)")
     p.add_argument("--out-name", required=True)
     p.add_argument("--out-dir", default=None)
     a = p.parse_args()
@@ -152,6 +180,25 @@ def main():
         arms.append(e)
 
     out = {"source": os.path.abspath(a.dir), "producer": a.producer, "rows": rows, "arms": arms}
+
+    if a.text_compare:
+        if not a.reference:
+            raise ValueError("--text-compare needs --reference: there is nothing to compare against")
+        ref_files = sorted(r["file"] for r in rows if arm_of(r["file"]) == a.reference)
+        if not ref_files:
+            raise ValueError(f"no rows for reference arm {a.reference!r}")
+        ref_text = generated_text(os.path.join(a.dir, ref_files[0]))
+        out["text_reference_file"] = ref_files[0]
+        out["text_reference_chars"] = len(ref_text)
+        for r in rows:
+            t = generated_text(os.path.join(a.dir, r["file"]))
+            r["text_chars"] = len(t)
+            r["text_common_prefix_chars"] = common_prefix_len(ref_text, t)
+            r["text_identical_to_reference"] = (t == ref_text)
+        for e in arms:
+            mine = [r for r in rows if arm_of(r["file"]) == e["arm"]]
+            e["text_common_prefix_chars_min"] = min(r["text_common_prefix_chars"] for r in mine)
+            e["text_identical_to_reference_all"] = all(r["text_identical_to_reference"] for r in mine)
     if a.reference:
         ref = next((e for e in arms if e["arm"] == a.reference), None)
         if ref is None or "decode_tok_s_median" not in ref:
@@ -166,7 +213,9 @@ def main():
         r = e.get("decode_tok_s_median")
         print(f"{e['arm']:<22} n={e['n']} fail={e['n_failed']} "
               + (f"median {r:6.3f} tok/s ({e['ms_per_token_median']:7.1f} ms/token)" if r else "NO RATE")
-              + (f"  vs {a.reference}: {e['vs_reference']:.3f}x" if e.get("vs_reference") else ""))
+              + (f"  vs {a.reference}: {e['vs_reference']:.3f}x" if e.get("vs_reference") else "")
+              + (f"  text: {'identical' if e.get('text_identical_to_reference_all') else str(e['text_common_prefix_chars_min']) + ' chars agree'}"
+                 if "text_common_prefix_chars_min" in e else ""))
 
     if a.out_dir:
         os.makedirs(a.out_dir, exist_ok=True)

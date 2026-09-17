@@ -1,0 +1,19 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field. The essay should be written in a formal academic style and include references to scholarly sources. The essay should be at least 1000 words in length. The essay should be written in English. The essay should be written in a formal academic style and include references to scholarly sources. The essay should be at least 1000 words in length. The essay should be written in English. The essay should be written in a formal academic style and include references to scholarly sources. The essay should be at least 1000 words in length. The essay should be written in English.
+
+Okay, I need to write a
+
+y = 0.000, presence_penalty = 0.000
+	dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = -1
+	top_k = 40, top_p = 0.950, min_p = 0.050, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 0.000
+	mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+0.21.965.134 I sampler chain: logits -> ?penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> min-p -> ?xtc -> temp-ext -> dist 
+0.21.965.157 I generate: n_ctx = 1024, n_batch = 64, n_predict = 128, n_keep = 0
+0.21.965.160 I 
+1.29.435.462 I common_perf_print:    sampling time =      51.58 ms
+1.29.435.473 I common_perf_print:    samplers time =      33.87 ms /   154 tokens
+1.29.435.474 I common_perf_print:        load time =   14212.32 ms
+1.29.435.476 I common_perf_print: prompt eval time =   14196.35 ms /    26 tokens (  546.01 ms per token,     1.83 tokens per second)
+1.29.435.478 I common_perf_print:        eval time =   53209.90 ms /   127 runs   (  418.98 ms per token,     2.39 tokens per second)
+1.29.435.483 I common_perf_print:       total time =   67485.35 ms /   153 tokens
+1.29.435.486 I common_perf_print: unaccounted time =      27.52 ms /   0.0 %      (total - sampling - prompt eval - eval) / (total)
+1.29.435.487 I common_perf_print:    graphs reused =        126

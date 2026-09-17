@@ -661,6 +661,38 @@ CLAIMS = [
          artifact="gguf_active_qwen_olmoe.json", expected=697.4, tol=0.1,
          value=lambda A: next(r["active_bytes_per_token"] for r in A["act18"]
                               if r["file"] == "olmoe-1b-7b-0924-q4_0.gguf") / 1e6),
+    # ------------------------- IN-APP DEVICE THROUGHPUT (gates/app_engine_analyze.py +
+    #                           gates/device_bandwidth.py, 2026-09-18)
+    # Resident-model decode rates measured inside an app process, where the DSP session opens. These are
+    # llama.cpp's own llama-bench tg numbers, so they are a property of the DEVICE, not of our engine.
+    dict(id="inapp_olmoe_cpu_tok_s",
+         text="OLMoE-1B-7B Q4_0 resident, decoded in an app process on 4 CPU threads: 44.47 tok/s",
+         artifact="app_engine.json", expected=44.465, tol=0.01,
+         value=lambda A: next(x["decode_tok_s_median"] for x in A["app18"]["arms"] if x["arm"] == "olmoe_cpu")),
+    dict(id="inapp_olmoe_gpu_tok_s",
+         text="the same model on the Adreno via OpenCL: 49.98 tok/s, the fastest single device on this phone",
+         artifact="app_engine.json", expected=49.975, tol=0.01,
+         value=lambda A: next(x["decode_tok_s_median"] for x in A["app18"]["arms"] if x["arm"] == "olmoe_gpu")),
+    dict(id="inapp_olmoe_htp_tok_s",
+         text="the same model on the Hexagon NPU: 40.73 tok/s -- the NPU is the SLOWEST of the three on this workload, not the fastest",
+         artifact="app_engine.json", expected=40.73, tol=0.01,
+         value=lambda A: next(x["decode_tok_s_median"] for x in A["app18"]["arms"] if x["arm"] == "olmoe_htp")),
+    dict(id="device_ceiling_qwen3_cpu",
+         text="the CPU's measured weight-byte throughput (31.01 GB/s) puts a ceiling of 16.85 tok/s on Qwen3-30B-A3B, so the 10 tok/s goal needs 59% of what the CPU alone can deliver",
+         artifact="device_bandwidth.json", expected=16.8538, tol=0.01,
+         value=lambda A: next(x["implied_target_tok_s"] for x in A["devbw"]["devices"] if x["arm"] == "olmoe_cpu")),
+    dict(id="device_ceiling_qwen3_gpu",
+         text="the Adreno's 34.85 GB/s puts the highest single-device ceiling on Qwen3-30B-A3B: 18.94 tok/s",
+         artifact="device_bandwidth.json", expected=18.9423, tol=0.01,
+         value=lambda A: next(x["implied_target_tok_s"] for x in A["devbw"]["devices"] if x["arm"] == "olmoe_gpu")),
+    dict(id="device_ceiling_qwen3_htp",
+         text="the NPU's 28.41 GB/s puts its Qwen3-30B-A3B ceiling at 15.44 tok/s",
+         artifact="device_bandwidth.json", expected=15.4381, tol=0.01,
+         value=lambda A: next(x["implied_target_tok_s"] for x in A["devbw"]["devices"] if x["arm"] == "olmoe_htp")),
+    dict(id="upstream_inapp_qwen3_best",
+         text="upstream llama.cpp's expert-streaming branch, run in the same app process on the same model, reaches 2.36 tok/s at best (on the GPU); its CPU path reaches 0.12",
+         artifact="app_engine.json", expected=2.36, tol=0.01,
+         value=lambda A: max(x["decode_tok_s_median"] for x in A["app18"]["arms"] if x["arm"].startswith("qwen_"))),
     # ------------------------------------------------------ instrument agreement
     # ------------------------------------------- HEADROOM (gates/headroom_sims.py, 2026-09-17)
     # The offline verdicts re-run at the phone's operating point (rho 2-4), plus the per-token
@@ -879,6 +911,8 @@ def load_all():
         "vcost": load("verify_cost.json"),
         "hr": load("headroom_sims.json"),
         "act18": load("gguf_active_qwen_olmoe.json"),
+        "app18": load("app_engine.json"),
+        "devbw": load("device_bandwidth.json"),
     }
 
 

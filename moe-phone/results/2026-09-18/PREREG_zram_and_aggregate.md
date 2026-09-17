@@ -71,3 +71,40 @@ unsafe direction for concluding "they do" — so a positive result will need the
 app process, because the DSP session opens only in an app. Domain is therefore confounded with device
 in the *solo* comparison. It is not confounded in the *pair-vs-solo* comparison, which is the question
 being asked, because each arm is compared against its own solo row in the same domain.
+
+---
+
+## Q3 — What can `--attn-device` show, and what can it not? (added before the A/B produced a row)
+
+`host/bmoe_attn_ab.sh`, arms `attn_cpu` / `attn_htp` / `attn_gpu`, 3 rotated repeats.
+
+**This A/B is underpowered for speed, by construction, and that is written down here rather than
+discovered afterwards.** From the committed node trace (`results/2026-09-17/bmoe_trace`, the source of
+`compute_trace.json`), the matmuls `--attn-device` can move — `Qcur`, `Kcur`, `Vcur` and the 48 unnamed
+output projections — are **13.5% of decode node time**. The device that would take them is at best
+around 1.3x the CPU on resident weights, so the predicted end-to-end change is **~3% of node time**,
+against a base arm whose own three repeats spread 6.32 / 5.97 / 6.20 tok/s (≈3%). `SE/|θ| ≈ 1`: the
+comparison cannot resolve its own effect, and adding repeats until it does would be tuning against
+noise (CLAUDE.md §4.1).
+
+**So the A/B is run for what it CAN establish, and only that:**
+
+| question | how this A/B answers it |
+|---|---|
+| does the engine run at all with attention on another device, in an app process, with a 5 GB streamed expert cache? | the run completes, or it is a counted failure |
+| is the placement lossless? | the generated text is compared against `attn_cpu`'s, character by character (`app_engine_analyze.py --text-compare`). A different device is not bit-identical, so exact equality is not required; the divergence point is reported, and an early divergence or incoherent text is a defect, not a rounding difference |
+| does it catastrophically regress? | a large loss (well outside the spread) would be real and would kill the idea; a small win or loss will be reported as **not resolvable at this n**, with the n that would be required |
+| where does the time actually go? | each row's own `compute / cache mgmt / flash I/O` split is recorded, so a change in the compute term can be seen even when the end-to-end rate cannot resolve it |
+
+**The speed question is moved to the right instrument:** `host/matmul_sweep.sh` measures each shape on
+each device directly, with enough iterations and enough rotated weight copies to be both precise and
+DRAM-bound, and additionally reports the upload (repack) cost that decides whether *streamed* experts
+could ever compute on the DSP. Predictions for it, on record now:
+
+- attention shapes: the device is faster by a factor near the resident-model ratio (order 1.1–1.5x), and
+  since they are only 13.5% of node time, no placement of them reaches the project's goal;
+- expert shapes (`MUL_MAT_ID`, the majority of decode node time): the DSP's compute may well be faster,
+  but `ggml_hexagon_is_repack_type` covers Q4_0/Q4_1, so every uploaded expert is repacked tiled on the
+  CPU — the prediction is that `upload_over_compute` is large enough that the break-even hit rate
+  exceeds 1, i.e. **streamed experts on the DSP never win**, and the honest route to the goal is the
+  aggregate-bandwidth question (Q2), not this one.

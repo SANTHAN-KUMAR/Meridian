@@ -1,0 +1,8 @@
+| model                          |       size |     params | backend    | ngl | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | --: | ------: | --------------: | -------------------: |
+| olmoe A1.7B Q4_0               |   3.66 GiB |     6.92 B | OpenCL,HTP |   0 |       4 |            pp64 |         21.53 ± 0.00 |
+| olmoe A1.7B Q4_0               |   3.66 GiB |     6.92 B | OpenCL,HTP |   0 |       4 |            tg64 |         44.32 ± 0.00 |
+
+build: 1248fd8 (49)
+?htp_iface_skel_handle_invoke&_modver=1.0&_dom=cdsp&_session=0 handle 0xb400007bf3cd3780
+ggml-hex: HTP0 op batching: n-bufs 16 n-tensors 7168 n-ops 1024 vmem 3355443200

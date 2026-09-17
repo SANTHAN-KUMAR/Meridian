@@ -1,0 +1,38 @@
+{
+ "rates_source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/app_engine.json",
+ "active_source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/gguf_active_qwen_olmoe.json",
+ "resident_model": "olmoe-1b-7b-0924-q4_0.gguf",
+ "target_model": "Qwen3-30B-A3B-Q4_0.gguf",
+ "resident_active_bytes_per_token": 697412736.0,
+ "target_active_bytes_per_token": 1839971456.0,
+ "goal_tok_s": 10.0,
+ "devices": [
+  {
+   "arm": "olmoe_cpu",
+   "n": 2,
+   "n_failed": 0,
+   "resident_decode_tok_s_median": 44.465,
+   "effective_GB_s": 31.010457306240003,
+   "implied_target_tok_s": 16.853770858845323,
+   "meets_goal": true
+  },
+  {
+   "arm": "olmoe_gpu",
+   "n": 2,
+   "n_failed": 0,
+   "resident_decode_tok_s_median": 49.974999999999994,
+   "effective_GB_s": 34.853201481599996,
+   "implied_target_tok_s": 18.942251178922636,
+   "meets_goal": true
+  },
+  {
+   "arm": "olmoe_htp",
+   "n": 2,
+   "n_failed": 0,
+   "resident_decode_tok_s_median": 40.730000000000004,
+   "effective_GB_s": 28.405620737280003,
+   "implied_target_tok_s": 15.438076848774768,
+   "meets_goal": true
+  }
+ ]
+}

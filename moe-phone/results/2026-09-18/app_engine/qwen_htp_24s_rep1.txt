@@ -1,0 +1,22 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field. The essay should be written in a formal academic style and include references to at least three scholarly sources. The essay should be at least 1000 words in length. The essay should be written in English. The essay should be written in a formal academic style and include references to at least three scholarly sources. The essay should be at least 1000 words in length. The essay should be written in English. The essay should be written in a formal academic style and include references to at least three scholarly sources. The essay should be at least 1000 words in length. The essay should be written in
+
+1.079 I 
+0.01.381.188 I system_info: n_threads = 4 (n_threads_batch = 4) / 8 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | MATMUL_INT8 = 1 | DOTPROD = 1 | REPACK = 1 | 
+0.01.381.194 I 
+0.01.381.423 I sampler seed: 4021457361
+0.01.381.436 I sampler params: 
+	repeat_last_n = 64, repeat_penalty = 1.000, frequency_penalty = 0.000, presence_penalty = 0.000
+	dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = -1
+	top_k = 40, top_p = 0.950, min_p = 0.050, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 0.000
+	mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+0.01.381.440 I sampler chain: logits -> ?penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> min-p -> ?xtc -> temp-ext -> dist 
+0.01.381.440 I generate: n_ctx = 1024, n_batch = 64, n_predict = 128, n_keep = 0
+0.01.381.441 I 
+3.29.946.306 I common_perf_print:    sampling time =      26.01 ms
+3.29.946.309 I common_perf_print:    samplers time =      16.43 ms /   154 tokens
+3.29.946.318 I common_perf_print:        load time =   11845.46 ms
+3.29.946.321 I common_perf_print: prompt eval time =   11844.88 ms /    26 tokens (  455.57 ms per token,     2.20 tokens per second)
+3.29.946.322 I common_perf_print:        eval time =  196687.69 ms /   127 runs   ( 1548.72 ms per token,     0.65 tokens per second)
+3.29.946.325 I common_perf_print:       total time =  208565.44 ms /   153 tokens
+3.29.946.327 I common_perf_print: unaccounted time =       6.87 ms /   0.0 %      (total - sampling - prompt eval - eval) / (total)
+3.29.946.328 I common_perf_print:    graphs reused =        126
