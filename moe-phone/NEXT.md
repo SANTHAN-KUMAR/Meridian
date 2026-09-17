@@ -100,6 +100,17 @@ drafting, bigger models (gpt-oss-20b not yet run on the phone). Audit hardening:
 bmoe_levers / bmoe_repack / bmoe_pin / ocl_split / recycle_laptop_check; README/POSITION narrative.
 Pending: cancel the overnight watchdog cron when the plan is done.
 
+### Update 16:30 — results already on the phone (not yet pulled into results/)
+- gpu_stream2: patch 0005 v2 no longer aborts, but the GPU-cache run is WRONG: OLMoE perplexity
+  gpu_stream 14.6022 vs gpu_full 11.5482 (cpu 11.5128). Correctness gate FAILED — no speed claim allowed.
+  Suspects, in order: (a) the Adreno trans4 partial conversion or the q_img image over the slot buffer;
+  (b) remapped-ids handling in the GEMM tile path (emap values are slot ids, check against src0->ne[2]);
+  (c) the GEMV single-token path. Bisect by running with ADRENO MoE kernels off for the stream cache.
+  Qwen3-30B-A3B GPU stream: exit 139 (segfault), read qwen_gpu_stream24.err.
+- verify cost rep1 total s at N=1,2,3,5: 135.17 105.72 97.31 90.62; rep2: 134.83 67.10 83.17 125.06 —
+  rep2 is erratic (N=5 slower than rep1 by 38%), so c(N) needs the thermal columns and more repeats.
+- bmoe_pin2 (rotated confirmation) started 16:23, running.
+
 ## OVERNIGHT PLAN 2026-09-16 night — resume here
 
 **Goal (user, verbatim intent): run big MoE models on the 15R at a decent decode rate — reproduce
