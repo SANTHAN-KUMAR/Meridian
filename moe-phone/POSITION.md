@@ -317,6 +317,33 @@ found). **Still not found:** a decode-rate predictor validated on held-out engin
 bounded exact lookahead used as an *eviction* oracle (colibri's lookahead feeds prefetch only;
 its eviction guard is frequency-based).
 
+**Added 2026-09-17 — third search, prompted by three AI-generated reports (ChatGPT, Gemini, Perplexity)
+the user supplied.** Two research subagents: one checked each report claim against primary pages, one
+searched for work not already listed here (queries recorded in their reports, summarised: MoE expert
+offloading edge 2025, HOBBIT, AdapMoE, MoE-Infinity, Fiddler, ProMoE, SwapMoE, MoE-Lightning, Klotski,
+DAOP, SiDA-MoE, ExpertFlow, MoE-Gen, FloE, D2MoE, HeteroLLM, Hexagon NPU MoE, Qwen3-30B-A3B Android tok/s,
+gpt-oss-20b/120b phone, Snapdragon 8 Elite Gen 5 LLM benchmark, ggml-hexagon MUL_MAT_ID, llama.cpp OpenCL
+Adreno MoE, Qualcomm Genie/QNN MoE, MNN-LLM MoE, speculative decoding offloading latency, thermal-aware
+on-device scheduling). DraftExpert and S2-MoE re-read here from their arXiv abstracts and the S2-MoE README.
+
+- **Still not found (not verified absent):** an unmodified checkpoint larger than DRAM decoding at
+  >= 8 tok/s on a phone. Closest open result remains BigMoeOnEdge's README (Qwen3-30B-A3B on a 12 GB
+  Android phone; its gpt-oss-120b row is a separate, slower row, which the Gemini report conflated).
+- **Needs model changes, so not our regime:** PowerInfer-2 (TurboSparse retrained checkpoint, OnePlus 12,
+  mobile engine unreleased); DraftExpert (self-distilled draft expert per layer; DeepSeek-V2-Lite,
+  Moonlight-16B); MobileMoE and Maple-Preview (trained from scratch); Edge0-35B-A3B (LoRA + prerouter
+  adapters, measured on a Mac mini, not a phone); HOBBIT, FloE, D2MoE, SiDA-MoE, AdapMoE, SwapMoE.
+- **Lossy routing, Tier-A only:** Mixture of Cache-Conditional Experts (arXiv 2412.00099; the reports'
+  "Minimind-MoE" is not a real paper name), SMoE expert substitution (2508.18983).
+- **Not a phone:** NPUMoE (2604.18788, Apple M-series), flash-moe (Mac), S2-MoE (Jetson AGX Orin, RTX 4090;
+  training-free, llama.cpp, MIT code), TensorRT-Edge-LLM (Jetson), OD-MoE (multi-node).
+- **Prefill-only:** llm.npu / mllm-NPU (2407.05858).
+- **Vendor roadmap to watch, not reproducible:** Qualcomm public statements (secondary press) about NPU-side
+  flash-to-memory expert management for ~30B-A3B MoE on future Hexagon parts [S].
+- **Report claims found inaccurate:** the "iPhone 16 Pro 3B ~4 tok/s vs iPhone 15 ~14 tok/s" row; Gemini's
+  gpt-oss-120b figure; "Minimind-MoE"; Edge0 and NPUMoE presented as phone results; llm.npu presented as
+  a decode speed-up.
+
 ## 10. Venues
 
 Systems/mobile: **MobiSys, MobiCom, SenSys, EuroSys, ASPLOS, OSDI** (PowerInfer-2's lineage and
