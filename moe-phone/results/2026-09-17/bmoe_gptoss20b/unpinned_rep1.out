@@ -1,0 +1,22 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field.
+
+The history of computing is a fascinating journey that spans centuries, from the earliest mechanical devices to the modern digital age. This essay will explore the origins of computing, key milestones, influential figures, and future directions in the field.
+
+Origins of Computing
+
+The origins of computing can be traced back to ancient times, where early civilizations used simple tools and devices to perform calculations. The abacus, for example, was invented in ancient China around 2400 BCE and was used for arithmetic calculations. In ancient Greece, the Antikythera mechanism, an ancient analog computer, was used to calculate astronomical positions and eclipses.
+
+The development of mechanical calculators in the 17th and 18th centuries marked a significant milestone in computing history. The first mechanical calculator, the Pascaline, was invented by Blaise Pascal in 1642. It used a series of gears and wheels to perform addition and subtraction. In the 19th century, Charles Babbage designed the Analytical Engine, a mechanical computer that could perform any calculation using punched cards. Although the Analytical Engine was never built, it laid the foundation for modern computing.
+
+Key Milestones
+
+The 20th century saw significant advancements in computing technology. In 1937, Alan Turing proposed the concept of a universal
+
+generation: 256 tokens, 0.232 s/token (4.319 tok/s)
+compute: 62.0% CPU occupancy (0.5747 cpu-s/token over 4 threads), 3.52 major faults/token
+prefill: 26 tokens, 3.854 s (6.7 tok/s) | model load 22.846 s | TTFT 26.700 s
+mode: expert streaming, cache auto, dense anon, overlap
+moe-stream: read 71610.5 MiB (279.73 MiB/token), decode 0.232 s/token (compute 0.122 + cache mgmt 0.034 + flash I/O 0.293 s/token, 954 MiB/s)
+moe-cache: 75.5% hit, resident 3315.6 MiB, budget 3327 MiB (auto)
+moe-cache: 5872 evictions, 5478 re-reads (21.4/token) — bytes the cache had already paid for once
+moe-overlap: stall 0.076 s/token (flash reads overlapped with FFN compute)
