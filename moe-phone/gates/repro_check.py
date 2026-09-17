@@ -113,6 +113,8 @@ JOBS_NEW += [
     ("bmoe_analyze.py", [f"{D17}/bmoe_repack", "--out-name", "bmoe_repack.json"], "bmoe_repack.json", "2026-09-17"),
     ("bmoe_analyze.py", [f"{D17}/bmoe_pin", "--out-name", "bmoe_pin.json"], "bmoe_pin.json", "2026-09-17"),
     ("bmoe_analyze.py", [f"{D17}/bmoe_pin2", "--out-name", "bmoe_pin2.json"], "bmoe_pin2.json", "2026-09-17"),
+    ("bmoe_analyze.py", [f"{D17}/bmoe_cache", "--out-name", "bmoe_cache.json"], "bmoe_cache.json", "2026-09-17"),
+    ("bmoe_analyze.py", [f"{D17}/bmoe_lanes", "--out-name", "bmoe_lanes.json"], "bmoe_lanes.json", "2026-09-17"),
     ("verify_cost_analyze.py", [f"{D17}/bmoe_verify_clean/log.txt", "--out-name", "verify_cost.json"], "verify_cost.json", "2026-09-17"),
 ]
 
