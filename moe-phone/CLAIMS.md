@@ -101,13 +101,13 @@ internally consistent and wrong. That is what the property tests are for.
 | `bmoe_compute_share` | decode spends 0.145 s/token in compute, the largest single term | `bmoe_repro.json` | 0.1445 | ok |
 | `bmoe_i8mm_no_gain` | an i8mm build of the same engine gains nothing: 3.71 tok/s (its kernels are generic with repacking off) | `bmoe_repro.json` | 3.7060 | ok |
 | `bmoe_pinning_starves_io` | pinning every thread to 4 cores collapses streaming to 0.23 tok/s: it starves the I/O lanes | `bmoe_repro.json` | 0.2265 | ok |
-| `levers_reference` | one-lever sweep, reference cell: 3.68 tok/s median over 2 interleaved repeats (throttled CPU) | `bmoe_levers.json` | — | ERROR |
-| `levers_cache_big` | a larger expert cache (1 GB floor instead of 1.5 GB) is the only lever above reference: 3.98 tok/s median | `bmoe_levers.json` | — | ERROR |
-| `levers_t6_collapse` | 6 compute threads on top of 4 I/O lanes collapse decode to 1.10 tok/s median (oversubscribed cores) | `bmoe_levers.json` | — | ERROR |
-| `repack_plain` | i8mm build, generic kernels: 4.11 tok/s median, the fastest cell of the repack A/B | `bmoe_repack.json` | — | ERROR |
-| `repack_compute` | repacked kernels on streamed experts: compute 0.170 s/token median vs 0.146 generic - no compute gain | `bmoe_repack.json` | — | ERROR |
-| `pin_recycle_best` | pinned 4 compute threads + separate I/O cores + page recycling: 5.04 tok/s median (n=2, fixed cell order, throttled CPU) | `bmoe_pin.json` | — | ERROR |
-| `pin_unpinned_median` | the unpinned baseline in the same campaign: 3.13 tok/s median, one repeat collapsed to 1.58 | `bmoe_pin.json` | — | ERROR |
+| `levers_reference` | one-lever sweep, reference cell: 3.68 tok/s median over 2 interleaved repeats (throttled CPU) | `bmoe_levers.json` | 3.6765 | ok |
+| `levers_cache_big` | a larger expert cache (1 GB floor instead of 1.5 GB) is the only lever above reference: 3.98 tok/s median | `bmoe_levers.json` | 3.9805 | ok |
+| `levers_t6_collapse` | 6 compute threads on top of 4 I/O lanes collapse decode to 1.10 tok/s median (oversubscribed cores) | `bmoe_levers.json` | 1.0985 | ok |
+| `repack_plain` | i8mm build, generic kernels: 4.11 tok/s median, the fastest cell of the repack A/B | `bmoe_repack.json` | 4.1145 | ok |
+| `repack_compute` | repacked kernels on streamed experts: compute 0.170 s/token median vs 0.146 generic - no compute gain | `bmoe_repack.json` | 0.1700 | ok |
+| `pin_recycle_best` | pinned 4 compute threads + separate I/O cores + page recycling: 5.04 tok/s median (n=2, fixed cell order, throttled CPU) | `bmoe_pin.json` | 5.0360 | ok |
+| `pin_unpinned_median` | the unpinned baseline in the same campaign: 3.13 tok/s median, one repeat collapsed to 1.58 | `bmoe_pin.json` | 3.1325 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
 97 claims checked.
