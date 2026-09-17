@@ -1,0 +1,268 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f, applied AFTER 0002-0007.
+# --slot-arena: expert slices in never-decommitted pool slots; ggml-cpu MUL_MAT_ID reads them via ggml_cpu_set_expert_data_hook.
+# ===== engine (BigMoeOnEdge root) =====
+diff --git a/cli/main.cpp b/cli/main.cpp
+index 2ea09ea..d5e9cdf 100644
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -448,6 +448,7 @@ static void print_usage(const char * argv0) {
+         "      --cpu-mask HEX      pin the compute threadpool to these cores, strict (moe-phone)\n"
+         "      --io-cpu-mask HEX   pin the expert-read lanes to these cores (moe-phone)\n"
+         "      --ppl-batch N       with --ppl: N teacher-forced tokens per decode (prices a verify batch) (moe-phone)\n"
++        "      --slot-arena        expert slices in never-released pool slots read via a MUL_MAT_ID pointer hook (moe-phone)\n"
+         "      --defer-evict       batch evicted pages' release after each decode (moe-phone)\n"
+         "      --recycle-pages     move evicted experts' pages into the next miss (mremap) instead of re-faulting (moe-phone)\n"
+         "      --no-odirect        do not bypass the page cache for expert reads\n"
+@@ -691,6 +692,8 @@ int main(int argc, char ** argv) {
+             cfg.cpu_mask = std::strtoull(next("--cpu-mask"), nullptr, 16);
+         else if (a == "--ppl-batch")
+             cfg.ppl_batch = std::atoi(next("--ppl-batch"));
++        else if (a == "--slot-arena")
++            cfg.moe.slot_arena = true;
+         else if (a == "--defer-evict")
+             cfg.moe.defer_evict = true;
+         else if (a == "--recycle-pages")
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+index 9c54c15..9f85865 100644
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -77,6 +77,12 @@ struct MoeStreamConfig {
+     // and a re-commit of a queued slice cancels its release. Billed inside the decode's wall time.
+     bool defer_evict = false;
+ 
++    // moe-phone: expert slices live in fixed-size, never-decommitted pool slots (one pool per slice size);
++    // MUL_MAT_ID reads them through ggml_cpu_set_expert_data_hook. Eviction returns slots to a free list:
++    // no MADV_DONTNEED, no mremap, no first-touch faults after warm-up. Incompatible with --recycle-pages,
++    // --defer-evict and --repack-experts (checked at init).
++    bool slot_arena = false;
++
+     bool o_direct = true;     // bypass the page cache (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+     bool load_all = false;    // debug/A-B: load ALL experts each token (full-sweep baseline)
+     bool force_cache = false; // allow a cache_mb in the pathological band (tests/experiments)
+diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
+index 3c958f8..3bb7ed6 100644
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -63,6 +63,12 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+     io_cpu_mask_ = cfg.io_cpu_mask;
+     recycle_pages_ = cfg.recycle_pages;
+     defer_evict_ = cfg.defer_evict;
++    arena_ = cfg.slot_arena;
++    if (arena_ && (cfg.recycle_pages || cfg.defer_evict)) {
++        std::fprintf(stderr, "bmoe: --slot-arena cannot be combined with --recycle-pages / --defer-evict\n");
++        return false;
++    }
++    if (arena_) for (int p = 0; p < 4; ++p) arena_ptr_[p].assign((size_t) n_layer_ * (size_t) n_expert_, nullptr);
+     if (defer_evict_) deferred_bits_.assign((size_t) n_layer_ * (size_t) n_expert_, 0);
+     if (recycle_pages_) parked_bits_.assign((size_t) n_layer_ * (size_t) n_expert_, 0);
+     page_ = pio::vm_page(); // the real OS page size, for the dense-residency probe in any cache mode
+@@ -505,7 +511,8 @@ void ExpertStreamSource::prefetch(int il, const int32_t * ids, int n_ids) {
+         for (int p = 0; p < MoeRecipe::max_exps; ++p) {
+             const uint64_t slice = L.proj[p].nb2;
+             if (slice == 0) continue;
+-            char * dst = (char *) lbuf_[p][il] + (uint64_t) e * slice;
++            char * dst = arena_ ? arena_slot(il, e, p) : (char *) lbuf_[p][il] + (uint64_t) e * slice;
++            if (!dst) { ok = false; break; }
+             uintptr_t a0 = (uintptr_t) dst & ~(uintptr_t) (page_ - 1);
+             uintptr_t a1 = ((uintptr_t) dst + slice + page_ - 1) & ~(uintptr_t) (page_ - 1);
+             if (!pio::vm_commit((void *) a0, (size_t) (a1 - a0))) { // low on memory — stop quietly
+@@ -810,6 +817,11 @@ void ExpertStreamSource::release_entry_pages(int32_t id) {
+     for (int p = 0; p < MoeRecipe::max_exps; ++p) {
+         const uint64_t slice = layers_[il].proj[p].nb2;
+         if (slice == 0) continue; // absent slot in a fused layout
++        if (arena_) { // slot back to its pool: no page release, no fault on reuse
++            const size_t aid = (size_t) il * (size_t) n_expert_ + (size_t) e;
++            if (arena_ptr_[p][aid]) { arena_free_[slice].push_back(arena_ptr_[p][aid]); arena_ptr_[p][aid] = nullptr; }
++            continue;
++        }
+         char * s = (char *) lbuf_[p][il] + (uint64_t) e * slice;
+ #if defined(__linux__)
+         if (recycle_pages_ && (parked_bits_[(size_t) id] & (1u << p))) continue; // already parked
+@@ -834,6 +846,39 @@ void ExpertStreamSource::release_entry_pages(int32_t id) {
+         if (a1 > a0) pio::vm_evict((void *) a0, (size_t) (a1 - a0));
+     }
+ }
++char * ExpertStreamSource::arena_slot(int il, int e, int p) {
++    const size_t id = (size_t) il * (size_t) n_expert_ + (size_t) e;
++    if (arena_ptr_[p][id]) return arena_ptr_[p][id];
++    const uint64_t slice = layers_[il].proj[p].nb2;
++    auto & fl = arena_free_[slice];
++    if (fl.empty()) {
++        // grow the pool by 32 slots; pages are populated on first write and never released
++        const size_t n = 32, sz = (size_t) slice * n;
++        void * blk = pio::vm_reserve(sz);
++        if (!blk) return nullptr;
++        arena_blocks_.push_back({blk, sz});
++        for (size_t k = 0; k < n; ++k) fl.push_back((char *) blk + (size_t) slice * k);
++        arena_slots_ += (long long) n;
++    } else {
++        ++arena_reuse_;
++    }
++    char * slot = fl.back();
++    fl.pop_back();
++    arena_ptr_[p][id] = slot;
++    return slot;
++}
++
++const char * ExpertStreamSource::c_expert_data(const ggml_tensor * src0, int expert, void * self_) {
++    auto * self = (ExpertStreamSource *) self_;
++    const void * key = (const void *) src0;
++    auto it = std::lower_bound(self->texp_.begin(), self->texp_.end(), key,
++                               [](const std::pair<const void *, uint32_t> & a, const void * k) { return a.first < k; });
++    if (it == self->texp_.end() || it->first != key) return nullptr;
++    const int il = (int) (it->second >> 8), p = (int) (it->second & 0xff);
++    if (expert < 0 || expert >= self->n_expert_) return nullptr;
++    return self->arena_ptr_[p][(size_t) il * (size_t) self->n_expert_ + (size_t) expert];
++}
++
+ void ExpertStreamSource::flush_deferred_evictions() {
+     if (!defer_evict_ || deferred_.empty()) return;
+     const auto t0 = clock_t_::now();
+@@ -841,6 +886,11 @@ void ExpertStreamSource::flush_deferred_evictions() {
+         const int il = dp.first / n_expert_, e = dp.first % n_expert_, p = dp.second;
+         deferred_bits_[(size_t) dp.first] &= (uint8_t) ~(1u << p);
+         const uint64_t slice = layers_[il].proj[p].nb2;
++        if (arena_) { // slot back to its pool: no page release, no fault on reuse
++            const size_t aid = (size_t) il * (size_t) n_expert_ + (size_t) e;
++            if (arena_ptr_[p][aid]) { arena_free_[slice].push_back(arena_ptr_[p][aid]); arena_ptr_[p][aid] = nullptr; }
++            continue;
++        }
+         char * s = (char *) lbuf_[p][il] + (uint64_t) e * slice;
+         uintptr_t a0 = ((uintptr_t) s + page_ - 1) & ~(uintptr_t) (page_ - 1);
+         uintptr_t a1 = ((uintptr_t) s + slice) & ~(uintptr_t) (page_ - 1);
+@@ -996,6 +1046,7 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
+     const LayerExperts & L = layers_[il];
+     const uint64_t slice = L.proj[p].nb2;
+     if (slice == 0) return true; // absent slot in a fused layout
++    if (arena_) return arena_slot(il, e, p) != nullptr;
+     char * dst = (char *) lbuf_[p][il] + (uint64_t) e * slice;
+     if (defer_evict_) {
+         const int32_t cid = il * n_expert_ + e;
+@@ -1124,7 +1175,7 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
+         for (int p = 0; p < MoeRecipe::max_exps; ++p) {
+             const uint64_t slice = L.proj[p].nb2;
+             if (slice == 0) continue; // absent slot in a fused layout
+-            jobs_.push_back({(char *) lbuf_[p][il] + (uint64_t) e * slice, L.proj[p].file_off + (uint64_t) e * slice,
++            jobs_.push_back({arena_ ? arena_slot(il, e, p) : (char *) lbuf_[p][il] + (uint64_t) e * slice, L.proj[p].file_off + (uint64_t) e * slice,
+                              slice, -1, (int16_t) L.proj[p].file_idx, e, (int16_t) il, (int8_t) p, 0});
+         }
+         return true;
+@@ -1320,7 +1371,7 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
+             for (int e : staged_) {
+                 if (!seen_[e]) continue; // cache hit, already marked ready
+                 const int32_t flag = (int32_t) ((size_t) p * (size_t) n_expert_ + (size_t) e);
+-                jobs_.push_back({(char *) lbuf_[p][il] + (uint64_t) e * slice,
++                jobs_.push_back({arena_ ? arena_slot(il, e, p) : (char *) lbuf_[p][il] + (uint64_t) e * slice,
+                                  L.proj[p].file_off + (uint64_t) e * slice, slice, flag, (int16_t) L.proj[p].file_idx,
+                                  e, (int16_t) il, (int8_t) p, 0});
+             }
+@@ -1499,6 +1550,7 @@ void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
+ void ExpertStreamSource::enable_overlap_hook() {
+ #ifdef BMOE_HAVE_EXPERT_READY_HOOK
+     ggml_cpu_set_expert_ready_hook(&ExpertStreamSource::c_expert_ready, this);
++    if (arena_) ggml_cpu_set_expert_data_hook(&ExpertStreamSource::c_expert_data, this);
+     hook_registered_ = true;
+ #endif
+ }
+@@ -1537,6 +1589,8 @@ IExpertSource::Stats ExpertStreamSource::stats() const {
+ }
+ 
+ void ExpertStreamSource::shutdown() {
++    if (arena_)
++        std::fprintf(stderr, "bmoe: slot-arena: slots %lld reused %lld blocks %zu\n", arena_slots_, arena_reuse_, arena_blocks_.size());
+     if (defer_evict_)
+         std::fprintf(stderr, "bmoe: defer-evict: flushed %lld cancelled %lld\n", deferred_flushed_, deferred_cancelled_);
+     if (recycle_pages_)
+@@ -1548,6 +1602,7 @@ void ExpertStreamSource::shutdown() {
+     // on_expert_ready and touch members we are about to tear down.
+     if (hook_registered_) {
+         ggml_cpu_set_expert_ready_hook(nullptr, nullptr);
++        ggml_cpu_set_expert_data_hook(nullptr, nullptr);
+         hook_registered_ = false;
+     }
+ #endif
+diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
+index 4e627d4..1e16f68 100644
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -343,6 +343,13 @@ private:
+     // the next miss of the same size. Eval-thread only, like the LRU. Bounded by recycle_cap_.
+     bool recycle_pages_ = false;
+     bool defer_evict_ = false;                                  // moe-phone --defer-evict
++    bool arena_ = false;                                        // moe-phone --slot-arena
++    std::vector<char *> arena_ptr_[4];                          // per projection, per entry id: slot or nullptr
++    std::unordered_map<uint64_t, std::vector<char *>> arena_free_; // slice size -> free slots
++    std::vector<std::pair<void *, size_t>> arena_blocks_;       // reservations, released at shutdown
++    long long arena_slots_ = 0, arena_reuse_ = 0;
++    char * arena_slot(int il, int e, int p);                    // eval thread: slot for (il,e,p), allocating
++    static const char * c_expert_data(const ggml_tensor * src0, int expert, void * self);
+     std::vector<std::pair<int32_t, int8_t>> deferred_;          // (entry id, projection) awaiting release
+     std::vector<uint8_t> deferred_bits_;                        // bit p set while (id, p) is queued
+     long long deferred_flushed_ = 0, deferred_cancelled_ = 0;
+# ===== ggml (third_party/llama.cpp): only the expert-data hook hunks are new in 0008 (0002's repack hunks precede) =====
+diff --git a/ggml/include/ggml-cpu.h b/ggml/include/ggml-cpu.h
+index 98b4f2850..bee02310c 100644
+--- a/ggml/include/ggml-cpu.h
++++ b/ggml/include/ggml-cpu.h
+@@ -150,6 +150,18 @@ extern "C" {
+     // Process-global registration; pass NULL to unregister. Not thread-safe with
+     // respect to concurrent graph computation - register before compute starts.
+     GGML_BACKEND_API void ggml_cpu_set_expert_ready_hook(ggml_cpu_expert_ready_hook_t hook, void * user_data);
++    // moe-phone: optional expert data indirection for MUL_MAT_ID. Returns the address of expert `expert`'s
++    // weights in src0 (NULL = use src0->data + expert * nb[2]). Called after the ready hook, per thread.
++    typedef const char * (*ggml_cpu_expert_data_hook_t)(const struct ggml_tensor * src0, int expert, void * user_data);
++    GGML_BACKEND_API void ggml_cpu_set_expert_data_hook(ggml_cpu_expert_data_hook_t hook, void * user_data);
++
++    // moe-phone: repacked (interleaved, i8mm/dotprod/AVX2) kernels for expert tensors whose data an
++    // external engine streams in. bind tags the tensor for the repacked MUL_MAT_ID kernel (false if
++    // the type/shape has no repacked form); slice repacks ONE expert's raw bytes in place at `slice`
++    // (same size in, same size out) and must run before those bytes are computed.
++    GGML_BACKEND_API bool ggml_cpu_repack_bind_tensor(struct ggml_tensor * t);
++    GGML_BACKEND_API bool ggml_cpu_repack_is_bound(const struct ggml_tensor * t);
++    GGML_BACKEND_API bool ggml_cpu_repack_slice(const struct ggml_tensor * t, void * slice, size_t nbytes);
+ 
+     GGML_BACKEND_API void ggml_cpu_fp32_to_fp32(const float *,       float *, int64_t);
+     GGML_BACKEND_API void ggml_cpu_fp32_to_i32 (const float *,     int32_t *, int64_t);
+diff --git a/ggml/src/ggml-cpu/ggml-cpu.c b/ggml/src/ggml-cpu/ggml-cpu.c
+index 6c2b92939..1a8831bb4 100644
+--- a/ggml/src/ggml-cpu/ggml-cpu.c
++++ b/ggml/src/ggml-cpu/ggml-cpu.c
+@@ -59,12 +59,27 @@
+ // Lets an external expert-streaming engine block until an expert's weights are resident.
+ static ggml_cpu_expert_ready_hook_t g_expert_ready_hook      = NULL;
+ static void *                       g_expert_ready_hook_data = NULL;
++static ggml_cpu_expert_data_hook_t  g_expert_data_hook       = NULL; // moe-phone
++static void *                       g_expert_data_hook_data  = NULL;
++void ggml_cpu_set_expert_data_hook(ggml_cpu_expert_data_hook_t hook, void * user_data) {
++    g_expert_data_hook      = hook;
++    g_expert_data_hook_data = user_data;
++}
+ 
+ void ggml_cpu_set_expert_ready_hook(ggml_cpu_expert_ready_hook_t hook, void * user_data) {
+     g_expert_ready_hook      = hook;
+     g_expert_ready_hook_data = user_data;
+ }
+ 
++// moe-phone: the repacked MUL_MAT_ID kernel (repack.cpp) calls this at the same point the generic
++// kernel calls the hook, so an overlapping streaming engine still gets to block until the expert
++// has landed before its bytes are read.
++void ggml_cpu_notify_expert_consumed(const struct ggml_tensor * src0, int expert) {
++    if (g_expert_ready_hook) {
++        g_expert_ready_hook(src0, expert, g_expert_ready_hook_data);
++    }
++}
++
+ // Note: once we move threading into a separate C++ file
+ // will use std::hardware_destructive_interference_size instead of hardcoding it here
+ // and we'll use C++ attribute syntax.
+@@ -1669,6 +1684,10 @@ static void ggml_compute_forward_mul_mat_id(
+         }
+ 
+         const char * src0_cur = (const char *) src0->data + cur_a * nb02;
++        if (g_expert_data_hook) { // moe-phone slot arena: the expert's weights live in a pool slot
++            const char * p = g_expert_data_hook(src0, cur_a, g_expert_data_hook_data);
++            if (p) src0_cur = p;
++        }
+         const void * wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
+         const size_t row_size = ggml_row_size(vec_dot_type, ne10);
+ 
