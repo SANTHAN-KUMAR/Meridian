@@ -75,6 +75,37 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
   partial of Qwen3-30B-A3B Q4_0 is kept in `moe-work/models/` and resumes with
   `curl -C -`. The pre-registered family-confound separator (gpt-oss-20b, 12 GB) is unfetched.
 
+## OVERNIGHT 2026-09-17/18 — NPU IS OPEN; what runs unattended
+
+**The NPU works, unrooted, and it needed two conditions (both verified):**
+1. the engine must run in the APP's OWN process. A binary the app spawns, `adb shell`, and `run-as` are all
+   refused at the vendor HAL (errno 13 -> AEE_ECONNREFUSED 0x72) even with `-ngl 0`, because the backend opens
+   the session at registry init;
+2. the app must declare the vendor libraries: `<uses-native-library libOpenCL.so / libcdsprpc.so /
+   libadsprpc.so>` (they are in /vendor/etc/public.libraries.txt).
+Harness: results/2026-09-17/npu_inprocess (AndroidManifest.xml, Probe.java, Run.java, npu_probe.cpp). The JNI
+shim sets ADSP_LIBRARY_PATH / GGML_HEXAGON_ARCH in-process and calls `llama_bench(argc,argv)` or
+`llama_completion(argc,argv)` by dlsym, so OUR engine stays the core and the app only opens the door.
+Gotcha found the hard way: build the Android libs with `-DANDROID_STL=c++_shared`, otherwise the app's
+libc++_shared and the libs' static libc++ free each other's pointers ("Pointer tag ... was truncated", SIGABRT).
+
+**First numbers (in-app):** OLMoE Q4_0 resident on HTP0 pp32 197.8 / tg32 40.7 tok/s (Adreno 102.2 / 47.6;
+4 pinned CPU cores 55.5 / 26.9 throttled). Qwen3-30B-A3B Q4_0 STREAMED from flash with a 24-slot expert cache
+on HTP0: coherent output, 4.88 tok/s over 31 tokens from a cold cache (same engine: GPU 1.9, CPU 0.39).
+
+**Running unattended (laptop driver `moe-work/overnight_npu.sh`, results in results/2026-09-18/app_engine):**
+Qwen3-30B on HTP0 with 24 and 32 slots, on GPUOpenCL 32 slots, on CPU 32 slots, 128 tokens, 2 repeats each;
+then OLMoE on all three devices; then it hands the phone back to `bmoe_mem.sh` (row-stream / smaller context
+/ both, against the 5 GB reference). Each row carries its own thermal state file.
+
+**Read the results like this:** the in-app engine is llama.cpp PR #25294, whose CPU path is ~10x slower than
+BigMoeOnEdge's (no read/compute overlap), so compare NPU against GPU/CPU *within* these rows, and compare the
+best in-app NPU number against BigMoeOnEdge's 6.48-7.25 tok/s separately - different engines.
+
+**Next levers, in order:** (1) if HTP decode scales with slots, raise the cache and re-measure; (2) move the
+output head (10.6 ms/token, claim trace_output_head_ms) and attention onto HTP/GPU while experts stream;
+(3) port the NPU path into BigMoeOnEdge's overlap engine, which is the only engine that hides I/O.
+
 ## LIVE TRACKER (updated as results land) — 2026-09-17 evening
 
 ### Phone queue (phone-side: phone_queue4 -> 5 -> 6; log /data/local/tmp/moe-stream/phone_queue.log)
