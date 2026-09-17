@@ -9,6 +9,8 @@
 #   floor768    --cache-floor-mb 768 with a 6 GB ceiling: a larger cache from the same RAM
 #   ub64        --ubatch 64 (compute buffer ~305 MiB at ubatch 512 shrinks; prefill slower, decode graph unchanged)
 #               with a 6 GB ceiling and the 1 GB floor, so the freed MiB go to the expert cache
+# (2026-09-17 23:xx: the first run of this script split its flag strings with ${fl%%|*}, which mksh treats as a
+# pattern alternation, so every run exited 1 with 'unknown arg'. Split with cut since.)
 # Rotated order over 5 cells x 3 repeats; performance mode is switched immediately before each run and its state,
 # the cpufreq caps and the per-core current frequency after 60 s of decode are logged per row.
 #   sh bmoe_boost.sh REPS
@@ -45,7 +47,7 @@ flags() {
 for r in $(seq 1 "$REPS"); do
   set -- $cells
   i=0; while [ $i -lt $(( (r - 1) % 5 )) ]; do first=$1; shift; set -- "$@" "$first"; i=$((i + 1)); done
-  for c in "$@"; do fl=$(flags $c); run "$c" "${fl%%|*}" "${fl#*|}" "$r"; done
+  for c in "$@"; do fl=$(flags $c); pm=$(echo "$fl" | cut -d"|" -f1); fx=$(echo "$fl" | cut -d"|" -f2-); run "$c" "$pm" "$fx" "$r"; done
 done
 cmd power set-fixed-performance-mode-enabled false
 echo "done $(date)" | tee "$O/DONE"

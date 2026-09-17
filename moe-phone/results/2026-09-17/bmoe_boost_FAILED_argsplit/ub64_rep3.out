@@ -1,0 +1,154 @@
+usage: ./bmoe-cli -m <model.gguf> [options]
+
+  -m, --model PATH        gguf model (required)
+  -p, --prompt STR        prompt text
+  -n, --n-predict N       tokens to generate (default 128)
+  -t, --threads N         compute threads (default 4)
+  -c, --ctx-size N        context size (default 2048)
+      --ubatch N          widest graph computed at once (0 = as wide as the context).
+                          Compute buffers are reserved for it, so a smaller value hands
+                          RAM back to the expert cache at the cost of prefill speed;
+                          decode is unaffected. Measured: a context of 2048 reserves
+                          320 MiB, falling to 80 MiB at 512.
+      --chatml            wrap the prompt in the model family's chat turn (gemma/chatml)
+      --no-think          render the chat template with reasoning disabled
+      --progress          emit machine telemetry (one JSON line per token)
+      --session           keep the model loaded and serve JSON prompt requests from stdin
+      --csv PATH          also write per-token metrics as CSV
+      --route-trace PATH  diagnostics: write the per-step per-layer MoE routing trace
+                          (which experts each layer routed, their weight, cache state).
+                          Needs --moe-stream; costs speed — not for benchmark runs
+      --compute-trace PATH
+                          diagnostics: isolate and time EVERY graph node (per-op detail,
+                          major faults per node). Serializes the graph — proportions only
+      --compute-trace-layers PATH
+                          same trace at layer granularity: one barrier per layer, so
+                          coalescing and the expert prefetch survive and the numbers stay
+                          close to an untraced run. Rows aggregate per layer (op LAYER)
+      --io-trace PATH     diagnostics: one row per expert read — its (layer, expert,
+                          projection), size and latency. Needs --moe-stream; this is how a
+                          flash-bandwidth claim is checked against the reads that made it
+      --n-expert-used N   override active MoE experts per token (top-k); lower = faster
+                          but changes the output (quality). 0 = model default
+  -h, --help              show this text and exit
+      --version           print the engine version and exit
+
+  Sampling (default: greedy/argmax, deterministic):
+      --temp F            sampling temperature; <= 0 keeps greedy (default 0). > 0 enables
+                          the chain top-k -> top-p -> temp -> dist
+      --top-k N           top-k cutoff when sampling (0 disables the stage; default 40)
+      --top-p F           nucleus cutoff in (0,1] when sampling (default 0.95)
+      --seed N            RNG seed for sampling (default: random per run)
+
+  Self-speculative decoding (draft a continuation, verify it in one wider decode).
+  Greedy verification makes the output token-identical to plain decode; the win is reading
+  the weights once per N tokens instead of N times, the risk is that N positions route
+  independently and widen the per-layer expert read set. Pick one source; off by default:
+      --mtp               draft with the model's own multi-token-prediction head.
+                          Needs a gguf with the nextn block (Qwen3.5/3.6)
+      --ngram             draft by looking the recent tokens up in the prompt and in what
+                          has been generated, proposing whatever followed last time. Costs
+                          no compute, no memory and no expert read, works on any model,
+                          and drafts NOTHING when it has no confident match — so a step
+                          without one costs exactly a plain decode
+      --draft N           tokens drafted per verify batch (default 3, max 8)
+      --mtp-p-min F       --mtp only: stop drafting when the head's best candidate falls
+                          below this probability (0..1, default 0 = draft the full width
+                          however unsure it is). Makes the draft width adaptive per step:
+                          a draft not made is one fewer MTP-block pass AND one fewer
+                          independently routed position in the verify batch
+      --ngram-min-match N --ngram only: shortest run of matching tokens allowed to draft
+                          (default 3). The confidence gate: raise it for fewer, better
+                          drafts, lower it for coverage
+
+  MoE expert streaming:
+      --moe-stream        stream only the routed experts per token (MoE models)
+      --cache-mb N|auto   LRU expert cache budget in MiB (0=off, or >=1500); auto=size to device
+                          (default: auto whenever --moe-stream is on)
+      --cache-floor-mb N  with --cache-mb auto: RAM to leave free (default 1536)
+      --cache-ceil-mb N   with --cache-mb auto: upper bound on the budget (0 = no cap)
+      --io-threads N      parallel expert-read lanes [1..8] (default 4)
+      --cpu-mask HEX      pin the compute threadpool to these cores, strict (moe-phone)
+      --io-cpu-mask HEX   pin the expert-read lanes to these cores (moe-phone)
+      --ppl-batch N       with --ppl: N teacher-forced tokens per decode (prices a verify batch) (moe-phone)
+      --slot-arena        expert slices in never-released pool slots read via a MUL_MAT_ID pointer hook (moe-phone)
+      --defer-evict       batch evicted pages' release after each decode (moe-phone)
+      --recycle-pages     move evicted experts' pages into the next miss (mremap) instead of re-faulting (moe-phone)
+      --no-odirect        do not bypass the page cache for expert reads
+      --dense-weights M   dense (non-expert) weight policy: mmap | warm | anon (default) | ahwb
+                          (warm = page-cache them at load, best when the model fits in RAM;
+                          anon = read via O_DIRECT into our own buffers and rebind, so a
+                          reclaim hits zram not flash — the win on >RAM models;
+                          ahwb = as anon, but into dma-buf memory the kernel may not reclaim
+                          at all — not even to zram, which is what anon still pays for.
+                          Android-only; measured +17.9% on a long generation, off by default)
+                          Deprecated aliases kept for old scripts: --dense-odirect means
+                          `--dense-weights anon`, --no-warm-dense means `--dense-weights mmap`
+      --row-stream        serve dense tables the graph only GATHERS ROWS from (a token
+                          embedding) from flash instead of RAM: the tensor is bound to
+                          reserved address space and only the rows a token needs are
+                          read. Which tables qualify comes from the graph, not from a
+                          name list, so a model that also multiplies by its embedding
+                          table is left alone, on any architecture
+      --row-stream-mb N   resident window for those tables in MiB (default 64)
+      --release-mmap      unmap the model file after load once nothing reads through it
+                          (Windows: a live mapping serialises the streamer's concurrent reads;
+                          needs --dense-weights anon|ahwb; measured neutral on Android)
+      --load-all          debug: read ALL experts each token (A/B baseline)
+      --force-cache       allow a cache-mb in the pathological band
+      --overlap           overlap async expert reads with FFN compute (needs the fork)
+      --repack-experts    compute streamed experts with repacked i8mm/dotprod kernels (moe-phone)
+      --io-two-wave       publish a layer's first-projection reads before committing the
+                          rest, so the lanes start sooner (needs --overlap and the cache;
+                          experimental, off by default pending the on-device A/B)
+      --prefetch K        temporally prefetch the next K layers' experts (needs the cache)
+      --prefetch-sync     debug/tests only: complete each speculative read on the eval
+                          thread before returning. Defeats the point (nothing overlaps) but
+                          makes the integrate-then-hit path deterministic for the gates
+      --drop-cold-experts F  skip a routed expert that is a cache MISS and carries less than
+                          F x (1/top-k) of the routing's weight. F in (0, 1]; 1.0 is the
+                          uniform share and the useful maximum. LOSSY and cache-dependent:
+                          it changes the output, and not reproducibly. Off by default.
+      --expert-substitute L  EXPERIMENTAL, LOSSY: before committing a decode routing, raise
+                          the score of every resident expert by L x this token's score range
+                          and re-rank. A resident expert wins a slot only when it was within
+                          that margin of the one it displaces; weights are the router's own.
+                          Runs the same NUMBER of experts, fewer of which cost a read.
+                          L in [0, 1]; 0 is off. Needs the LRU cache. Measured best: 0.15
+      --ppl FILE          measure teacher-forced perplexity of FILE instead of generating.
+                          Every cell scores the SAME fixed token sequence, so the number is
+                          a scale: comparing GENERATED text cannot price a lossy setting,
+                          because greedy output only moves when a perturbation happens to
+                          cross an argmax boundary, whatever its size
+      --ppl-skip N        leading tokens evaluated but not scored (default 8)
+      --ppl-step          score one token per decode, so a cache-dependent policy (dropping,
+                          substitution) is priced in the regime where it acts. A wide batch
+                          routes a layer before reading any of it, and finds almost nothing
+                          resident. Slower: one decode per token
+      --ppl-list FILE     score every text named in FILE (one path per line) in one session,
+                          so a benchmark of many short texts loads the model once
+      --ppl-choices A,B   after the text, report the log-probability of each choice's first
+                          token: the multiple-choice comparison, one pass per question
+      --drop-no-renorm    do not rescale the surviving weights after a drop (A/B)
+      --drop-in-prefill   drop during prefill too (off: the cold cache makes it expensive)
+      --route-ahead N     EXPERIMENTAL, LOSSY: commit decode routing to the prediction made
+                          N layers earlier in the same forward pass (each layer's own gate
+                          run on the hidden state N layers back). The router still computes
+                          and gives the substituted experts their true renormalized weights;
+                          a prefetch of a committed layer can then never miss. Changes the
+                          output — this flag exists to measure that quality trade [0..8].
+                          Excludes --predict-log / --predict-prefetch / --prefetch.
+      --predict-log       diagnostics: measure how much of each layer's routing could be
+                          known a layer early (the next layer's gate run on this layer's
+                          input), scored against the previous-token bet --prefetch makes.
+                          Changes nothing that is read; costs a barrier and a GEMV per
+                          layer, so a probed run is not a benchmark run.
+      --predict-prefetch  act on that prediction: speculatively read predicted expert
+                          misses on the idle lanes and LRU-protect predicted residents
+                          (needs the cache; excludes --prefetch). Drop-aware: experts
+                          predicted below the drop threshold are not speculated.
+      --predict-spec-max N  speculated predicted misses per layer [0..8] (default 2;
+                          0 = retention only, the prediction spends no flash at all)
+      --list-archs        print supported MoE architectures and exit
+
+  Env overrides (flag wins): BMOE_CACHE_MB, BMOE_IO_THREADS, BMOE_PROGRESS, BMOE_OVERLAP, BMOE_PREFETCH, BMOE_N_EXPERT_USED, BMOE_PREDICT_LOG, BMOE_PREDICT_PREFETCH
