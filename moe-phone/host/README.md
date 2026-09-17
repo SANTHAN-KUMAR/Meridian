@@ -25,6 +25,7 @@ weight-byte throughput each device achieves, and the ceiling that implies for a 
    best `device/bmoe_cache.sh` cell precisely so that the app-vs-shell difference is the only thing left
    over when the attention device is held at CPU.
 2. **The model is copied, not shared.** Each app package needs its own copy in its own `files/`
-   directory, because `untrusted_app` cannot read `/data/local/tmp`. Two packages holding Qwen3-30B-A3B
-   is ~35 GB of the phone's storage; `chain_attn.sh` checks the copy's size against the source and
-   refuses to run the A/B if they differ, rather than measuring a truncated model.
+   directory, because `untrusted_app` cannot read `/data/local/tmp`. Two app packages each holding a
+   copy of the model costs twice the model's size in phone storage on top of the original;
+   `chain_attn.sh` checks the copy's size against the source and refuses to run the A/B if they differ,
+   rather than measuring a truncated model.

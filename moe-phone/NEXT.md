@@ -106,6 +106,56 @@ best in-app NPU number against BigMoeOnEdge's 6.48-7.25 tok/s separately - diffe
 output head (10.6 ms/token, claim trace_output_head_ms) and attention onto HTP/GPU while experts stream;
 (3) port the NPU path into BigMoeOnEdge's overlap engine, which is the only engine that hides I/O.
 
+## OVERNIGHT 2026-09-18 — OUR ENGINE ON THE NPU, and the ceiling question
+
+**Patch 0009 (committed): BigMoeOnEdge itself now runs in-app and can place work on another device.**
+`bmoe_main()` is the CLI as a shared-library symbol, so the app's JNI shim dlsyms the engine instead of
+exec'ing a child (a child is refused by the vendor HAL). `--attn-device NAME` puts attn_q/k/v/output on
+HTP0 or GPUOpenCL through llama.cpp's `tensor_buft_overrides` while the routed experts keep streaming
+into host memory and computing on the CPU under `--overlap`. Verified before any rate was measured: an
+unknown device name fails the run; `--attn-device CPU` reproduces the unset baseline's generated text
+byte-for-byte; the in-process probe reports `HTP0 init OK`; `bmoe~~--version` returns through the shim.
+Found while reading the path: the dense-weight policies would have rebound a device-resident tensor's
+`data` pointer into our anon arena — such tensors are now excluded and counted. The output head cannot
+move (Q6_K, and ggml-hexagon refuses `ne[1] > 32768`).
+
+**Reproducing the app path: `moe-phone/host/build_npu_app.sh` (engine -> JNI -> APK -> install -> probe),
+with the app's whole source in `moe-phone/host/app/`.** Before 0009 this existed only in shell history.
+
+**THE CEILING QUESTION, which now drives the order of work.** A token of Qwen3-30B-A3B reads a fixed
+1840.0 MB of weights (`results/2026-09-18/gguf_active_qwen_olmoe.json`), so a decode rate is equivalent
+to a weight-byte throughput, and each device's own throughput is a hard ceiling on what any engine can
+reach with that device alone. `gates/device_bandwidth.py` computes those from tonight's resident-model
+(OLMoE) rows; `gates/app_engine_analyze.py` produces the rates it reads. The measured single-device
+numbers are all well under the SoC's DRAM peak, which makes one question decisive:
+
+> **Do two compute devices ADD weight-byte throughput on this SoC, or share one bottleneck?**
+
+If they add, splitting the expert FFN across CPU + GPU (+ HTP) is the route to 10 tok/s and worth a
+patch; if they share, no amount of engine work gets there and that is the honest finding.
+`moe-phone/host/agg_bandwidth.sh` measures it directly: the same resident model decoding on two devices
+at once vs each alone, with start/end stamps per row (a pair's sum is a lower bound, which is the safe
+direction for a "they do not add" conclusion).
+
+**Queued unattended, in this order (laptop drivers under `moe-phone/host/`):**
+| # | step | script | produces |
+|---|---|---|---|
+| 1 | upstream llama.cpp in-app: Qwen3 on HTP 24/32 slots, GPU, CPU, then OLMoE on all three | `overnight_npu.sh` | `results/2026-09-18/app_engine/` |
+| 2 | copy Qwen3 into the new package, then OUR engine in-app: `--attn-device` CPU vs HTP0 vs GPUOpenCL, 3 rotated repeats, flags identical to the best measured cell | `chain_attn.sh` -> `bmoe_attn_ab.sh` | `results/2026-09-18/bmoe_attn_ab/` |
+| 3 | oversized ZRAM-backed expert cache (5000 vs 8000 vs 10000 MiB, `--force-cache`), with `/proc/vmstat` swap counters per row so a row that did not swap cannot be reported as one that did | `chain_after_ab.sh` -> `device/bmoe_zram.sh` | `results/2026-09-18/bmoe_zram/` |
+| 4 | do two devices add bandwidth? | `chain_after_ab.sh` -> `agg_bandwidth.sh` | `results/2026-09-18/agg_bandwidth/` |
+| 5 | the memory campaign queued earlier (row-stream / smaller context / both) | `device/bmoe_mem.sh` | pulled on resume |
+
+**Why ZRAM is worth a cell:** the phone reports 11.4 GB of RAM and a 12.6 GB ZRAM swap device with most
+of it free. The cache budget is currently chosen to fit MemAvailable, which caps the hit rate; Q4_0
+pages barely compress, but zram stores an incompressible page raw, so the overflow becomes a RAM-to-RAM
+fault instead of a UFS read. It can still lose, because a swap fault is synchronous in the compute
+thread while a flash miss is read by the I/O lanes and overlaps compute — hence a measurement.
+
+**Analysis to run on resume:** `app_engine_analyze.py` on both result trees (`--producer bmoe
+--reference attn_cpu` for the A/B), `device_bandwidth.py` on the OLMoE rows, `bmoe_analyze.py
+--swap-log` on the ZRAM campaign, then claims + repro gates, then this tracker.
+
 ## LIVE TRACKER (updated as results land) — 2026-09-17 evening
 
 ### Phone queue (phone-side: phone_queue4 -> 5 -> 6; log /data/local/tmp/moe-stream/phone_queue.log)

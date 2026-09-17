@@ -67,6 +67,38 @@ def parse(text):
     return r
 
 
+# device/bmoe_zram.sh writes memory and swap counters around each run, so a row claiming to have swapped
+# can be checked against /proc/vmstat rather than believed: "=== <tag> <time> MemAvailable=.. SwapFree=..
+# pswpin=.. pswpout=.. BEFORE .." then "exit=N AFTER .. MemAvailable=.. SwapFree=.. pswpin=.. pswpout=..".
+RE_LOG_BEFORE = re.compile(r"^=== (\S+_rep\d+)\s")
+RE_KV = re.compile(r"(MemAvailable|SwapFree|SwapTotal|pswpin|pswpout)=(\d+)")
+
+
+def parse_swap_log(path):
+    """tag -> {before: {...}, after: {...}, delta_pswpin, delta_pswpout, exit}"""
+    out = {}
+    tag = None
+    for line in open(path, encoding="utf-8", errors="replace"):
+        m = RE_LOG_BEFORE.match(line)
+        if m:
+            tag = m.group(1)
+            out[tag] = {"before": {k: int(v) for k, v in RE_KV.findall(line)}}
+            continue
+        if tag and line.startswith("exit="):
+            e = out[tag]
+            e["exit"] = int(line.split("=", 1)[1].split()[0])
+            e["after"] = {k: int(v) for k, v in RE_KV.findall(line)}
+            for k in ("pswpin", "pswpout"):
+                if k in e["before"] and k in e["after"]:
+                    e["delta_" + k] = e["after"][k] - e["before"][k]
+            if "MemAvailable" in e["before"]:
+                e["memavail_MB_before"] = e["before"]["MemAvailable"] / 1024.0
+            if "SwapFree" in e["before"] and "SwapFree" in e["after"]:
+                e["swap_used_MB_during"] = (e["before"]["SwapFree"] - e["after"]["SwapFree"]) / 1024.0
+            tag = None
+    return out
+
+
 def med(xs):
     xs = [x for x in xs if x is not None]
     return statistics.median(xs) if xs else None
@@ -77,7 +109,11 @@ def main():
     p.add_argument("root")
     p.add_argument("--out-name", required=True)
     p.add_argument("--out-dir", default=None)
+    p.add_argument("--swap-log", default=None,
+                   help="a campaign log.txt carrying MemAvailable/SwapFree/pswp* around each run "
+                        "(device/bmoe_zram.sh); attaches the measured swap activity per row")
     a = p.parse_args()
+    swap = parse_swap_log(a.swap_log) if a.swap_log else {}
     runs = []
     for out in sorted(glob.glob(os.path.join(a.root, "*.out"))):
         tag = os.path.basename(out)[:-4]
@@ -86,14 +122,19 @@ def main():
         if os.path.exists(err):
             text += "\n" + open(err, encoding="utf-8", errors="replace").read()
         cell, _, rep = tag.rpartition("_rep")
-        runs.append(dict(parse(text), tag=tag, cell=cell or tag, rep=int(rep) if rep.isdigit() else None))
+        r = dict(parse(text), tag=tag, cell=cell or tag, rep=int(rep) if rep.isdigit() else None)
+        if tag in swap:
+            r.update({k: v for k, v in swap[tag].items() if k not in ("before", "after")})
+            r["swap_counters"] = {"before": swap[tag].get("before"), "after": swap[tag].get("after")}
+        runs.append(r)
     cells = {}
     for r in runs:
         cells.setdefault(r["cell"], []).append(r)
     summary = []
     keys = ("decode_tok_s", "effective_tok_s_with_drafting", "cache_hit_pct", "read_MiB_per_token",
             "compute_s_per_token", "flash_io_s_per_token_summed", "rereads_per_token", "budget_MiB",
-            "draft_accept_pct", "tokens_per_verify", "prefill_tok_s")
+            "draft_accept_pct", "tokens_per_verify", "prefill_tok_s",
+            "delta_pswpin", "delta_pswpout", "swap_used_MB_during", "memavail_MB_before")
     for cell, rs in sorted(cells.items()):
         s = {"cell": cell, "n": len(rs), "failed": sum(1 for r in rs if "decode_tok_s" not in r)}
         for k in keys:

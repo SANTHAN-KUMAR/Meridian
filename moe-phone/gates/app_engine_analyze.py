@@ -38,6 +38,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 RE_UPSTREAM = re.compile(r"eval time =\s*[0-9.]+ ms /\s*(\d+) runs?\s*\(\s*([0-9.]+) ms per token,\s*([0-9.]+) tokens per second\)")
 RE_UP_PP = re.compile(r"prompt eval time =\s*[0-9.]+ ms /\s*(\d+) tokens?\s*\(\s*[0-9.]+ ms per token,\s*([0-9.]+) tokens per second\)")
 RE_UP_LOAD = re.compile(r"load time =\s*([0-9.]+) ms")
+# llama-bench prints a markdown table instead of a perf block: "| ... | tg64 | 40.70 ± 0.35 |"
+RE_BENCH_TG = re.compile(r"\|\s*tg(\d+)\s*\|\s*([0-9.]+)\s*±\s*([0-9.]+)\s*\|")
+RE_BENCH_PP = re.compile(r"\|\s*pp(\d+)\s*\|\s*([0-9.]+)\s*±\s*([0-9.]+)\s*\|")
 # bmoe: the engine's own decode report (core/src/engine/session.cpp print_predict_report)
 RE_BMOE = re.compile(r"generation: (\d+) tokens, ([0-9.]+) s/token \(([0-9.]+) tok/s\)")
 RE_BMOE_PP = re.compile(r"prefill: (\d+) tokens, ([0-9.]+) s \(([0-9.]+) tok/s\) \| model load ([0-9.]+) s")
@@ -54,8 +57,19 @@ def parse_row(path, producer):
     if producer == "upstream":
         m = RE_UPSTREAM.search(txt)
         if not m:
-            row["failed"] = True
+            # llama-bench (the resident-model rows) rather than llama-completion
+            b = RE_BENCH_TG.search(txt)
+            if not b:
+                row["failed"] = True
+                return row
+            row.update(failed=False, tokens=int(b.group(1)), decode_tok_s=float(b.group(2)),
+                       decode_tok_s_sd=float(b.group(3)), ms_per_token=1000.0 / float(b.group(2)),
+                       source_tool="llama-bench")
+            pp = RE_BENCH_PP.search(txt)
+            if pp:
+                row["prefill_tok_s"] = float(pp.group(2))
             return row
+        row["source_tool"] = "llama-completion"
         row.update(failed=False, tokens=int(m.group(1)), ms_per_token=float(m.group(2)),
                    decode_tok_s=float(m.group(3)))
         pp = RE_UP_PP.search(txt)

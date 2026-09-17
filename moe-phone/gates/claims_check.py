@@ -648,6 +648,19 @@ CLAIMS = [
          text="expert matmuls (MUL_MAT_ID, including the expert-ready wait) are 50.2% of decode node time in the serialised node trace",
          artifact="compute_trace.json", expected=0.502, tol=0.005,
          value=lambda A: A["ctrace"]["node_op_share"]["MUL_MAT_ID"]),
+    # ---------------------------------------- ACTIVE BYTES (gates/gguf_active.py, 2026-09-18)
+    # The denominator of every ceiling argument: a token's weight bytes are fixed by the file, so a
+    # decode rate is equivalent to a weight-byte throughput and vice versa.
+    dict(id="qwen3_active_mb_per_token",
+         text="a decoded token of Qwen3-30B-A3B Q4_0 reads 1840.0 MB of weights (top-8 of 128 experts, plus every dense tensor and one embedding row)",
+         artifact="gguf_active_qwen_olmoe.json", expected=1840.0, tol=0.1,
+         value=lambda A: next(r["active_bytes_per_token"] for r in A["act18"]
+                              if r["file"] == "Qwen3-30B-A3B-Q4_0.gguf") / 1e6),
+    dict(id="olmoe_active_mb_per_token",
+         text="a decoded token of OLMoE-1B-7B Q4_0 reads 697.4 MB of weights, which is what makes it the resident-model yardstick for a device's byte throughput",
+         artifact="gguf_active_qwen_olmoe.json", expected=697.4, tol=0.1,
+         value=lambda A: next(r["active_bytes_per_token"] for r in A["act18"]
+                              if r["file"] == "olmoe-1b-7b-0924-q4_0.gguf") / 1e6),
     # ------------------------------------------------------ instrument agreement
     # ------------------------------------------- HEADROOM (gates/headroom_sims.py, 2026-09-17)
     # The offline verdicts re-run at the phone's operating point (rho 2-4), plus the per-token
@@ -865,6 +878,7 @@ def load_all():
         "cacheo": load("cache_OLMoE-1B-7B-0924.json"),
         "vcost": load("verify_cost.json"),
         "hr": load("headroom_sims.json"),
+        "act18": load("gguf_active_qwen_olmoe.json"),
     }
 
 
