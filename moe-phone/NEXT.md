@@ -95,7 +95,14 @@ Queue order on the phone now: repack_pin -> npu_compare -> gptoss20b -> defer ->
 **Housekeeping when the queue is done:** restore the phone's screen timeout (`settings put system screen_off_timeout 1800000`,
 its original value), `svc power stayon false`, `dumpsys deviceidle enable`, stop keep_awake.sh (`rm /data/local/tmp/moe-stream/keep_awake.run`).
 Laptop: S9 Qwen3-30B-A3B trace running under capped.sh (`moe-work/s9_Qwen3-30B-A3B.log`); then simulate lookahead
-eviction under verify batches on that trace (ARCHITECTURE.md §4) using c(N) from verify_cost.json.
+eviction under verify batches on that trace (ARCHITECTURE.md §4). Parameters now measured: forward pass
+~99.5 ms pinned (bmoe_pin2 compute median), verify beta = (c(N)-1)/(N-1) = 0.71/0.685/0.68 from verify_cost.json
+(pessimistic: c(N) includes the union's flash reads, which engine_sim also charges). Command:
+  python moe-phone/gates/engine_sim.py results/2026-09-16/traces_Qwen3-30B-A3B-q4_0-llamacpp.npz \
+      --bulk-gbps 2.806 --expert-mb 2.65 --fractions 0.2,0.24,0.3 --fwd-ms 50,99.5 --verify-beta 0,0.69 \
+      --out-dir results/2026-09-17
+Expected reading: with a full-cost self-draft pass (~0.1 s) W>1 needs very high alpha; the lever is a
+cheaper drafter (reduced top-k / layer skip) - fwd 50 ms row approximates it.
 
 ### Earlier failures — fix status
 | failure | status |
