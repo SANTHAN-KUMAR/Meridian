@@ -43,13 +43,33 @@ run() {
   e=$?
   echo "exit=$e AFTER $(thermal_state) $(mem) $(swp) $(grep -hE 'generation:|moe-stream:|moe-cache:' "$O/$tag.out" "$O/$tag.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
 }
+# SAFETY CAP, added 2026-09-18 02:45 after the first attempt at this campaign took the phone down. The
+# 10000 MiB cell (on an 11366 MiB device) drove the machine into a state from which adbd never returned
+# and the tcp port was gone -- consistent with the phone rebooting, which also loses the non-persistent
+# service.adb.tcp.port and therefore all remote access. That is a genuine answer at that budget ("not
+# runnable", one of this campaign's pre-registered outcomes) but it costs the rest of a night's queue,
+# so the cell is retired rather than repeated: nothing here may ask for more than CAP_MIB.
+#   The cap is not a tuned constant. It is MemTotal minus the floor the engine is told to leave free
+#   (1024 MiB) minus the ~1.5 GB of dense weights and context this model needs outside the cache, which
+#   is what the engine itself would refuse to exceed if its budget accounted for anon slots. Computed
+#   from /proc/meminfo at run time, not typed.
+MEMTOTAL_MIB=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
+CAP_MIB=$((MEMTOTAL_MIB - 1024 - 1536))
+echo "zram cells capped at ${CAP_MIB} MiB (MemTotal ${MEMTOTAL_MIB} MiB)" | tee -a "$O/log.txt"
+cell() {  # name  requested_mib  rep
+  if [ "$2" -gt "$CAP_MIB" ]; then
+    echo "=== $1_rep$3 SKIPPED: requested $2 MiB exceeds the cap $CAP_MIB MiB (see the safety note in this script)" | tee -a "$O/log.txt"
+    return
+  fi
+  run "$1" "--cache-mb $2" "$3"
+}
 for r in $(seq 1 "$REPS"); do
   # base5000 repeats the best measured cell inside THIS campaign, so the comparison never crosses
   # campaigns (a different day's thermal state and MemAvailable are not a control).
   case $((r % 3)) in
-    1) run base5000 "--cache-mb 5000" "$r"; run zram8000 "--cache-mb 8000" "$r"; run zram10000 "--cache-mb 10000" "$r" ;;
-    2) run zram8000 "--cache-mb 8000" "$r"; run zram10000 "--cache-mb 10000" "$r"; run base5000 "--cache-mb 5000" "$r" ;;
-    0) run zram10000 "--cache-mb 10000" "$r"; run base5000 "--cache-mb 5000" "$r"; run zram8000 "--cache-mb 8000" "$r" ;;
+    1) cell base5000 5000 "$r"; cell zram7000 7000 "$r"; cell zram8500 8500 "$r" ;;
+    2) cell zram7000 7000 "$r"; cell zram8500 8500 "$r"; cell base5000 5000 "$r" ;;
+    0) cell zram8500 8500 "$r"; cell base5000 5000 "$r"; cell zram7000 7000 "$r" ;;
   esac
 done
 echo "done $(date)" | tee "$O/DONE"
