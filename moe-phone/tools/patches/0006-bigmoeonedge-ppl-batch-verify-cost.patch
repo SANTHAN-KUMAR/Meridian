@@ -1,0 +1,50 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f, applied AFTER 0002-0004 (engine files only).
+# --ppl-batch N: teacher-forced --ppl with N tokens per decode, pricing a speculative verify of N positions.
+diff --git a/cli/main.cpp b/cli/main.cpp
+index 89fe78f..f7a054f 100644
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -447,6 +447,7 @@ static void print_usage(const char * argv0) {
+         "      --io-threads N      parallel expert-read lanes [1..%d] (default 4)\n"
+         "      --cpu-mask HEX      pin the compute threadpool to these cores, strict (moe-phone)\n"
+         "      --io-cpu-mask HEX   pin the expert-read lanes to these cores (moe-phone)\n"
++        "      --ppl-batch N       with --ppl: N teacher-forced tokens per decode (prices a verify batch) (moe-phone)\n"
+         "      --recycle-pages     move evicted experts' pages into the next miss (mremap) instead of re-faulting (moe-phone)\n"
+         "      --no-odirect        do not bypass the page cache for expert reads\n"
+         "      --dense-weights M   dense (non-expert) weight policy: mmap | warm | anon (default) | ahwb\n"
+@@ -687,6 +688,8 @@ int main(int argc, char ** argv) {
+             cfg.moe.cache_ceil_mb = std::atoi(next("--cache-ceil-mb"));
+         else if (a == "--cpu-mask")
+             cfg.cpu_mask = std::strtoull(next("--cpu-mask"), nullptr, 16);
++        else if (a == "--ppl-batch")
++            cfg.ppl_batch = std::atoi(next("--ppl-batch"));
+         else if (a == "--recycle-pages")
+             cfg.moe.recycle_pages = true;
+         else if (a == "--io-cpu-mask")
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+index 0b7baca..3c8fb26 100644
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -365,6 +365,9 @@ struct RunConfig {
+     // Unpinned ggml workers migrate across the 15R's clusters and every barrier waits for the
+     // slowest one; see moe-phone/results/2026-09-17/decode_15r_pin.json.
+     uint64_t cpu_mask = 0;
++    // moe-phone: decode width for --ppl (teacher-forced tokens per llama_decode, all logits). 0 = n_ctx.
++    // --ppl-batch N prices a speculative verify of N positions with real routing and a real cache.
++    int ppl_batch = 0;
+     int n_ctx = 2048;
+ 
+     // Largest batch computed in one graph, i.e. the prefill chunk size. 0 (the default) means
+diff --git a/core/src/engine/runtime.cpp b/core/src/engine/runtime.cpp
+index 4a3bc2f..6b4f36d 100644
+--- a/core/src/engine/runtime.cpp
++++ b/core/src/engine/runtime.cpp
+@@ -12,7 +12,7 @@ SessionConfig session_config_from(const RunConfig & cfg) {
+     sc.n_threads = cfg.n_threads;
+     sc.cpu_mask = cfg.cpu_mask;
+     sc.n_ctx = cfg.n_ctx;
+-    sc.n_batch = cfg.n_ctx;     // one-batch prefill for any prompt that fits the context
++    sc.n_batch = cfg.ppl_batch > 0 ? cfg.ppl_batch : cfg.n_ctx; // moe-phone --ppl-batch; else one-batch prefill
+     sc.n_ubatch = cfg.n_ubatch; // 0 = follow n_batch; smaller trades prefill speed for memory
+     sc.chatml = cfg.chatml;
+     sc.n_expert_used = cfg.n_expert_used; // active-expert (top-k) override; 0 = model default
