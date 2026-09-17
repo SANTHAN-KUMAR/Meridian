@@ -83,12 +83,19 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
 | 1 | GPU slot cache speed vs CPU, same engine | gpu_speed.sh | DONE -> results/2026-09-17/gpu_speed (GPU 1.5-1.9, CPU 0.17-0.39 tok/s) |
 | 2 | rotated confirmation, pin/recycle, 5 cells x 4 | bmoe_pin2.sh | DONE -> bmoe_pin2.json: pinned 5.36 median (best), unpinned 4.75; recycle a net loss (retracted) |
 | 3 | CPU vs Adreno vs Hexagon HTP v81 compute, OLMoE | npu_compare.sh | first attempt broke on a global LD_LIBRARY_PATH; fixed, requeued after step 5 |
-| 4 | verify cost c(N), 3 reps | bmoe_verify_cost.sh | RUNNING (base includes --recycle-pages; c(N) is a ratio within it) |
-| 5 | repacked kernels on pin+recycle, 3 reps | bmoe_repack_pin.sh | queued |
+| 4 | verify cost c(N), 3 reps | bmoe_verify_cost.sh | DONE -> verify_cost.json: c(2)=1.71 c(3)=2.37 c(5)=3.71 |
+| 5 | repacked kernels on pinned (no recycle), 3 reps | bmoe_repack_pin.sh | RUNNING (started 20:50) |
+| 5a | gpt-oss-20b (12.1 GB > RAM) pinned vs unpinned, 2 reps | bmoe_gptoss20b.sh | queued (after step 3) |
 | 5b | --defer-evict correctness (ppl) + speed vs pinned | bmoe_defer.sh | queued |
 | 6 | I/O lanes 4/6/8 (pinned, no recycle) | bmoe_lanes.sh | queued |
 | 7 | cache ceiling 4/5/6 GB | bmoe_cache.sh | queued |
 Every row: quiesce (third-party apps force-stopped), wake, thermal status, cpufreq caps logged.
+Queue order on the phone now: repack_pin -> npu_compare -> gptoss20b -> defer -> lanes -> cache.
+
+**Housekeeping when the queue is done:** restore the phone's screen timeout (`settings put system screen_off_timeout 1800000`,
+its original value), `svc power stayon false`, `dumpsys deviceidle enable`, stop keep_awake.sh (`rm /data/local/tmp/moe-stream/keep_awake.run`).
+Laptop: S9 Qwen3-30B-A3B trace running under capped.sh (`moe-work/s9_Qwen3-30B-A3B.log`); then simulate lookahead
+eviction under verify batches on that trace (ARCHITECTURE.md §4) using c(N) from verify_cost.json.
 
 ### Earlier failures — fix status
 | failure | status |
@@ -97,7 +104,7 @@ Every row: quiesce (third-party apps force-stopped), wake, thermal status, cpufr
 | thread collapse / unpinned variance | CONFIRMED FIXED by pinning: 5.36 vs 4.75 tok/s median, n=4 rotated |
 | page recycling (new failure) | net loss end to end (mm lock/IPIs on compute cores); fix attempt: patch 0007 --defer-evict, step 5b |
 | repacked kernels no gain | retest queued (step 5) |
-| verify cost inconclusive (doze) | clean retest queued (step 4) |
+| verify cost inconclusive (doze) | DONE clean: c(N) 1.71/2.37/3.71 -> 4-token lossless draft needs >3.71 tokens/verify |
 | GPU expert cache abort / wrong ppl | FIXED (0005 v4): ppl 11.5482 = whole-model GPU; engine speed low -> move GPU compute into an overlap engine |
 | PR engine slow on phone | diagnosed: per-layer load stall, no overlap |
 | NPU unreachable (old reading) | reachable as HTP v81 with GGML_HEXAGON_ARCH=v81; compute test requeued (step 3) |
