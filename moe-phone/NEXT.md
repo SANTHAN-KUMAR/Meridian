@@ -75,6 +75,31 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
   partial of Qwen3-30B-A3B Q4_0 is kept in `moe-work/models/` and resumes with
   `curl -C -`. The pre-registered family-confound separator (gpt-oss-20b, 12 GB) is unfetched.
 
+## RESUME HERE — 2026-09-17 afternoon (session limit), phone queue running unattended
+
+Phone over wireless adb: `export ANDROID_SERIAL=192.168.0.65:5555` (see memory note; tcpip mode survives
+until reboot). Everything writes under `/data/local/tmp/moe-stream/`; `phone_queue.sh` orchestrates on the
+phone itself (no laptop needed). Progress: `adb shell cat /data/local/tmp/moe-stream/phone_queue.log`.
+
+Queue, in order:
+1. `gpu_stream_check.sh` (old ocl-stream build) — its cpu / Qwen rows are expected to fail or be superseded;
+   only its gpu_full row matters (non-regression, already 11.5482 twice).
+2. `bmoe_verify_cost.sh 2` -> `bmoe_verify_*/`: --ppl-batch 1,2,3,5 on Qwen3-30B-A3B = verify cost c(N).
+   Analyse: seconds per decode = total s / ceil(tokens/N), vs N=1. Laptop reference c(4)=3.5.
+3. `gpu_stream_check2.sh` -> `gpu_stream2_*/`: OLMoE ppl gpu_full vs gpu_stream (patch 0005 v2) — must
+   match; then Qwen3-30B-A3B with the expert cache on the Adreno GPU (llama-completion eval time).
+   If gpu_stream aborts: read gpu_stream.err, next suspect is the GEMV (single-token) MoE path or the
+   `q_img` image over a partially written buffer.
+4. `bmoe_pin2.sh 4` -> `bmoe_pin2_*/`: rotated-order confirmation (5 cells x 4). Analyse with
+   `gates/bmoe_analyze.py`, then add to `repro_check.py` JOBS_NEW and to CLAIMS.md.
+
+State of the goal (all numbers in commit messages / artifacts, none yet in CLAIMS.md):
+best phone decode so far = pinned t4 + --recycle-pages (results/2026-09-17/bmoe_pin.json), throttled CPU,
+n=2, fixed order. Open levers: GPU expert cache (patch 0005), verify cost -> S2-MoE-style resident-expert
+drafting, bigger models (gpt-oss-20b not yet run on the phone). Audit hardening: CLAIMS.md entries for
+bmoe_levers / bmoe_repack / bmoe_pin / ocl_split / recycle_laptop_check; README/POSITION narrative.
+Pending: cancel the overnight watchdog cron when the plan is done.
+
 ## OVERNIGHT PLAN 2026-09-16 night — resume here
 
 **Goal (user, verbatim intent): run big MoE models on the 15R at a decent decode rate — reproduce
