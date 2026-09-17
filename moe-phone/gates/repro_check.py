@@ -103,6 +103,15 @@ JOBS_NEW = [
                          "--expert-mb", "3.54", "--fwd-ms", "0,30.07,80,160"],
      "prefetch_sim_OLMoE-1B-7B-0924.json", "2026-09-16"),
 ]
+# 2026-09-17: on-device campaigns analysed from their committed raw logs.
+D17 = os.path.join(RESULTS_ROOT, "2026-09-17")
+JOBS_NEW += [
+    ("decode_analyze.py", [f"{D17}/decode_15r_pin", "--out-name", "decode_15r_pin.json", "--model-bytes"] + MB,
+     "decode_15r_pin.json", "2026-09-17"),
+    ("bmoe_analyze.py", [f"{D17}/bmoe_repro", "--out-name", "bmoe_repro.json"], "bmoe_repro.json", "2026-09-17"),
+    ("bmoe_analyze.py", [f"{D17}/bmoe_levers", "--out-name", "bmoe_levers.json"], "bmoe_levers.json", "2026-09-17"),
+    ("bmoe_analyze.py", [f"{D17}/bmoe_repack", "--out-name", "bmoe_repack.json"], "bmoe_repack.json", "2026-09-17"),
+]
 
 SHIM = ("import os,sys,runpy; sys.path.insert(0,{g!r}); import _paths; "
         "_paths.write_path=lambda f: os.path.join({o!r}, f); "
