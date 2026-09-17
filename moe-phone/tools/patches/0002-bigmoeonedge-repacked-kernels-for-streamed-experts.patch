@@ -1,0 +1,223 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f (engine) and its llama.cpp fork submodule @ 0e8c83e51
+# Apply: engine part at the BigMoeOnEdge root, ggml part inside third_party/llama.cpp.
+# ===== engine (BigMoeOnEdge root) =====
+diff --git a/cli/main.cpp b/cli/main.cpp
+index ea3c2b7..06e2213 100644
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -468,6 +468,7 @@ static void print_usage(const char * argv0) {
+         "      --load-all          debug: read ALL experts each token (A/B baseline)\n"
+         "      --force-cache       allow a cache-mb in the pathological band\n"
+         "      --overlap           overlap async expert reads with FFN compute (needs the fork)\n"
++        "      --repack-experts    compute streamed experts with repacked i8mm/dotprod kernels (moe-phone)\n"
+         "      --io-two-wave       publish a layer's first-projection reads before committing the\n"
+         "                          rest, so the lanes start sooner (needs --overlap and the cache;\n"
+         "                          experimental, off by default pending the on-device A/B)\n"
+@@ -718,6 +719,8 @@ int main(int argc, char ** argv) {
+             cfg.moe.force_cache = true;
+         else if (a == "--overlap")
+             cfg.moe.overlap = true;
++        else if (a == "--repack-experts")
++            cfg.moe.repack_experts = true;
+         else if (a == "--io-two-wave")
+             cfg.moe.io_two_wave = true;
+         else if (a == "--prefetch")
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+index fbed9b6..05e1f8e 100644
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -70,6 +70,9 @@ struct MoeStreamConfig {
+     // expert (via the fork's expert-ready hook) only if that expert's slice is not yet in.
+     // Requires the Helldez/llama.cpp fork submodule (the hook); run() fails fast otherwise.
+     bool overlap = false;
++    // moe-phone: compute streamed experts with ggml's repacked (interleaved) kernels; each expert
++    // slice is repacked in place as it lands. Off by default.
++    bool repack_experts = false;
+ 
+     // Two-wave batch publish (#118). A layer's read batch normally becomes visible to the I/O
+     // lanes only after ALL of its staging finished — up to three page-commit syscalls per cold
+diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
+index 860acb8..24e362f 100644
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -195,6 +195,22 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+         clookups_ = 0;
+     }
+ 
++    // moe-phone: tag expert tensors for ggml's repacked kernels. Done after every rebind above, so the
++    // tag sticks to the tensors compute will actually see; each slice is repacked in read_slice.
++    repack_experts_ = cfg.repack_experts;
++    if (repack_experts_) {
++        int n_bound = 0, n_generic = 0;
++        for (LayerExperts & L : layers_) {
++            if (!L.bound) continue;
++            for (int p = 0; p < MoeRecipe::max_exps; ++p) {
++                if (!L.proj[p].tensor) continue;
++                if (ggml_cpu_repack_bind_tensor(L.proj[p].tensor)) ++n_bound; else ++n_generic;
++            }
++        }
++        std::fprintf(stderr, "bmoe: repack-experts: %d expert tensors on repacked kernels, %d generic\n",
++                     n_bound, n_generic);
++    }
++
+     // Read pool: one reader per shard file, each owning a private fd + bounce per lane so concurrent
+     // preads never contend, and the O_DIRECT request + its verify/fallback (per file — a shard set
+     // could in principle straddle storage with different O_DIRECT behaviour). The dense-weights
+@@ -313,6 +329,16 @@ bool ExpertStreamSource::read_slice(int lane, const IoJob & j) {
+     const auto t0 = clock_t_::now();
+     const long long window = readers_[(size_t) j.file]->read(lane, j.dst, j.off, j.nbytes);
+     if (window < 0) return false;
++    // moe-phone: repack the landed slice in place before anything can mark it ready. A failure is a
++    // read failure (fatal under overlap): raw bytes must never be computed as repacked ones.
++    if (repack_experts_ && j.layer >= 0 && j.proj >= 0) {
++        const ggml_tensor * t = layers_[(size_t) j.layer].proj[(size_t) j.proj].tensor;
++        if (t && ggml_cpu_repack_is_bound(t) && !ggml_cpu_repack_slice(t, j.dst, (size_t) j.nbytes)) {
++            std::fprintf(stderr, "bmoe: repack failed: layer %d expert %d proj %d (%llu bytes)\n",
++                         (int) j.layer, (int) j.expert, (int) j.proj, (unsigned long long) j.nbytes);
++            return false;
++        }
++    }
+ 
+     if (io_trace_on_) {
+         const uint64_t lat_ns =
+diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
+index 5995b7f..acd6b80 100644
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -222,6 +222,7 @@ private:
+     bool active_ = false;
+     bool load_all_ = false;
+     bool overlap_ = false;
++    bool repack_experts_ = false; // moe-phone
+     bool two_wave_ = false;                  // publish the first projection's jobs before committing the rest (#118)
+     bool prefetch_sync_ = false;             // test only: drain prefetch reads synchronously (serial mode)
+     bool spec_adopt_ = false;                // route-ahead: staged layers adopt committed spec reads (see quiesce_spec)
+# ===== ggml (third_party/llama.cpp) =====
+diff --git a/ggml/include/ggml-cpu.h b/ggml/include/ggml-cpu.h
+index 98b4f2850..0d841d746 100644
+--- a/ggml/include/ggml-cpu.h
++++ b/ggml/include/ggml-cpu.h
+@@ -151,6 +151,14 @@ extern "C" {
+     // respect to concurrent graph computation - register before compute starts.
+     GGML_BACKEND_API void ggml_cpu_set_expert_ready_hook(ggml_cpu_expert_ready_hook_t hook, void * user_data);
+ 
++    // moe-phone: repacked (interleaved, i8mm/dotprod/AVX2) kernels for expert tensors whose data an
++    // external engine streams in. bind tags the tensor for the repacked MUL_MAT_ID kernel (false if
++    // the type/shape has no repacked form); slice repacks ONE expert's raw bytes in place at `slice`
++    // (same size in, same size out) and must run before those bytes are computed.
++    GGML_BACKEND_API bool ggml_cpu_repack_bind_tensor(struct ggml_tensor * t);
++    GGML_BACKEND_API bool ggml_cpu_repack_is_bound(const struct ggml_tensor * t);
++    GGML_BACKEND_API bool ggml_cpu_repack_slice(const struct ggml_tensor * t, void * slice, size_t nbytes);
++
+     GGML_BACKEND_API void ggml_cpu_fp32_to_fp32(const float *,       float *, int64_t);
+     GGML_BACKEND_API void ggml_cpu_fp32_to_i32 (const float *,     int32_t *, int64_t);
+     GGML_BACKEND_API void ggml_cpu_fp32_to_fp16(const float *, ggml_fp16_t *, int64_t);
+diff --git a/ggml/src/ggml-cpu/ggml-cpu.c b/ggml/src/ggml-cpu/ggml-cpu.c
+index 6c2b92939..864337f46 100644
+--- a/ggml/src/ggml-cpu/ggml-cpu.c
++++ b/ggml/src/ggml-cpu/ggml-cpu.c
+@@ -65,6 +65,15 @@ void ggml_cpu_set_expert_ready_hook(ggml_cpu_expert_ready_hook_t hook, void * us
+     g_expert_ready_hook_data = user_data;
+ }
+ 
++// moe-phone: the repacked MUL_MAT_ID kernel (repack.cpp) calls this at the same point the generic
++// kernel calls the hook, so an overlapping streaming engine still gets to block until the expert
++// has landed before its bytes are read.
++void ggml_cpu_notify_expert_consumed(const struct ggml_tensor * src0, int expert) {
++    if (g_expert_ready_hook) {
++        g_expert_ready_hook(src0, expert, g_expert_ready_hook_data);
++    }
++}
++
+ // Note: once we move threading into a separate C++ file
+ // will use std::hardware_destructive_interference_size instead of hardcoding it here
+ // and we'll use C++ attribute syntax.
+diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
+index 9689ca3ce..cb12b22e9 100644
+--- a/ggml/src/ggml-cpu/repack.cpp
++++ b/ggml/src/ggml-cpu/repack.cpp
+@@ -1,5 +1,14 @@
+ #define GGML_COMMON_IMPL_CPP
+ #define GGML_COMMON_DECL_CPP
++// moe-phone: defined in ggml-cpu.c
++#ifdef __cplusplus
++extern "C" {
++#endif
++void ggml_cpu_notify_expert_consumed(const struct ggml_tensor * src0, int expert);
++#ifdef __cplusplus
++}
++#endif
++
+ #include "ggml-common.h"
+ #include "ggml-backend-impl.h"
+ 
+@@ -4476,6 +4485,10 @@ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PAR
+                 continue;
+             }
+ 
++            // moe-phone: same contract as the generic kernel - let a streaming engine block until
++            // this expert's (repacked) bytes have landed before they are read
++            ggml_cpu_notify_expert_consumed(src0, cur_a);
++
+             const auto * src0_cur = (const char *) src0->data + cur_a*nb02;
+ 
+             //const int64_t nr0 = ne01; // src0 rows
+@@ -4834,3 +4847,58 @@ ggml_backend_buffer_type_t ggml_backend_cpu_repack_buffer_type(void) {
+ 
+     return &ggml_backend_cpu_buffer_type_repack;
+ }
++
++
++// ---- moe-phone: repacked kernels for externally streamed expert tensors -------------------------
++// A tensor whose ->buffer has the repack buffer type and whose ->extra holds its traits is dispatched
++// to the repacked kernels by ggml_cpu_extra_compute_forward (traits.cpp). A streaming engine rebinds
++// expert ->data to its own cache, so the tensor cannot live in a real repack buffer; it is tagged with
++// one shared 64-byte repack buffer instead, and each expert slice is repacked in place when it lands.
++#include <mutex>
++static ggml_backend_buffer_t g_moe_repack_tag = nullptr;
++static std::mutex            g_moe_repack_mtx;
++
++extern "C" {
++
++bool ggml_cpu_repack_bind_tensor(struct ggml_tensor * t) {
++    const auto * traits = ggml_repack_get_optimal_repack_type(t);
++    if (!traits) {
++        return false;
++    }
++    {
++        std::lock_guard<std::mutex> lk(g_moe_repack_mtx);
++        if (!g_moe_repack_tag) {
++            g_moe_repack_tag = ggml_backend_buft_alloc_buffer(ggml_backend_cpu_repack_buffer_type(), 64);
++        }
++    }
++    if (!g_moe_repack_tag) {
++        return false;
++    }
++    t->extra  = (void *) const_cast<ggml::cpu::tensor_traits *>(traits);
++    t->buffer = g_moe_repack_tag;
++    return true;
++}
++
++bool ggml_cpu_repack_is_bound(const struct ggml_tensor * t) {
++    return g_moe_repack_tag != nullptr && t->buffer == g_moe_repack_tag && t->extra != nullptr;
++}
++
++bool ggml_cpu_repack_slice(const struct ggml_tensor * t, void * slice, size_t nbytes) {
++    if (!ggml_cpu_repack_is_bound(t)) {
++        return false;
++    }
++    ggml_tensor tmp = *t;          // one expert: a 2-D view of the 3-D expert tensor
++    tmp.ne[2] = 1;
++    tmp.ne[3] = 1;
++    tmp.data  = slice;
++    const size_t expect = (size_t) (tmp.ne[0] / ggml_blck_size(tmp.type)) * ggml_type_size(tmp.type) * (size_t) tmp.ne[1];
++    if (nbytes != expect) {
++        return false;              // never repack a partial or mis-sized slice
++    }
++    thread_local std::vector<uint8_t> src;
++    src.assign((uint8_t *) slice, (uint8_t *) slice + nbytes);
++    auto * tb = (ggml::cpu::repack::tensor_traits_base *) t->extra;
++    return tb->repack(&tmp, src.data(), nbytes) == 0;
++}
++
++} // extern "C"
