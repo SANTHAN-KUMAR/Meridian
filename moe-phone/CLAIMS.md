@@ -113,6 +113,43 @@ internally consistent and wrong. That is what the property tests are for.
 | `verify_cost_n2` | a streamed verify of 2 positions costs 1.71x a single-token decode (Qwen3-30B-A3B on the 15R, 3 repeats, awake) | `verify_cost.json` | 1.7119 | ok |
 | `verify_cost_n3` | a streamed verify of 3 positions costs 2.37x a single-token decode | `verify_cost.json` | 2.3716 | ok |
 | `verify_cost_n5` | a streamed verify of 5 positions costs 3.71x a single-token decode: a 4-token draft must average more than 3.71 accepted tokens per verify to break even | `verify_cost.json` | 3.7098 | ok |
+| `hr_pinned_steady_tok_s` | pinned t4/io4 decodes Qwen3-30B-A3B at 5.30 tok/s over tokens 65-256 (ESTIMAND §1 steady state; the 256-token mean the pin2 claims quote is 5.36) | `headroom_sims.json` | 5.3025 | ok |
+| `hr_unpinned_steady_tok_s` | unpinned t4/io4: 4.72 tok/s over tokens 65-256 | `headroom_sims.json` | 4.7219 | ok |
+| `hr_pinned_compute_ms` | pinned steady state: 100 ms/token of 'compute' RESIDUAL (wall - stall - mgmt; BigMoeOnEdge telemetry.md: 'a residual, not a measured quantity') | `headroom_sims.json` | 100.2324 | ok |
+| `hr_pinned_stall_ms` | pinned steady state: 54 ms/token of I/O stall | `headroom_sims.json` | 53.7196 | ok |
+| `hr_pinned_mgmt_ms` | pinned steady state: 35 ms/token of cache management | `headroom_sims.json` | 35.0171 | ok |
+| `hr_pinned_stall_intercept_ms` | regressing per-token stall on flash MiB (pinned): a fixed 25 ms/token that bytes do not explain -- the per-layer head-of-line latency | `headroom_sims.json` | 24.7346 | ok |
+| `hr_pinned_stall_slope` | and 0.151 ms per MiB on top (a marginal ~6.6 GB/s: overlap already hides part of each byte) | `headroom_sims.json` | 0.1509 | ok |
+| `hr_compute_drift_pinned` | within a 256-token pinned run the compute residual rises 11% from the first 32 tokens to the last 32 (thermal drift inside the run) | `headroom_sims.json` | 1.1068 | ok |
+| `hr_recycle_mgmt_ms` | page recycling cuts cache management to 14 ms/token | `headroom_sims.json` | 14.0085 | ok |
+| `hr_recycle_compute_ms` | but the compute residual rises to 115 ms/token: the cost moved into the compute cores | `headroom_sims.json` | 115.2075 | ok |
+| `hr_engine_rho` | the BigMoeOnEdge run's 4000 MiB cache is rho 4.12 for Qwen3-30B-A3B (clamped to the OLMoE curve's last grid point, rho 4.0) | `headroom_sims.json` | 4.1152 | ok |
+| `hr_engine_hit_vs_h_rho` | its measured 0.780 hit rate is +0.009 from the equal-rho prediction (H_rho) | `headroom_sims.json` | 0.0090 | ok |
+| `hr_engine_hit_vs_h_floor` | and +0.266 from the floor-additive prediction (H_floor) the documents prefer | `headroom_sims.json` | 0.2662 | ok |
+| `hr_union_c5_olmoe_rho4` | at rho 4 the union of a 5-token window fetches 4.17x what one token fetches (OLMoE): bytes alone predict a near-linear verify cost | `headroom_sims.json` | 4.1694 | ok |
+| `hr_union_c5_gptoss_rho4` | 4.29x on gpt-oss-20b at rho 4 | `headroom_sims.json` | 4.2871 | ok |
+| `hr_union_c2_olmoe_rho4` | and a 2-token window fetches 1.90x (so even a free verify needs >1.9 accepted tokens per 2-position pass on the I/O side) | `headroom_sims.json` | 1.8993 | ok |
+| `hr_la_olmoe_rho4_gap4` | at rho 4 (OLMoE) a 4-token lookahead closes only 47% of the LRU-to-Belady gap | `headroom_sims.json` | 0.4722 | ok |
+| `hr_la_olmoe_rho4_gap16` | and 16 tokens are needed to close 97% of it | `headroom_sims.json` | 0.9698 | ok |
+| `hr_la_olmoe_rho24_gap4` | at rho 2.4 a 4-token lookahead closes 69% of the gap (the 30% row POSITION §3c calls 'reaches Belady') | `headroom_sims.json` | 0.6900 | ok |
+| `hr_la_gptoss_rho4_gap4` | on gpt-oss-20b at rho 4, 45% | `headroom_sims.json` | 0.4479 | ok |
+| `hr_gap_olmoe_rho4` | the LRU-to-Belady gap at rho 4 is 12.5 pp on OLMoE | `headroom_sims.json` | 0.1252 | ok |
+| `hr_gap_gptoss_rho4` | 4.8 pp on gpt-oss-20b | `headroom_sims.json` | 0.0481 | ok |
+| `hr_gap_granite_rho4` | and 3.2 pp on granite-3b: eviction policy is a small lever at phone cache sizes | `headroom_sims.json` | 0.0317 | ok |
+| `hr_p_miss_olmoe_rho4` | at rho 4 a layer-event has at least one miss with probability 0.745 (OLMoE) | `headroom_sims.json` | 0.7454 | ok |
+| `hr_p_miss_gptoss_rho4` | 0.279 on gpt-oss-20b | `headroom_sims.json` | 0.2787 | ok |
+| `hr_pf_rho24_fwd60` | within-token prefetch at rho 2.4 with 60 ms of compute per token: 1.23x (the closed verdict was 0.76x at rho 0.8 and 30 ms) | `headroom_sims.json` | 1.2257 | ok |
+| `hr_pf_rho24_fwd100` | 1.35x at 100 ms | `headroom_sims.json` | 1.3482 | ok |
+| `hr_pf_rho4_fwd60` | at rho 4: 1.24x at 60 ms | `headroom_sims.json` | 1.2415 | ok |
+| `hr_pf_rho4_fwd100` | and 1.24x at 100 ms | `headroom_sims.json` | 1.2415 | ok |
+| `hr_protect_rho4_acc05` | a protect-mode veto at horizon 8 and 50% slot accuracy reaches 0.800 at rho 4 against LRU's 0.774 | `headroom_sims.json` | 0.8003 | ok |
+| `hr_protect_rho24_acc05` | and 0.649 at rho 2.4 against LRU's 0.593 | `headroom_sims.json` | 0.6487 | ok |
+| `hr_lex_olmoe` | the token id alone names 0.445 of OLMoE's expert slots (table fitted on half of wikitext, scored on the other half) against persistence 0.369 and independence 0.125 | `headroom_sims.json` | 0.4445 | ok |
+| `hr_lex_gptoss` | 0.479 on gpt-oss-20b (persistence 0.491: its late layers are contextual) | `headroom_sims.json` | 0.4795 | ok |
+| `hr_lex_granite` | 0.586 on granite-3b (persistence 0.473); its layer 0 is 0.803 lexical | `headroom_sims.json` | 0.5864 | ok |
+| `hr_q4_nibble_entropy_bits` | the Q4_0 nibbles of Qwen3-30B-A3B's expert tensors carry 3.754 bits of zeroth-order entropy per 4-bit code (6 tensors, 37748736 blocks) | `headroom_sims.json` | 3.7538 | ok |
+| `hr_q4_scale_entropy_bits` | and the fp16 block scales 11.52 bits of 16 | `headroom_sims.json` | 11.5197 | ok |
+| `hr_q4_max_lossless_saving` | so an order-0 entropy coder can save at most 8.6% of expert bytes on flash (4.114 of 4.5 bits/weight): lossless expert compression is closed | `headroom_sims.json` | 0.0858 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-102 claims checked.
+139 claims checked.
