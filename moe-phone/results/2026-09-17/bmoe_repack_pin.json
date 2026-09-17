@@ -1,0 +1,299 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-17/bmoe_repack_pin",
+ "runs": [
+  {
+   "n_generated": 256,
+   "s_per_token": 0.19,
+   "decode_tok_s": 5.253,
+   "n_prompt": 34,
+   "prefill_s": 5.738,
+   "prefill_tok_s": 5.9,
+   "load_s": 20.086,
+   "ttft_s": 25.824,
+   "read_MiB": 49608.6,
+   "read_MiB_per_token": 193.78,
+   "compute_s_per_token": 0.103,
+   "cache_mgmt_s_per_token": 0.034,
+   "flash_io_s_per_token_summed": 0.258,
+   "io_lane_MiBps": 750.0,
+   "cache_hit_pct": 78.0,
+   "resident_MiB": 3999.3,
+   "budget_MiB": 4000.0,
+   "evictions": 20731,
+   "rereads": 17927,
+   "rereads_per_token": 70.0,
+   "tag": "pin_recycle_rep1",
+   "cell": "pin_recycle",
+   "rep": 1
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.185,
+   "decode_tok_s": 5.394,
+   "n_prompt": 34,
+   "prefill_s": 6.173,
+   "prefill_tok_s": 5.5,
+   "load_s": 19.742,
+   "ttft_s": 25.915,
+   "read_MiB": 49608.6,
+   "read_MiB_per_token": 193.78,
+   "compute_s_per_token": 0.099,
+   "cache_mgmt_s_per_token": 0.035,
+   "flash_io_s_per_token_summed": 0.258,
+   "io_lane_MiBps": 750.0,
+   "cache_hit_pct": 78.0,
+   "resident_MiB": 3999.3,
+   "budget_MiB": 4000.0,
+   "evictions": 20731,
+   "rereads": 17927,
+   "rereads_per_token": 70.0,
+   "tag": "pin_recycle_rep2",
+   "cell": "pin_recycle",
+   "rep": 2
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.176,
+   "decode_tok_s": 5.693,
+   "n_prompt": 34,
+   "prefill_s": 5.267,
+   "prefill_tok_s": 6.5,
+   "load_s": 21.491,
+   "ttft_s": 26.758,
+   "read_MiB": 49608.6,
+   "read_MiB_per_token": 193.78,
+   "compute_s_per_token": 0.097,
+   "cache_mgmt_s_per_token": 0.033,
+   "flash_io_s_per_token_summed": 0.237,
+   "io_lane_MiBps": 816.0,
+   "cache_hit_pct": 78.0,
+   "resident_MiB": 3999.3,
+   "budget_MiB": 4000.0,
+   "evictions": 20731,
+   "rereads": 17927,
+   "rereads_per_token": 70.0,
+   "tag": "pin_recycle_rep3",
+   "cell": "pin_recycle",
+   "rep": 3
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.202,
+   "decode_tok_s": 4.953,
+   "n_prompt": 34,
+   "prefill_s": 5.788,
+   "prefill_tok_s": 5.9,
+   "load_s": 21.1,
+   "ttft_s": 26.888,
+   "read_MiB": 44125.3,
+   "read_MiB_per_token": 172.36,
+   "compute_s_per_token": 0.095,
+   "cache_mgmt_s_per_token": 0.038,
+   "flash_io_s_per_token_summed": 0.218,
+   "io_lane_MiBps": 792.0,
+   "cache_hit_pct": 80.1,
+   "resident_MiB": 3997.6,
+   "budget_MiB": 4000.0,
+   "evictions": 18587,
+   "rereads": 15863,
+   "rereads_per_token": 62.0,
+   "tag": "pin_recycle_repack_rep1",
+   "cell": "pin_recycle_repack",
+   "rep": 1
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.203,
+   "decode_tok_s": 4.938,
+   "n_prompt": 34,
+   "prefill_s": 6.102,
+   "prefill_tok_s": 5.6,
+   "load_s": 21.324,
+   "ttft_s": 27.425,
+   "read_MiB": 44125.3,
+   "read_MiB_per_token": 172.36,
+   "compute_s_per_token": 0.096,
+   "cache_mgmt_s_per_token": 0.039,
+   "flash_io_s_per_token_summed": 0.219,
+   "io_lane_MiBps": 788.0,
+   "cache_hit_pct": 80.1,
+   "resident_MiB": 3997.6,
+   "budget_MiB": 4000.0,
+   "evictions": 18587,
+   "rereads": 15863,
+   "rereads_per_token": 62.0,
+   "tag": "pin_recycle_repack_rep2",
+   "cell": "pin_recycle_repack",
+   "rep": 2
+  },
+  {
+   "n_generated": 256,
+   "s_per_token": 0.204,
+   "decode_tok_s": 4.9,
+   "n_prompt": 34,
+   "prefill_s": 5.295,
+   "prefill_tok_s": 6.4,
+   "load_s": 21.992,
+   "ttft_s": 27.287,
+   "read_MiB": 44125.3,
+   "read_MiB_per_token": 172.36,
+   "compute_s_per_token": 0.097,
+   "cache_mgmt_s_per_token": 0.039,
+   "flash_io_s_per_token_summed": 0.222,
+   "io_lane_MiBps": 777.0,
+   "cache_hit_pct": 80.1,
+   "resident_MiB": 3997.6,
+   "budget_MiB": 4000.0,
+   "evictions": 18587,
+   "rereads": 15863,
+   "rereads_per_token": 62.0,
+   "tag": "pin_recycle_repack_rep3",
+   "cell": "pin_recycle_repack",
+   "rep": 3
+  }
+ ],
+ "cells": [
+  {
+   "cell": "pin_recycle",
+   "n": 3,
+   "failed": 0,
+   "decode_tok_s_all": [
+    5.253,
+    5.394,
+    5.693
+   ],
+   "decode_tok_s_median": 5.394,
+   "effective_tok_s_with_drafting_all": [
+    null,
+    null,
+    null
+   ],
+   "effective_tok_s_with_drafting_median": null,
+   "cache_hit_pct_all": [
+    78.0,
+    78.0,
+    78.0
+   ],
+   "cache_hit_pct_median": 78.0,
+   "read_MiB_per_token_all": [
+    193.78,
+    193.78,
+    193.78
+   ],
+   "read_MiB_per_token_median": 193.78,
+   "compute_s_per_token_all": [
+    0.103,
+    0.099,
+    0.097
+   ],
+   "compute_s_per_token_median": 0.099,
+   "flash_io_s_per_token_summed_all": [
+    0.258,
+    0.258,
+    0.237
+   ],
+   "flash_io_s_per_token_summed_median": 0.258,
+   "rereads_per_token_all": [
+    70.0,
+    70.0,
+    70.0
+   ],
+   "rereads_per_token_median": 70.0,
+   "budget_MiB_all": [
+    4000.0,
+    4000.0,
+    4000.0
+   ],
+   "budget_MiB_median": 4000.0,
+   "draft_accept_pct_all": [
+    null,
+    null,
+    null
+   ],
+   "draft_accept_pct_median": null,
+   "tokens_per_verify_all": [
+    null,
+    null,
+    null
+   ],
+   "tokens_per_verify_median": null,
+   "prefill_tok_s_all": [
+    5.9,
+    5.5,
+    6.5
+   ],
+   "prefill_tok_s_median": 5.9
+  },
+  {
+   "cell": "pin_recycle_repack",
+   "n": 3,
+   "failed": 0,
+   "decode_tok_s_all": [
+    4.953,
+    4.938,
+    4.9
+   ],
+   "decode_tok_s_median": 4.938,
+   "effective_tok_s_with_drafting_all": [
+    null,
+    null,
+    null
+   ],
+   "effective_tok_s_with_drafting_median": null,
+   "cache_hit_pct_all": [
+    80.1,
+    80.1,
+    80.1
+   ],
+   "cache_hit_pct_median": 80.1,
+   "read_MiB_per_token_all": [
+    172.36,
+    172.36,
+    172.36
+   ],
+   "read_MiB_per_token_median": 172.36,
+   "compute_s_per_token_all": [
+    0.095,
+    0.096,
+    0.097
+   ],
+   "compute_s_per_token_median": 0.096,
+   "flash_io_s_per_token_summed_all": [
+    0.218,
+    0.219,
+    0.222
+   ],
+   "flash_io_s_per_token_summed_median": 0.219,
+   "rereads_per_token_all": [
+    62.0,
+    62.0,
+    62.0
+   ],
+   "rereads_per_token_median": 62.0,
+   "budget_MiB_all": [
+    4000.0,
+    4000.0,
+    4000.0
+   ],
+   "budget_MiB_median": 4000.0,
+   "draft_accept_pct_all": [
+    null,
+    null,
+    null
+   ],
+   "draft_accept_pct_median": null,
+   "tokens_per_verify_all": [
+    null,
+    null,
+    null
+   ],
+   "tokens_per_verify_median": null,
+   "prefill_tok_s_all": [
+    5.9,
+    5.6,
+    6.4
+   ],
+   "prefill_tok_s_median": 5.9
+  }
+ ]
+}
