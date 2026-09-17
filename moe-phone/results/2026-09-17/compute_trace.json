@@ -1,0 +1,39 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-17/bmoe_trace",
+ "nonflash_gbps": 23.2,
+ "active_mb": 1800.0,
+ "tokens": 128,
+ "layers": {
+  "n": 48,
+  "ms_per_token_median": 2.8183713906250016,
+  "ms_per_token_min": 0.5102176796874999,
+  "ms_per_token_max": 4.624892171875001,
+  "ms_per_token_sum": 136.4751610390625
+ },
+ "output_head_ms_per_token": 10.638319960937505,
+ "pre_ms_per_token": 0.06211875000000001,
+ "total_traced_ms_per_token": 147.17559975,
+ "node_op_share": {
+  "MUL_MAT_ID": 0.5020081421454468,
+  "MUL_MAT": 0.18614434605209884,
+  "GET_ROWS": 0.10560989464564685,
+  "FLASH_ATTN_EXT": 0.04206717231225737,
+  "ADD": 0.037400282233317914,
+  "RMS_NORM": 0.02786640116978806,
+  "DIV": 0.022886801530057083,
+  "VIEW": 0.016990616711932208,
+  "MUL": 0.014860490966948366,
+  "RESHAPE": 0.010958003455644417,
+  "ARGSORT": 0.00983824286626618,
+  "PERMUTE": 0.007383131230729761,
+  "SET_ROWS": 0.0069096890822255815,
+  "ROPE": 0.002862828594315573,
+  "GLU": 0.0023864124211863025,
+  "SUM_ROWS": 0.0018447481157426006,
+  "CLAMP": 0.001372419743036483,
+  "SOFT_MAX": 0.0006103767233597131
+ },
+ "node_total_ms_per_token_serialised": 198.8099291484375,
+ "bytes_floor_ms_per_token": 75.7677801724138,
+ "traced_over_bytes_floor": 1.9424562711893334
+}

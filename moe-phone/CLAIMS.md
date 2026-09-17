@@ -120,6 +120,10 @@ internally consistent and wrong. That is what the property tests are for.
 | `cache5000_read` | and cuts flash reads from 193.8 to 119.8 MiB per token | `bmoe_cache.json` | 119.8000 | ok |
 | `qwen3_sim_lru_5gb` | replayed on Qwen3-30B-A3B's own llama.cpp trace (wikitext, 8192 tokens), global LRU at the 5 GB cache's 30.7% of experts hits 86.4%, vs 85.3% measured on the phone (essay prompt) | `cache_qwen3_phone_sizes.json` | 0.8635 | ok |
 | `qwen3_sim_belady_5gb` | at the same cache size the offline optimum (Belady, global) hits 94.6%: eviction, not cache size, is the larger remaining I/O lever | `cache_qwen3_phone_sizes.json` | 0.9459 | ok |
+| `trace_per_layer_ms` | per-layer decode cost on the phone, traced at layer granularity: 2.82 ms/token median over 48 layers | `compute_trace.json` | 2.8184 | ok |
+| `trace_output_head_ms` | the 151936-row output projection alone costs 10.64 ms/token, 7% of a traced token | `compute_trace.json` | 10.6383 | ok |
+| `trace_over_bytes_floor` | the traced token costs 1.94x what its active bytes alone would at the measured 23.2 GB/s non-flash rate: the gap is barrier/scheduling overhead, not arithmetic | `compute_trace.json` | 1.9425 | ok |
+| `trace_mul_mat_id_share` | expert matmuls (MUL_MAT_ID, including the expert-ready wait) are 50.2% of decode node time in the serialised node trace | `compute_trace.json` | 0.5020 | ok |
 | `hr_pinned_steady_tok_s` | pinned t4/io4 decodes Qwen3-30B-A3B at 5.30 tok/s over tokens 65-256 (ESTIMAND §1 steady state; the 256-token mean the pin2 claims quote is 5.36) | `headroom_sims.json` | 5.3025 | ok |
 | `hr_unpinned_steady_tok_s` | unpinned t4/io4: 4.72 tok/s over tokens 65-256 | `headroom_sims.json` | 4.7219 | ok |
 | `hr_pinned_compute_ms` | pinned steady state: 100 ms/token of 'compute' RESIDUAL (wall - stall - mgmt; BigMoeOnEdge telemetry.md: 'a residual, not a measured quantity') | `headroom_sims.json` | 100.2324 | ok |
@@ -159,4 +163,4 @@ internally consistent and wrong. That is what the property tests are for.
 | `hr_q4_max_lossless_saving` | so an order-0 entropy coder can save at most 8.6% of expert bytes on flash (4.114 of 4.5 bits/weight): lossless expert compression is closed | `headroom_sims.json` | 0.0858 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-146 claims checked.
+150 claims checked.
