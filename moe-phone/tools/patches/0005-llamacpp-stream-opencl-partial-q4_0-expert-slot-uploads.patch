@@ -1,0 +1,197 @@
+# moe-phone patch for llama.cpp PR #25294 (freedomljc/feat/moe-streaming-core @ 1248fd8), on top of 0001.
+# OpenCL Q4_0 set_tensor: partial uploads of whole experts into the SoA layout (plain and Adreno MoE transposed),
+# so the streaming expert cache can live in an Adreno GPU buffer. Offset kernels in kernels/cvt.cl.
+diff --git a/ggml/src/ggml-opencl/ggml-opencl.cpp b/ggml/src/ggml-opencl/ggml-opencl.cpp
+index 10f9cc2..c8cc102 100644
+--- a/ggml/src/ggml-opencl/ggml-opencl.cpp
++++ b/ggml/src/ggml-opencl/ggml-opencl.cpp
+@@ -652,6 +652,7 @@ struct ggml_backend_opencl_context {
+     cl_kernel kernel_convert_block_q1_0, kernel_restore_block_q1_0;
+     cl_kernel kernel_convert_block_q4_0, kernel_restore_block_q4_0;
+     cl_kernel kernel_convert_block_q4_0_trans4_ns, kernel_restore_block_q4_0_trans4_ns;
++    cl_kernel kernel_convert_block_q4_0_off, kernel_convert_block_q4_0_trans4_ns_off; // moe-phone partial uploads
+     cl_kernel kernel_convert_block_q4_1, kernel_restore_block_q4_1;
+     cl_kernel kernel_convert_block_q4_1_trans4_ns, kernel_restore_block_q4_1_trans4_ns;
+     cl_kernel kernel_convert_block_q5_0, kernel_restore_block_q5_0;
+@@ -1232,6 +1233,8 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+         CL_CHECK((backend_ctx->kernel_convert_block_q4_0  = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_0", &err), err));
+         CL_CHECK((backend_ctx->kernel_restore_block_q4_0  = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_0", &err), err));
+         CL_CHECK((backend_ctx->kernel_convert_block_q4_0_trans4_ns = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_0_trans4_ns", &err), err));
++        CL_CHECK((backend_ctx->kernel_convert_block_q4_0_off = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_0_off", &err), err));
++        CL_CHECK((backend_ctx->kernel_convert_block_q4_0_trans4_ns_off = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_0_trans4_ns_off", &err), err));
+         CL_CHECK((backend_ctx->kernel_restore_block_q4_0_trans4_ns = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_0_trans4_ns", &err), err));
+         CL_CHECK((backend_ctx->kernel_convert_block_q4_1_noshuffle = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_1_noshuffle", &err), err));
+         CL_CHECK((backend_ctx->kernel_restore_block_q4_1_noshuffle = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_1_noshuffle", &err), err));
+@@ -6778,13 +6781,98 @@ static void ggml_backend_opencl_buffer_set_tensor(ggml_backend_buffer_t buffer,
+         if (tensor->view_src != nullptr || !ggml_is_contiguous(tensor)) {
+             return;
+         }
++        ggml_backend_opencl_buffer_context * ctx = (ggml_backend_opencl_buffer_context *) buffer->context;
++        const bool partial = !(offset == 0 && size == ggml_nbytes(tensor));
++        if (partial) {
++            // moe-phone: a PARTIAL write of whole experts (MoE expert streaming fills one cache slot at a
++            // time). Build the SoA layout once for the whole tensor (no data), then convert only the
++            // uploaded blocks into their place. Only 3-D expert stacks reach here; anything else aborts
++            // rather than silently mis-converting.
++            GGML_ASSERT(tensor->ne[2] > 1 && tensor->ne[3] == 1 && "partial Q4_0 upload is only supported for 3-D expert tensors");
++            const size_t bs = ggml_type_size(tensor->type); // 18 bytes per block
++            const size_t blocks_per_expert = (size_t) (tensor->ne[0] / ggml_blck_size(tensor->type)) * (size_t) tensor->ne[1];
++            GGML_ASSERT(offset % (bs * blocks_per_expert) == 0 && size % (bs * blocks_per_expert) == 0 && "partial Q4_0 upload must cover whole experts");
++            ggml_tensor_extra_cl_q4_0 * extra;
++            if (ctx->q4_0_soa_tensors.count(tensor)) {
++                extra = (ggml_tensor_extra_cl_q4_0 *) tensor->extra;
++            } else {
++                ggml_tensor_extra_cl * extra_orig = (ggml_tensor_extra_cl *)tensor->extra;
++                GGML_ASSERT(extra_orig && "Tesnors in OpenCL backend should have been allocated and initialized");
++                extra = ctx->ggml_opencl_alloc_temp_tensor_extra_q4_0();
++                size_t size_d = ggml_nelements(tensor)/ggml_blck_size(tensor->type)*sizeof(ggml_fp16_t);
++                size_t size_q = ggml_nelements(tensor)/ggml_blck_size(tensor->type)*ggml_blck_size(tensor->type)/2;
++                cl_int err;
++                cl_buffer_region region;
++                region.origin = align_to(extra_orig->offset + tensor->view_offs, backend_ctx->alignment);
++                region.size = size_d;
++                extra->d = clCreateSubBuffer(extra_orig->data_device, CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
++                CL_CHECK(err);
++                region.origin = align_to(region.origin + size_d, backend_ctx->alignment);
++                region.size = size_q;
++                extra->q = clCreateSubBuffer(extra_orig->data_device, CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
++                CL_CHECK(err);
++#ifdef GGML_OPENCL_USE_ADRENO_KERNELS
++                if (use_adreno_moe_kernels(backend_ctx, tensor)) {
++                    cl_image_format img_format_q = {CL_R, CL_UNSIGNED_INT32};
++                    cl_image_desc img_desc_q = {
++                        CL_MEM_OBJECT_IMAGE1D_BUFFER,
++                        static_cast<size_t>(ggml_nelements(tensor) / 8),
++                        0, 0, 0, 0, 0, 0, 0,
++                        { extra->q }
++                    };
++                    extra->q_img = clCreateImage(context, CL_MEM_READ_ONLY, &img_format_q, &img_desc_q, NULL, &err);
++                    CL_CHECK(err);
++                }
++#endif
++                tensor->extra = extra;
++                ctx->q4_0_soa_tensors.insert(tensor);
++            }
++            cl_int err;
++            cl_mem data_device = clCreateBuffer(context, CL_MEM_READ_WRITE, size, NULL, &err);
++            CL_CHECK(err);
++            CL_CHECK(clEnqueueWriteBuffer(queue, data_device, CL_TRUE, 0, size, data, 0, NULL, NULL));
++            const size_t n_blocks = size / bs;
++            cl_event evt;
++#ifdef GGML_OPENCL_USE_ADRENO_KERNELS
++            if (use_adreno_moe_kernels(backend_ctx, tensor)) {
++                cl_kernel kernel = backend_ctx->kernel_convert_block_q4_0_trans4_ns_off;
++                int ne00 = tensor->ne[0];
++                int ne01 = tensor->ne[1];
++                cl_uint expert_off = (cl_uint) (offset / (bs * blocks_per_expert));
++                size_t n_exp = n_blocks / blocks_per_expert;
++                CL_CHECK(clSetKernelArg(kernel, 0, sizeof(cl_mem), &data_device));
++                CL_CHECK(clSetKernelArg(kernel, 1, sizeof(cl_mem), &extra->q));
++                CL_CHECK(clSetKernelArg(kernel, 2, sizeof(cl_mem), &extra->d));
++                CL_CHECK(clSetKernelArg(kernel, 3, sizeof(int), &ne00));
++                CL_CHECK(clSetKernelArg(kernel, 4, sizeof(int), &ne01));
++                CL_CHECK(clSetKernelArg(kernel, 5, sizeof(cl_uint), &expert_off));
++                size_t global_work_size[3] = {static_cast<size_t>(((ne01 + 63) / 64) * 64), static_cast<size_t>(ne00 / 32), n_exp};
++                size_t local_work_size[3] = {64, 2, 1};
++                CL_CHECK(clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global_work_size, local_work_size, 0, NULL, &evt));
++            } else
++#endif
++            {
++                cl_kernel kernel = backend_ctx->kernel_convert_block_q4_0_off;
++                cl_ulong blk_off = (cl_ulong) (offset / bs);
++                CL_CHECK(clSetKernelArg(kernel, 0, sizeof(cl_mem), &data_device));
++                CL_CHECK(clSetKernelArg(kernel, 1, sizeof(cl_mem), &extra->q));
++                CL_CHECK(clSetKernelArg(kernel, 2, sizeof(cl_mem), &extra->d));
++                CL_CHECK(clSetKernelArg(kernel, 3, sizeof(cl_ulong), &blk_off));
++                size_t global_work_size[] = {n_blocks, 1, 1};
++                CL_CHECK(clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global_work_size, NULL, 0, NULL, &evt));
++            }
++            CL_CHECK(clWaitForEvents(1, &evt));
++            CL_CHECK(clReleaseEvent(evt));
++            CL_CHECK(clReleaseMemObject(data_device));
++            return;
++        }
++
+         // Tensors should have been preallocated, therefore they should
+         // already have ggml_tensor_extra_cl as extra.
+         ggml_tensor_extra_cl * extra_orig = (ggml_tensor_extra_cl *)tensor->extra;
+         GGML_ASSERT(extra_orig && "Tesnors in OpenCL backend should have been allocated and initialized");
+ 
+         // Allocate the new extra and create aliases from the original.
+-        ggml_backend_opencl_buffer_context * ctx = (ggml_backend_opencl_buffer_context *) buffer->context;
+         ggml_tensor_extra_cl_q4_0 * extra = ctx->ggml_opencl_alloc_temp_tensor_extra_q4_0();
+ 
+         size_t size_d = ggml_nelements(tensor)/ggml_blck_size(tensor->type)*sizeof(ggml_fp16_t);
+diff --git a/ggml/src/ggml-opencl/kernels/cvt.cl b/ggml/src/ggml-opencl/kernels/cvt.cl
+index bf0335a..89c0f7a 100644
+--- a/ggml/src/ggml-opencl/kernels/cvt.cl
++++ b/ggml/src/ggml-opencl/kernels/cvt.cl
+@@ -2372,3 +2372,68 @@ kernel void kernel_restore_block_iq4_nl_noshuffle(
+         b->qs[2*i + 1] = convert_uchar(((x0 & mask_F0) >> 4) | (x1 & mask_F0));
+     }
+ }
++
++// moe-phone: offset variants for PARTIAL uploads of whole experts into an already SoA-converted Q4_0
++// tensor (MoE expert streaming writes one cache slot at a time). src0 holds only the uploaded blocks;
++// blk_off / expert_off place them in the destination layout of the full tensor.
++kernel void kernel_convert_block_q4_0_off(
++    global struct block_q4_0 * src0,
++    global uchar * dst_q,
++    global half  * dst_d,
++    ulong blk_off
++) {
++    global struct block_q4_0 * b = (global struct block_q4_0 *) src0 + get_global_id(0);
++    global uchar * q = (global uchar *) dst_q + QK4_0/2*(get_global_id(0) + blk_off);
++    global half  * d = (global half *) dst_d + (get_global_id(0) + blk_off);
++
++    *d = b->d;
++
++    for (int i = 0; i < QK4_0/2; ++i) {
++        q[i] = b->qs[i];
++    }
++}
++
++kernel void kernel_convert_block_q4_0_trans4_ns_off(
++    global struct block_q4_0 * src0,
++    __global uint * dst_q,
++    __global half * dst_d,
++    uint ne00,
++    uint ne01,
++    uint expert_off
++) {
++    uint i00 = get_global_id(1);
++    uint i01 = get_global_id(0);
++    uint i02 = get_global_id(2);
++
++    if (i01 >= ne01) {
++        return;
++    }
++
++    uint ne00_blk = ne00 / QK4_0;
++    uint src_blk_offset = i00 + i01 * ne00_blk + i02 * ne00_blk * ne01;
++    uint dst_blk_offset = i01 + i00 * ne01 + (i02 + expert_off) * ne00_blk * ne01;
++
++    global struct block_q4_0 * b = src0 + src_blk_offset;
++    dst_d[dst_blk_offset] = b->d;
++
++    ushort8 pre_block = ((global ushort8 *)(&(b->qs[0])))[0];
++    ushort8 post_block = (ushort8)(0);
++    uchar * pre_block_ptr = (uchar *)(&pre_block);
++    uchar * post_block_ptr = (uchar *)(&post_block);
++
++    for (int i = 0; i < QK4_0 / 4; ++i) {
++        uchar x0 = pre_block_ptr[2*i + 0];
++        uchar x1 = pre_block_ptr[2*i + 1];
++
++        post_block_ptr[i + 0        ] = convert_uchar(x0 & 0x0F) | convert_uchar((x1 & 0x0F) << 4);
++        post_block_ptr[i + QK4_0 / 4] = convert_uchar((x0 & 0xF0) >> 4) | convert_uchar(x1 & 0xF0);
++    }
++
++    uint4 q_block = as_uint4(post_block);
++
++    uint offset = (i02 + expert_off) * ne00_blk * ne01 * 4 + i00 * ne01 * 4 + i01;
++    dst_q[offset] = q_block.x;
++    dst_q[offset + ne01] = q_block.y;
++    dst_q[offset + ne01 * 2] = q_block.z;
++    dst_q[offset + ne01 * 3] = q_block.w;
++}
