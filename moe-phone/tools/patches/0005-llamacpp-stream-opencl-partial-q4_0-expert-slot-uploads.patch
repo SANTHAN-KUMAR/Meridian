@@ -1,11 +1,23 @@
 # moe-phone patch for llama.cpp PR #25294 (freedomljc/feat/moe-streaming-core @ 1248fd8), on top of 0001.
-# OpenCL Q4_0 set_tensor: partial uploads of whole experts into the SoA layout (plain and Adreno MoE transposed),
-# so the streaming expert cache can live in an Adreno GPU buffer. Offset kernels in kernels/cvt.cl.
+# (1) OpenCL Q4_0 set_tensor: partial uploads of whole experts into the SoA layout (plain + Adreno MoE transposed).
+# (2) Adreno GEMM MUL_MAT_ID router reorder for streamed (CPU slot-remapped) ids: reorder on every new ids tensor
+#     per graph; expert count from the weight tensor; ids row stride passed separately from the expert count.
 diff --git a/ggml/src/ggml-opencl/ggml-opencl.cpp b/ggml/src/ggml-opencl/ggml-opencl.cpp
-index 10f9cc2..c8cc102 100644
+index 10f9cc2..f05153a 100644
 --- a/ggml/src/ggml-opencl/ggml-opencl.cpp
 +++ b/ggml/src/ggml-opencl/ggml-opencl.cpp
-@@ -652,6 +652,7 @@ struct ggml_backend_opencl_context {
+@@ -526,6 +526,10 @@ struct ggml_backend_opencl_context {
+ 
+     // prealloc buffers for MoE router table preprocess
+     bool toggle_reorder = false;
++    // moe-phone: the ids tensor last reordered in this graph. MoE expert streaming remaps router ids to cache
++    // slots in a CPU op, so no GPU argsort precedes MUL_MAT_ID and toggle_reorder is never set; reorder on
++    // every ids tensor not yet reordered in the current graph instead. Reset per graph_compute.
++    const ggml_tensor * last_reordered_ids = nullptr;
+     ggml_cl_buffer prealloc_post_router;
+     ggml_cl_buffer prealloc_emap;
+     ggml_cl_buffer prealloc_hist;
+@@ -652,6 +656,7 @@ struct ggml_backend_opencl_context {
      cl_kernel kernel_convert_block_q1_0, kernel_restore_block_q1_0;
      cl_kernel kernel_convert_block_q4_0, kernel_restore_block_q4_0;
      cl_kernel kernel_convert_block_q4_0_trans4_ns, kernel_restore_block_q4_0_trans4_ns;
@@ -13,7 +25,7 @@ index 10f9cc2..c8cc102 100644
      cl_kernel kernel_convert_block_q4_1, kernel_restore_block_q4_1;
      cl_kernel kernel_convert_block_q4_1_trans4_ns, kernel_restore_block_q4_1_trans4_ns;
      cl_kernel kernel_convert_block_q5_0, kernel_restore_block_q5_0;
-@@ -1232,6 +1233,8 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
+@@ -1232,6 +1237,8 @@ static void load_cl_kernels(ggml_backend_opencl_context *backend_ctx) {
          CL_CHECK((backend_ctx->kernel_convert_block_q4_0  = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_0", &err), err));
          CL_CHECK((backend_ctx->kernel_restore_block_q4_0  = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_0", &err), err));
          CL_CHECK((backend_ctx->kernel_convert_block_q4_0_trans4_ns = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_0_trans4_ns", &err), err));
@@ -22,7 +34,15 @@ index 10f9cc2..c8cc102 100644
          CL_CHECK((backend_ctx->kernel_restore_block_q4_0_trans4_ns = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_0_trans4_ns", &err), err));
          CL_CHECK((backend_ctx->kernel_convert_block_q4_1_noshuffle = clCreateKernel(backend_ctx->program_cvt, "kernel_convert_block_q4_1_noshuffle", &err), err));
          CL_CHECK((backend_ctx->kernel_restore_block_q4_1_noshuffle = clCreateKernel(backend_ctx->program_cvt, "kernel_restore_block_q4_1_noshuffle", &err), err));
-@@ -6778,13 +6781,98 @@ static void ggml_backend_opencl_buffer_set_tensor(ggml_backend_buffer_t buffer,
+@@ -5762,6 +5769,7 @@ static void ggml_opencl_op_norm_fused(ggml_backend_t backend, ggml_tensor * norm
+ static void ggml_opencl_op_group_norm_fused(ggml_backend_t backend, ggml_tensor * gn_tensor, ggml_tensor * mul_tensor, ggml_tensor * add_tensor);
+ 
+ static ggml_status ggml_backend_opencl_graph_compute(ggml_backend_t backend, ggml_cgraph * cgraph) {
++    ((ggml_backend_opencl_context *) backend->context)->last_reordered_ids = nullptr; // moe-phone
+     ggml_backend_opencl_context *backend_ctx = (ggml_backend_opencl_context *)backend->context;
+ 
+     for (int i = 0; i < cgraph->n_nodes; i++) {
+@@ -6778,13 +6786,98 @@ static void ggml_backend_opencl_buffer_set_tensor(ggml_backend_buffer_t buffer,
          if (tensor->view_src != nullptr || !ggml_is_contiguous(tensor)) {
              return;
          }
@@ -122,6 +142,148 @@ index 10f9cc2..c8cc102 100644
          ggml_tensor_extra_cl_q4_0 * extra = ctx->ggml_opencl_alloc_temp_tensor_extra_q4_0();
  
          size_t size_d = ggml_nelements(tensor)/ggml_blck_size(tensor->type)*sizeof(ggml_fp16_t);
+@@ -17824,7 +17917,7 @@ static void ggml_cl_mul_mat(ggml_backend_t backend, const ggml_tensor * src0, co
+     }
+ }
+ 
+-static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src, int ne20) {
++static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src, int ne20, int n_expert_src0) {
+     cl_int err;
+     ggml_backend_opencl_context *backend_ctx = (ggml_backend_opencl_context *)backend->context;
+ 
+@@ -17833,7 +17926,10 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
+ 
+     const int ne21 = src->ne[1];
+     const int nb21 = src->nb[1];
+-    const int ne02 = nb21 / src->nb[0];
++    // moe-phone: the expert count must come from the weight tensor. Deriving it from the ids stride only
++    // works when ids is the usual view into the router's argsort (stride n_expert); MoE expert streaming
++    // passes a contiguous slot-remapped ids tensor (stride n_expert_used), which under-sized every buffer.
++    const int ne02 = n_expert_src0;
+     const int n_tile_size = 32;
+     const int max_post_router_tile = (ne20 * ne21 / n_tile_size) + ne02;
+ 
+@@ -17886,6 +17982,8 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
+     CL_CHECK(clSetKernelArg(kernel, 2, sizeof(int), &ne21));
+     CL_CHECK(clSetKernelArg(kernel, 3, sizeof(int), &ne20));
+     CL_CHECK(clSetKernelArg(kernel, 4, sizeof(int), &ne02));
++    const int row_stride = nb21 / src->nb[0]; // moe-phone
++    CL_CHECK(clSetKernelArg(kernel, 5, sizeof(int), &row_stride));
+ 
+     size_t histogram_global_size[] = {(size_t)(((ne21 + 63) / 64) * 64), static_cast<size_t>(ne20), 1};
+     size_t histogram_local_size[] = {64, 1, 1};
+@@ -17924,6 +18022,7 @@ static void moe_router_reoerder(ggml_backend_t backend, const ggml_tensor * src,
+     CL_CHECK(clSetKernelArg(kernel, 5, sizeof(int), &ne21));
+     CL_CHECK(clSetKernelArg(kernel, 6, sizeof(int), &ne20));
+     CL_CHECK(clSetKernelArg(kernel, 7, sizeof(int), &ne02));
++    CL_CHECK(clSetKernelArg(kernel, 8, sizeof(int), &row_stride));
+ 
+     backend_ctx->enqueue_ndrange_kernel(kernel, 3, histogram_global_size, histogram_local_size, src);
+ 
+@@ -18104,9 +18203,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+ 
+                     // Reorder router if called from test-backend-ops or when new router is generated.
+                     // Otherwise reuse the reordered result from previous mul_mat_id call.
+-                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder) {
+-                        moe_router_reoerder(backend, src2, ne20);
++                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder || backend_ctx->last_reordered_ids != src2) {
++                        moe_router_reoerder(backend, src2, ne20, (int) src0->ne[2]);
+                         backend_ctx->toggle_reorder = false;
++                        backend_ctx->last_reordered_ids = src2;
+                     }
+ 
+                     cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
+@@ -18329,9 +18429,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+ 
+                     // Reorder router if called from test-backend-ops or when new router is generated.
+                     // Otherwise reuse the reordered result from previous mul_mat_id call.
+-                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder) {
+-                        moe_router_reoerder(backend, src2, ne20);
++                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder || backend_ctx->last_reordered_ids != src2) {
++                        moe_router_reoerder(backend, src2, ne20, (int) src0->ne[2]);
+                         backend_ctx->toggle_reorder = false;
++                        backend_ctx->last_reordered_ids = src2;
+                     }
+ 
+                     cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
+@@ -18510,9 +18611,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+ 
+                     // Reorder router if called from test-backend-ops or when new router is generated.
+                     // Otherwise reuse the reordered result from previous mul_mat_id call.
+-                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder) {
+-                        moe_router_reoerder(backend, src2, ne20);
++                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder || backend_ctx->last_reordered_ids != src2) {
++                        moe_router_reoerder(backend, src2, ne20, (int) src0->ne[2]);
+                         backend_ctx->toggle_reorder = false;
++                        backend_ctx->last_reordered_ids = src2;
+                     }
+ 
+                     cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
+@@ -18686,9 +18788,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+ 
+                     // Reorder router if called from test-backend-ops or when new router is generated.
+                     // Otherwise reuse the reordered result from previous mul_mat_id call.
+-                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder) {
+-                        moe_router_reoerder(backend, src2, ne20);
++                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder || backend_ctx->last_reordered_ids != src2) {
++                        moe_router_reoerder(backend, src2, ne20, (int) src0->ne[2]);
+                         backend_ctx->toggle_reorder = false;
++                        backend_ctx->last_reordered_ids = src2;
+                     }
+ 
+                     cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
+@@ -18943,9 +19046,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+ 
+                     // Reorder router if called from test-backend-ops or when new router is generated.
+                     // Otherwise reuse the reordered result from previous mul_mat_id call.
+-                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder) {
+-                        moe_router_reoerder(backend, src2, ne20);
++                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder || backend_ctx->last_reordered_ids != src2) {
++                        moe_router_reoerder(backend, src2, ne20, (int) src0->ne[2]);
+                         backend_ctx->toggle_reorder = false;
++                        backend_ctx->last_reordered_ids = src2;
+                     }
+ 
+                     cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
+@@ -19122,9 +19226,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+ 
+                     // Reorder router if called from test-backend-ops or when new router is generated.
+                     // Otherwise reuse the reordered result from previous mul_mat_id call.
+-                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder) {
+-                        moe_router_reoerder(backend, src2, ne20);
++                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder || backend_ctx->last_reordered_ids != src2) {
++                        moe_router_reoerder(backend, src2, ne20, (int) src0->ne[2]);
+                         backend_ctx->toggle_reorder = false;
++                        backend_ctx->last_reordered_ids = src2;
+                     }
+ 
+                     cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
+@@ -19299,9 +19404,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+ 
+                     // Reorder router if called from test-backend-ops or when new router is generated.
+                     // Otherwise reuse the reordered result from previous mul_mat_id call.
+-                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder) {
+-                        moe_router_reoerder(backend, src2, ne20);
++                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder || backend_ctx->last_reordered_ids != src2) {
++                        moe_router_reoerder(backend, src2, ne20, (int) src0->ne[2]);
+                         backend_ctx->toggle_reorder = false;
++                        backend_ctx->last_reordered_ids = src2;
+                     }
+ 
+                     cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
+@@ -19475,9 +19581,10 @@ static void ggml_cl_mul_mat_id(ggml_backend_t backend, const ggml_tensor * src0,
+ 
+                     // Reorder router if called from test-backend-ops or when new router is generated.
+                     // Otherwise reuse the reordered result from previous mul_mat_id call.
+-                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder) {
+-                        moe_router_reoerder(backend, src2, ne20);
++                    if ((strstr(src0->name, "as") != NULL) || backend_ctx->toggle_reorder || backend_ctx->last_reordered_ids != src2) {
++                        moe_router_reoerder(backend, src2, ne20, (int) src0->ne[2]);
+                         backend_ctx->toggle_reorder = false;
++                        backend_ctx->last_reordered_ids = src2;
+                     }
+ 
+                     cl_mem sub_buf_src1_pre, buf_src1_reordered, image_src1_reordered, sub_buf_dst, buf_dst_image;
 diff --git a/ggml/src/ggml-opencl/kernels/cvt.cl b/ggml/src/ggml-opencl/kernels/cvt.cl
 index bf0335a..89c0f7a 100644
 --- a/ggml/src/ggml-opencl/kernels/cvt.cl
@@ -195,3 +357,47 @@ index bf0335a..89c0f7a 100644
 +    dst_q[offset + ne01 * 2] = q_block.z;
 +    dst_q[offset + ne01 * 3] = q_block.w;
 +}
+diff --git a/ggml/src/ggml-opencl/kernels/moe_sort_by_expert.cl b/ggml/src/ggml-opencl/kernels/moe_sort_by_expert.cl
+index d970342..d1a735e 100644
+--- a/ggml/src/ggml-opencl/kernels/moe_sort_by_expert.cl
++++ b/ggml/src/ggml-opencl/kernels/moe_sort_by_expert.cl
+@@ -5,7 +5,8 @@ __kernel void kernel_moe_histogram(
+     __global int * hist,
+     uint N,
+     uint topK,
+-    uint n_experts
++    uint n_experts,
++    uint row_stride
+ ) {
+     uint n = get_global_id(0);
+     uint k = get_global_id(1);
+@@ -14,7 +15,9 @@ __kernel void kernel_moe_histogram(
+         return;
+     }
+ 
+-    int expert_id = input[n * n_experts + k];
++    // moe-phone: row_stride (ids per row in memory) differs from n_experts for a contiguous slot-remapped
++    // ids tensor (MoE expert streaming); for the usual argsort view the two are equal.
++    int expert_id = input[n * row_stride + k];
+     atomic_inc(&hist[expert_id]);
+ }
+ 
+@@ -47,7 +50,8 @@ __kernel void kernel_moe_scatter(
+     __global int * slot_counter,
+     int N,
+     int topK,
+-    uint n_experts
++    uint n_experts,
++    uint row_stride
+ ) {
+     uint n = get_global_id(0);
+     uint k = get_global_id(1);
+@@ -56,7 +60,7 @@ __kernel void kernel_moe_scatter(
+         return;
+     }
+ 
+-    int val = input[n * n_experts + k];
++    int val = input[n * row_stride + k];
+ 
+     int local_slot = atomic_inc(&slot_counter[val]);
+ 
