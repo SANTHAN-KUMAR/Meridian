@@ -111,6 +111,17 @@ Pending: cancel the overnight watchdog cron when the plan is done.
   rep2 is erratic (N=5 slower than rep1 by 38%), so c(N) needs the thermal columns and more repeats.
 - bmoe_pin2 (rotated confirmation) started 16:23, running.
 
+### Update 19:40 — where the 0.1 s/token budget actually goes (corrected)
+- GPU expert cache (llama.cpp PR #25294 + 0005 v4) is CORRECT (OLMoE ppl 11.5482 with 32 slots = whole-model GPU)
+  and works on Qwen3-30B-A3B, but that engine decodes at 1.53-1.89 tok/s on the GPU and 0.39 on the CPU
+  (results pending pull: gpu_speed_*): it stalls on expert loads every layer (no read/compute overlap).
+- A claim made in conversation that flash I/O caps decode near 3.7 tok/s was WRONG: bmoe's "MiB/s" is per
+  lane-second summed over lanes; G1 measured 3.2 GB/s at 1 MB x 8 threads. bmoe pin_t4+recycle per token:
+  compute 0.114 + stall ~0.069 + mgmt 0.014 = 0.197 s. Compute is the largest term, measured throttled.
+- Plan for 10 tok/s: (1) compute -> ~0.05 s: unthrottled CPU and/or GPU/NPU compute inside an overlap engine
+  (port GPU MUL_MAT_ID into BigMoeOnEdge rather than the PR engine); npu_compare.sh ranks the accelerators;
+  (2) stall -> ~0.04: 6-8 I/O lanes (G1 scales to 8) + prefetch; (3) mgmt already 0.014.
+
 ## OVERNIGHT PLAN 2026-09-16 night — resume here
 
 **Goal (user, verbatim intent): run big MoE models on the 15R at a decent decode rate — reproduce
