@@ -4,7 +4,8 @@
 # positions): each decode is exactly a verify pass with real routing and the real expert cache. Seconds
 # per decode at N vs at 1 is the verify cost multiplier c(N); a drafter at acceptance giving T tokens per
 # verify wins only if c(N) < T minus the drafting cost. On the laptop c(4) was 3.5 (results/2026-09-17).
-# Interleaved N, thermal gate per run, one binary (patches 0002-0005).
+# Interleaved N, thermal gate + quiesce per run, one binary (patches 0002-0006), on the best measured
+# configuration (pinned t4 cores 4-7, I/O cores 0-3, --recycle-pages) since 2026-09-17 evening.
 #   sh bmoe_verify_cost.sh REPS
 set -u
 REPS=${1:-2}
@@ -12,7 +13,7 @@ H=/data/local/tmp/moe-stream
 . $H/thermal_gate.sh
 M=$H/Qwen3-30B-A3B-Q4_0.gguf
 O=$H/bmoe_verify_$(date +%Y%m%d_%H%M); mkdir -p "$O"
-BASE="--moe-stream --cache-mb auto --cache-ceil-mb 4000 --overlap --dense-weights anon -t 4 --io-threads 4 --ppl $H/verify_cost_text.txt"
+BASE="--moe-stream --cache-mb auto --cache-ceil-mb 4000 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-threads 4 --io-cpu-mask 0f --recycle-pages --ppl $H/verify_cost_text.txt"
 for r in $(seq 1 "$REPS"); do
   for n in 1 2 3 5; do
     tag=b${n}_rep$r
