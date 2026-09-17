@@ -85,7 +85,7 @@ artifact and in [`CLAIMS.md`](CLAIMS.md). The gate record is [`README.md`](READM
 | 3 | CPU vs Adreno vs Hexagon HTP v81 compute, OLMoE | npu_compare.sh | DONE -> npu_compare/: GPU tg64 34.6/47.1/47.6 vs pinned CPU 23.8/30.4/26.9 (throttled); NPU 'failed to load model' x3 -> verbose diagnostic after gpt-oss-20b |
 | 4 | verify cost c(N), 3 reps | bmoe_verify_cost.sh | DONE -> verify_cost.json: c(2)=1.71 c(3)=2.37 c(5)=3.71 |
 | 5 | repacked kernels on pinned (no recycle), 3 reps | bmoe_repack_pin.sh | DONE -> bmoe_repack_pin.json: 4.94 vs 5.39 tok/s — repack lever DEAD (both unpinned and pinned) |
-| 5a | gpt-oss-20b (12.1 GB > RAM) pinned vs unpinned, 2 reps | bmoe_gptoss20b.sh | RUNNING; queue6 auto-pauses after it for the NPU diagnostic, then phone_queue7.sh (defer -> lanes -> cache) |
+| 5a | gpt-oss-20b (12.1 GB > RAM) pinned vs unpinned, 2 reps | bmoe_gptoss20b.sh | DONE -> bmoe_gptoss20b.json: 4.21-4.39 tok/s; pinning inconclusive (n=2). Then queue7 resumed: defer -> lanes -> cache |
 | 5b | --defer-evict correctness (ppl) + speed vs pinned | bmoe_defer.sh | queued |
 | 6 | I/O lanes 4/6/8 (pinned, no recycle) | bmoe_lanes.sh | queued |
 | 7 | cache ceiling 4/5/6 GB | bmoe_cache.sh | queued |
@@ -114,7 +114,7 @@ cheaper drafter (reduced top-k / layer skip) - fwd 50 ms row approximates it.
 | verify cost inconclusive (doze) | DONE clean: c(N) 1.71/2.37/3.71 -> 4-token lossless draft needs >3.71 tokens/verify |
 | GPU expert cache abort / wrong ppl | FIXED (0005 v4): ppl 11.5482 = whole-model GPU; engine speed low -> move GPU compute into an overlap engine |
 | PR engine slow on phone | diagnosed: per-layer load stall, no overlap |
-| NPU unreachable (old reading) | device registers as HTP v81, but model load fails in all 3 runs; diagnosing (session/unsigned PD/memory mapping from the shell domain) |
+| NPU unreachable (old reading) | llama.cpp ggml-hexagon: HTP0 registers (v81) but opening the DSP session fails with 0x72 = AEE_ECONNREFUSED ("connection refused to DSP", AEEStdErr.h:196) from BOTH the adb shell domain and Termux (untrusted_app_27). QNN APKs reach HTP v81 on this phone (G0-NPU). OPEN, next: run through QNN (libQnnHtp*) or package the backend in an APK; not a dead end |
 | "flash I/O wall" claim | retracted (bmoe MiB/s is per lane-second); lanes + cache tests queued |
 | G-VALID-3 formula over-predicts | deferred until speed work lands; refit with measured compute term |
 | G3 sparsity outside margin | lossy by design; not pursued for headline |
