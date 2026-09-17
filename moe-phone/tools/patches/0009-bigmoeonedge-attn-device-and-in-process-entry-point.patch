@@ -11,12 +11,13 @@
 diff --git a/cli/CMakeLists.txt b/cli/CMakeLists.txt
 --- a/cli/CMakeLists.txt
 +++ b/cli/CMakeLists.txt
-@@ -1,2 +1,8 @@
+@@ -1,2 +1,9 @@
  add_executable(bmoe-cli main.cpp)
  target_link_libraries(bmoe-cli PRIVATE bmoe_core)
 +
 +# moe-phone: the same CLI as a shared library exporting bmoe_main(argc, argv), so an app process (the only
 +# place the Hexagon NPU session opens) can run the engine in-process via dlsym instead of exec'ing it.
++set_property(TARGET bmoe_core PROPERTY POSITION_INDEPENDENT_CODE ON) # bmoe_core is static; a .so needs its objects PIC
 +add_library(bmoe_entry SHARED main.cpp)
 +target_link_libraries(bmoe_entry PRIVATE bmoe_core)
 +set_target_properties(bmoe_entry PROPERTIES OUTPUT_NAME bmoe_entry)
@@ -134,3 +135,44 @@ diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
      // The nextn/MTP block is skipped at load unless asked for: llama.cpp marks its tensors
      // TENSOR_SKIP by default, and only --mtp builds a graph over them. n_layer_nextn comes from
      // the gguf metadata either way, so the "this model has no trained head" check below is
+@@ -897,6 +918,12 @@
+             // one entry's alias list so the bytes are still read and allocated exactly once.
+             std::vector<DenseTensorRef> dense, rows;
+             std::unordered_map<uint64_t, size_t> dense_at; // (shard, file offset) -> index in `dense`
++            // moe-phone --attn-device: a tensor the loader put in a non-host buffer (HTP/OpenCL) is owned
++            // by that backend. The dense policies below rebind tensor->data to host memory, which for a
++            // device-resident tensor would hand the backend a pointer into our anon arena and read garbage.
++            // Such tensors are not dense-policy candidates at all; they are counted, not silently dropped.
++            size_t n_device_resident = 0;
++            std::string device_resident_names;
+             for (ggml_tensor * t : im.hook->captured_weight_objects()) {
+                 if (!t) continue;
+                 const std::string name = t->name;
+@@ -904,6 +931,15 @@
+                 auto off = offs.off_by_name.find(name);
+                 auto sz = offs.size_by_name.find(name);
+                 if (off == offs.off_by_name.end() || sz == offs.size_by_name.end()) continue; // not a file tensor
++                // The check must come AFTER the file-tensor test, or it also counts the graph's own
++                // activations, which live in the device's compute buffer and were never dense
++                // candidates: counting them reported 435 "device-resident weights" for a placement that
++                // moved 192.
++                if (t->buffer && !ggml_backend_buffer_is_host(t->buffer)) {
++                    if (n_device_resident < 6) device_resident_names += std::string(" ") + name;
++                    ++n_device_resident;
++                    continue;
++                }
+                 const int file_idx = offs.file_by_name.at(name);
+                 const uint64_t key = ((uint64_t) (uint32_t) file_idx << 48) ^ off->second;
+                 auto seen = dense_at.find(key);
+@@ -922,6 +958,11 @@
+                 // qualified as row-gathered; the guard costs nothing and keeps that coupling explicit.
+                 if (row_names.count(name)) rows.push_back(d);
+             }
++            if (n_device_resident)
++                std::fprintf(stderr, "bmoe: %zu file-backed weight tensors live in a non-host buffer "
++                             "(--attn-device %s) and are excluded from every dense-weight policy; "
++                             "first:%s\n", n_device_resident, cfg.attn_device.c_str(),
++                             device_resident_names.c_str());
+             for (const DenseTensorRef & d : dense)
+                 if (!d.aliases.empty())
+                     std::fprintf(stderr, "bmoe: '%s' is bound %zu times over one range (tied head) — all rebound\n",
