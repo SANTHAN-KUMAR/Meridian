@@ -17,7 +17,11 @@ adb push "$HERE/out/android/." "$D/" >/dev/null
 mk=""
 adb shell "test -f $D/zc_experts.bin" || mk="--make-file"
 TG=/data/local/tmp/moe-stream/thermal_gate.sh
-adb shell "if [ -f $TG ]; then . $TG; quiesce; thermal_state; fi" > "$R/state_before.txt" 2>&1 || true
+# the phone session's gate (device/thermal_gate.sh): quiesce third-party apps, make sure >= 2000 MiB is
+# free (zcbench needs <= ~800 MB), and record the thermal state and caps. zcbench then samples both CPU
+# caps, current frequencies and the GPU frequency every second on its own (CLKS lines).
+adb shell "if [ -f $TG ]; then . $TG; quiesce; mem_ready 2000 60; thermal_state; else echo NO_THERMAL_GATE; fi" > "$R/state_before.txt" 2>&1 || true
+cat "$R/state_before.txt"
 adb shell "cd $D && LD_LIBRARY_PATH=/vendor/lib64:$D ./zcbench --file $D/zc_experts.bin $mk $*" | tee "$R/zcbench.out"
 adb shell "if [ -f $TG ]; then . $TG; thermal_state; fi" > "$R/state_after.txt" 2>&1 || true
 adb pull "$D/zc_concurrent_trace.csv" "$R/" >/dev/null 2>&1 || true
