@@ -768,7 +768,7 @@ CLAIMS = [
          value=lambda A: next(r["lru_hit"] for r in A["ezram"]["rows"]
                               if abs(r["cache_fraction"] - 0.544) < 1e-9)),
     dict(id="budget_projected_7000_tok_s",
-         text="carrying the simulator's +2.7-point optimism across, a 7000 MiB budget projects 58.3 MiB/token of flash traffic against today's 119.8 and 7.33 tok/s against 6.199 (+18.2%) -- a projection that holds compute and cache management fixed, which is optimistic, and that needs a thermally clean run to confirm",
+         text="IF a 7000 MiB budget were granted, carrying the simulator's +2.7-point optimism across projects 58.3 MiB/token of flash traffic against today's 119.8 and 7.33 tok/s against 6.199 (+18.2%). Conditional twice over: it holds compute and cache management fixed (optimistic), and whether 7000 MiB is REACHABLE is unknown -- the process needs the dense weights and ~1.2 GB of compute buffers on top of the cache, so ~7.6 GB free does not mean a 7000 MiB cache fits; device/bmoe_hitrate.sh lets the engine's own auto logic decide and records what it actually grants",
          artifact="cache_projection.json", expected=7.333, tol=0.01,
          value=lambda A: next(r["projected_decode_tok_s"] for r in A["cproj"]["rows"]
                               if r["budget_MiB"] == 7000)),
