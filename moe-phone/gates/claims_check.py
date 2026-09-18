@@ -912,7 +912,7 @@ CLAIMS = [
          artifact="overhead_summary.json", expected=20.05, tol=0.01,
          value=lambda A: A["ovh"]["stream_minus_plain"]["mean_diff_ms"]),
     dict(id="overhead_ratio",
-         text="steady-state median 55.7 vs 29.3 ms/token: the engine runs the same arithmetic 1.90x slower (12.5 vs 23.8 GB/s of weights), so compute on Qwen3 is NOT a hardware wall -- roughly half of it is the engine",
+         text="steady-state median 55.7 vs 29.3 ms/token: on fully-cached OLMoE the engine runs the same arithmetic 1.90x slower (12.5 vs 23.8 GB/s of weights). This is an OLMoE measurement: on Qwen3 the engine's compute (~92 ms for 1.84 GB, ~20 GB/s at status-1 caps) is only 12-25% below the CPU's 23-26 GB/s matmul rate, so the recoverable overhead on Qwen3 is ~12-20 ms, not half of compute (and the OLMoE dense-copy saving reversed on Qwen3, claim densemap_sensitivity_compute)",
          artifact="overhead_summary.json", expected=1.9017, tol=0.001,
          value=lambda A: A["ovh"]["overhead_ratio"]),
     dict(id="overhead_lossless",
