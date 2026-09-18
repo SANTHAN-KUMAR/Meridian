@@ -61,7 +61,10 @@ extern "C" JNIEXPORT jint JNICALL
 Java_com_moephone_npu_Probe_setEnv(JNIEnv * env, jclass, jstring jk, jstring jv) {
     const char * k = env->GetStringUTFChars(jk, nullptr);
     const char * v = env->GetStringUTFChars(jv, nullptr);
-    const int rc = setenv(k, v, 1);
+    // An empty value UNSETS the variable. The app process survives between runs, so a knob set for one
+    // arm of a sweep would otherwise still be set for the next one and the arms would accumulate
+    // instead of being independent.
+    const int rc = (v && v[0]) ? setenv(k, v, 1) : unsetenv(k);
     env->ReleaseStringUTFChars(jk, k);
     env->ReleaseStringUTFChars(jv, v);
     return rc;

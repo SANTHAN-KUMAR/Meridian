@@ -18,9 +18,21 @@ public class Probe {
     // their configuration at static-init time. Format: "K=V;K=V". Used to sweep the Hexagon backend's
     // dispatch knobs -- GGML_HEXAGON_OPPOLL in particular, which is 0 by default and decides whether the
     // host polls for DSP batch completion or waits on an interrupt.
+    // Every knob any arm of a sweep might set. Cleared before each run so that arms are independent
+    // even when Android keeps the process alive between them.
+    private static final String[] SWEPT = {
+        "GGML_HEXAGON_OPPOLL", "GGML_HEXAGON_HOSTBUF", "GGML_HEXAGON_DEVICES", "GGML_HEXAGON_NDEV",
+        "GGML_HEXAGON_OPBATCH", "GGML_HEXAGON_OPQUEUE", "GGML_HEXAGON_OPFUSION", "GGML_HEXAGON_NHVX",
+        "GGML_HEXAGON_NHMX", "GGML_HEXAGON_VERBOSE", "GGML_HEXAGON_OPMASK", "GGML_HEXAGON_OPFILTER"
+    };
+
     private static String applyEnv(String env) {
-        if (env == null || env.length() == 0) { return ""; }
         StringBuilder sb = new StringBuilder("env:");
+        for (int i = 0; i < SWEPT.length; i++) {
+            try { setEnv(SWEPT[i], ""); } catch (Throwable ignored) { }
+        }
+        sb.append(" cleared=").append(SWEPT.length);
+        if (env == null || env.length() == 0) { return sb.append(" | ").toString(); }
         String[] pairs = env.split(";");
         for (int i = 0; i < pairs.length; i++) {
             int eq = pairs[i].indexOf('=');

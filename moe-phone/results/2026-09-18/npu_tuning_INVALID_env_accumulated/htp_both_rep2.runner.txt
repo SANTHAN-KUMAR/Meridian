@@ -1,0 +1,2 @@
+env: GGML_HEXAGON_OPPOLL=1 GGML_HEXAGON_HOSTBUF=1 | bench rc=0
+EXIT=bench

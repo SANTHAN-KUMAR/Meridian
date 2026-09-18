@@ -34,7 +34,7 @@ run_one() {  # tag threads
   local tag=$1 t=$2 i=0
   adb shell "run-as $PKG sh -c 'rm -f files/out.txt files/bench.txt'" >/dev/null 2>&1
   adb shell "input keyevent KEYCODE_WAKEUP; am start -n $PKG/com.moephone.npu.Run --es bench '-m~~$M~~-p~~0~~-n~~$N~~-r~~2~~-t~~$t~~-ngl~~0'" >/dev/null 2>&1
-  while [ $i -lt 60 ]; do
+  while [ $i -lt 120 ]; do
     sleep 5
     if adb shell "run-as $PKG sh -c 'grep -c EXIT= files/out.txt 2>/dev/null'" 2>/dev/null | tr -d '\r' | grep -qv '^0$'; then break; fi
     i=$((i + 1))
@@ -46,6 +46,11 @@ run_one() {  # tag threads
 }
 
 log "START reps=$REPS n_gen=$N pkg=$PKG"
+# Warm the model into the page cache first: the first run after an install or a reboot otherwise
+# spends minutes faulting a multi-GB file in and can exceed the driver\'s wait, which is exactly how
+# the 09:44 sweep lost its htp_default and gpu rows (both were still running when it gave up).
+adb shell "run-as $PKG sh -c \'cat files/olmoe.gguf > /dev/null 2>&1\'" >/dev/null 2>&1 </dev/null
+log "model warmed into page cache"
 for rep in $(seq 1 "$REPS"); do
   case $((rep % 4)) in
     1) order="2 4 6 8" ;;

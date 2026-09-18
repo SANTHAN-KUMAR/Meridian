@@ -1,0 +1,2 @@
+env: GGML_HEXAGON_OPBATCH=1 | bench rc=0
+EXIT=bench

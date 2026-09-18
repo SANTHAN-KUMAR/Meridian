@@ -48,9 +48,11 @@ run_one() {  # tag  device  env
   local tag=$1 dev=$2 env=$3 i=0
   local devargs="-ngl~~99~~-dev~~$dev"
   [ "$dev" = "CPU" ] && devargs="-ngl~~0"
+  # a fresh process per arm: the cheapest guarantee that one arm's environment cannot reach the next
+  adb shell "am force-stop $PKG" >/dev/null 2>&1 </dev/null
   adb shell "run-as $PKG sh -c 'rm -f files/out.txt files/bench.txt'" >/dev/null 2>&1 </dev/null
   adb shell "input keyevent KEYCODE_WAKEUP; am start -n $PKG/com.moephone.npu.Run --es env '$env' --es bench '-m~~$M~~-p~~64~~-n~~$N~~-r~~2~~-t~~4~~$devargs'" >/dev/null 2>&1 </dev/null
-  while [ $i -lt 60 ]; do
+  while [ $i -lt 120 ]; do
     sleep 5
     if adb shell "run-as $PKG sh -c 'grep -c EXIT= files/out.txt 2>/dev/null'" 2>/dev/null </dev/null | tr -d '\r' | grep -qv '^0$'; then break; fi
     i=$((i + 1))
@@ -77,6 +79,11 @@ cpu|CPU|
 # campaign silently runs one arm per repeat and then reports DONE. That happened on the first attempt
 # (results/2026-09-18/npu_tuning/driver.log, 09:41): two arms, then DONE.
 log "START reps=$REPS n_gen=$N pkg=$PKG"
+# Warm the model into the page cache first: the first run after an install or a reboot otherwise
+# spends minutes faulting a multi-GB file in and can exceed the driver\'s wait, which is exactly how
+# the 09:44 sweep lost its htp_default and gpu rows (both were still running when it gave up).
+adb shell "run-as $PKG sh -c \'cat files/olmoe.gguf > /dev/null 2>&1\'" >/dev/null 2>&1 </dev/null
+log "model warmed into page cache"
 mapfile -t ARM_LIST < <(printf '%s\n' "$ARMS" | grep '|')
 n=${#ARM_LIST[@]}
 log "arms: $n"

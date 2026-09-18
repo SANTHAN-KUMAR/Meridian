@@ -1,0 +1,2 @@
+env: GGML_HEXAGON_DEVICES=2 | bench rc=0
+EXIT=bench

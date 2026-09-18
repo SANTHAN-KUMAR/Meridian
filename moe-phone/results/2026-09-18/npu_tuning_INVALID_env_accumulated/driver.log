@@ -1,0 +1,15 @@
+2026-09-18T09:44:33+05:30 START reps=2 n_gen=128 pkg=com.moephone.npu2
+2026-09-18T09:44:33+05:30 arms: 8
+2026-09-18T09:49:48+05:30 htp_default_rep1 [HTP0] env='' :: 
+2026-09-18T09:50:24+05:30 htp_oppoll_rep1 [HTP0] env='GGML_HEXAGON_OPPOLL=1' :: pp64 |       325.93 tg128 |         43.60 
+2026-09-18T09:51:10+05:30 htp_hostbuf_rep1 [HTP0] env='GGML_HEXAGON_HOSTBUF=1' :: pp64 |        336.50 tg128 |         39.18 
+2026-09-18T09:52:13+05:30 htp_both_rep1 [HTP0] env='GGML_HEXAGON_OPPOLL=1;GGML_HEXAGON_HOSTBUF=1' :: pp64 |       284.27 tg128 |         39.11 
+2026-09-18T09:53:24+05:30 htp_ndev2_rep1 [HTP0] env='GGML_HEXAGON_DEVICES=2' :: pp64 |       293.28 tg128 |         36.71 
+2026-09-18T09:54:05+05:30 htp_nobatch_rep1 [HTP0] env='GGML_HEXAGON_OPBATCH=1' :: pp64 |       305.70 tg128 |         32.08 
+2026-09-18T09:59:50+05:30 gpu_rep1 [GPUOpenCL] env='' :: 
+2026-09-18T10:05:18+05:30 cpu_rep1 [CPU] env='' :: 
+2026-09-18T10:05:55+05:30 htp_oppoll_rep2 [HTP0] env='GGML_HEXAGON_OPPOLL=1' :: pp64 |       340.98 tg128 |         43.42 
+2026-09-18T10:06:42+05:30 htp_hostbuf_rep2 [HTP0] env='GGML_HEXAGON_HOSTBUF=1' :: pp64 |       318.62 tg128 |         36.60 
+2026-09-18T10:07:50+05:30 htp_both_rep2 [HTP0] env='GGML_HEXAGON_OPPOLL=1;GGML_HEXAGON_HOSTBUF=1' :: pp64 |       298.72 tg128 |         35.86 
+2026-09-18T10:08:44+05:30 htp_ndev2_rep2 [HTP0] env='GGML_HEXAGON_DEVICES=2' :: pp64 |       297.81 tg128 |         38.48 
+2026-09-18T10:09:26+05:30 htp_nobatch_rep2 [HTP0] env='GGML_HEXAGON_OPBATCH=1' :: pp64 |        299.61 tg128 |         32.22 
