@@ -1,0 +1,1 @@
+STOPPED 02:05:42 by the agent after 4 complete rows (stack_rep2a killed mid-run): the kgsl arm makes the system swap hard (engine 104,680 major faults/30 s, VmSwap 212 MB, pswpout 212k pages/30 s during stack_rep2a) and the swap state carries over into the following base row (compute 97 -> 148 ms), which ABBA cannot cancel; the A/B cannot give a valid verdict
