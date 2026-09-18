@@ -2,7 +2,7 @@
 # bmoe_gtier.sh — the GPU expert tier (patches 0017-0019 + libgx, component C) on Qwen3, phone, against the stack.
 #   base   the stack configuration (SLRU + predict-prefetch + selective adoption; I/O lanes cpu0-3; compute cpu4-7)
 #   stack  the same + --gpu-tier-mb 1000 --gpu-backend gx --gpu-variant 1 --gpu-tier-prior <qwen3 prior>
-#          --gpu-max-per-layer 3 --gpu-promotions-per-token 1
+#          --gpu-max-per-layer $GT_CAP --gpu-promotions-per-token 1
 # (arm names reuse gates/stack_summary.py; "stack" means "GPU tier on").
 # The tier's 1000 MiB come out of the CPU cache budget (the total stays at the auto-sized budget). Tier size from
 # gates/gtier_size.py (1000 MiB = 380 slots covers 32% of selections out of sample; 2.19 device experts/layer at
@@ -46,10 +46,16 @@
 # FIX 2026-09-19 02:30: smoke bmoe_gtier_smoke_20260919_0223 was invalid -- the stack row exited 1 with "unknown arg" because
 # --gpu-spin-wait takes a value and the bare flag swallowed --gpu-tier-prior. Now "--gpu-spin-wait 1"; the exact TIER
 # string is validated on the laptop engine (same CLI) before each push.
-#   GT_BIN=... GT_VARIANT=... sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
+# FOLLOW-UP PRE-REGISTERED 2026-09-19 03:05 (before any cap-8 row; the cap-3 A/B is still running): GT_CAP (default 3)
+# sets --gpu-max-per-layer. Mechanism seen in the cap-3 A/B's repeat 1: ~2,500 overflow experts per row (owned by the tier
+# but beyond cap 3) are read-mapped for the CPU through blocking OpenCL maps (pool test: map 1.4 + unmap 2.7 ms), about
+# 40 ms/token of host time, against compute +56..+120 ms/token. At cap 8 every owned expert is dispatched to the device
+# during decode. Only prefill still read-maps. Laptop: overflow 644 -> 116. The same A/B rule, keep rule and outcomes
+# apply; binary bmoe-i8mm-0023 = 0022 + host-time counters (overflow map / unmap / promotion ms), gx still at 58b13dd.
+#   GT_BIN=... GT_VARIANT=... GT_CAP=... sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
 set -u
 MODE=${1:-smoke}
-GT_BIN=${GT_BIN:-bmoe-i8mm-0019gx}; GT_VARIANT=${GT_VARIANT:-1}; GT_SPIN=${GT_SPIN:-0}
+GT_BIN=${GT_BIN:-bmoe-i8mm-0019gx}; GT_VARIANT=${GT_VARIANT:-1}; GT_SPIN=${GT_SPIN:-0}; GT_CAP=${GT_CAP:-3}
 H=/data/local/tmp/moe-stream
 . $H/thermal_gate.sh
 M=$H/Qwen3-30B-A3B-Q4_0.gguf
@@ -57,7 +63,7 @@ O=$H/bmoe_gtier_${MODE}_$(date +%Y%m%d_%H%M); mkdir -p "$O"
 P="Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field"
 BASE="--chatml --ubatch 512 --moe-stream --cache-mb auto --cache-floor-mb 1024 --cache-ceil-mb 5000 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-threads 4 --io-cpu-mask 0f --expert-slru --predict-prefetch --spec-adopt-selective"
 SPINF=""; [ "$GT_SPIN" = 1 ] && SPINF="--gpu-spin-wait 1"
-TIER="--gpu-tier-mb 1000 --gpu-backend gx --gpu-variant $GT_VARIANT $SPINF --gpu-tier-prior $H/qwen3_gtier_prior.txt --gpu-max-per-layer 3 --gpu-promotions-per-token 1"
+TIER="--gpu-tier-mb 1000 --gpu-backend gx --gpu-variant $GT_VARIANT $SPINF --gpu-tier-prior $H/qwen3_gtier_prior.txt --gpu-max-per-layer $GT_CAP --gpu-promotions-per-token 1"
 if [ -e $H/.phone_busy ]; then echo "phone busy: $(cat $H/.phone_busy)" | tee "$O/REFUSED"; exit 3; fi
 echo "gtier $MODE $(date +%H:%M:%S)" > $H/.phone_busy
 trap 'rm -f $H/.phone_busy' EXIT
