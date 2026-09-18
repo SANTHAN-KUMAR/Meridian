@@ -423,3 +423,87 @@ kernel void gx_down_soa(global const uchar * w0, global const uchar * w1, global
     const float v = hsum8p(acc);
     out[(size_t) s * N_EMBD + row] = dt == DT_Q4_1 ? summs + v : v;
 }
+
+
+// ---------------------------------------------------------------------------------------------------
+// Variant 3 ("tiled"): variant 2's planes, tiled by 64-row groups so one work-group's data is one
+// contiguous region (M6 run 3: variant 2's [ib][row] planes ran ~10x slower on Adreno, each block of a wave
+// landing on a new 4 KB page). Index of (ib, row) in 16-byte (qs) or 2-byte (d, m) units:
+//   ((row / 64) * NB + ib) * 64 + row % 64
+// Same bytes, same slot offsets; the arithmetic is variant 1's, unchanged.
+// ---------------------------------------------------------------------------------------------------
+#define TIL_I(ib, row, NB) ((((size_t) (row) >> 6) * (size_t) (NB) + (size_t) (ib)) * 64 + ((size_t) (row) & 63))
+#define TIL_Q(base, ib, row, R) as_uchar16(((global const uint4 *) (base))[TIL_I(ib, row, (R) == N_FF ? NBX : NBH)])
+#define TIL_H(base, NB, R, plane, ib, row) \
+    h2f(((global const ushort *) ((base) + (size_t) (NB) * (R) * (16 + 2 * (plane))))[TIL_I(ib, row, NB)])
+
+// Grid (N_FF, k), local (64, 1).
+kernel void gx_gate_up_tiled(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
+                           global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
+                           global const uchar * inb, global uchar * hq,
+                           global float * hdbg, int dbg, int dt, global uchar * outb) {
+    local char  lx[NBX * 32];
+    local float ldx[NBX];
+    local float lh[64];
+    local int   lrisk;
+    global const ulong * offs = (global const ulong *) (inb + IN_OFFS_OFF);
+    global const uchar * xq = inb;
+    const int t = get_local_id(0), s = get_group_id(1);
+    const int row = get_group_id(0) * 64 + t;
+    if (t == 0) lrisk = 0;
+    for (int i = t; i < NBX; i += 64) {
+        ldx[i] = h2f(((global const ushort *) (xq + i * YB0))[0]);
+        for (int b = 0; b < 32; b++) lx[i * 32 + b] = (char) xq[i * YB0 + 2 + b];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    global const uchar * W = pick(s, w0, w1, w2, w3, w4, w5, w6, w7);
+    global const uchar * G = W + offs[s * 3 + 0];
+    global const uchar * U = W + offs[s * 3 + 1];
+    float ag[8] = {0, 0, 0, 0, 0, 0, 0, 0}, au[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    for (int ib = 0; ib < NBX; ib++) {
+        const float dy = ldx[ib];
+        row_block_v(ag, ib & 1, TIL_Q(G, ib, row, N_FF), TIL_H(G, NBX, N_FF, 0, ib, row) * dy, 8, lx + ib * 32);
+        row_block_v(au, ib & 1, TIL_Q(U, ib, row, N_FF), TIL_H(U, NBX, N_FF, 0, ib, row) * dy, 8, lx + ib * 32);
+    }
+    int r = 0;
+    const float h = gx_swiglu_r(hsum8p(ag), hsum8p(au), &r);
+    lh[t] = h;
+    if (dbg) hdbg[s * N_FF + row] = h;
+    if (r) lrisk = 1;
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (t < 2 && q8_block(lh + 32 * t, hq + ((size_t) s * NBH + get_group_id(0) * 2 + t) * YB1, dt == DT_Q4_1)) lrisk = 1;
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (t == 0) ((global int *) outb)[s * RISK_WG + get_group_id(0)] = lrisk;
+}
+
+// Grid (N_EMBD, k), local (64, 1).
+kernel void gx_down_tiled(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
+                        global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
+                        global const uchar * inb, global const uchar * hq, global uchar * outb, int dt) {
+    local char  ly[NBH * 32];
+    local float ld[NBH], ls[NBH];
+    global const ulong * offs = (global const ulong *) (inb + IN_OFFS_OFF);
+    global float * out = (global float *) (outb + OUT_OFF);
+    const int t = get_local_id(0), s = get_group_id(1);
+    const int row = get_group_id(0) * 64 + t;
+    global const uchar * Y = hq + (size_t) s * NBH * YB1;
+    for (int i = t; i < NBH; i += 64) {
+        ld[i] = h2f(((global const ushort *) (Y + i * YB1))[0]);
+        ls[i] = h2f(((global const ushort *) (Y + i * YB1))[1]);
+        for (int b = 0; b < 32; b++) ly[i * 32 + b] = (char) Y[i * YB1 + 4 + b];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    const int bias = dt == DT_Q4_1 ? 0 : 8;
+    global const uchar * D = pick(s, w0, w1, w2, w3, w4, w5, w6, w7) + offs[s * 3 + 2];
+    float acc[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    float summs = 0.0f;
+    for (int ib = 0; ib < NBH; ib++) {
+        row_block_v(acc, ib & 1, TIL_Q(D, ib, row, N_EMBD), TIL_H(D, NBH, N_EMBD, 0, ib, row) * ld[ib], bias, ly + ib * 32);
+        if (dt == DT_Q4_1 && (ib & 1)) {
+            const float m0 = TIL_H(D, NBH, N_EMBD, 1, ib - 1, row), m1 = TIL_H(D, NBH, N_EMBD, 1, ib, row);
+            summs = summs + fma(m0, ls[ib - 1], m1 * ls[ib]);
+        }
+    }
+    const float v = hsum8p(acc);
+    out[(size_t) s * N_EMBD + row] = dt == DT_Q4_1 ? summs + v : v;
+}

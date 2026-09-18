@@ -34,6 +34,8 @@ controls=(
   "soa_wrong_parity|s.replace('row_block_v(ag, ib & 1,', 'row_block_v(ag, (ib >> 1) & 1,')"
   "soa_wrong_plane_stride|s.replace('#define SOA_Q(base, ib, row, R) as_uchar16(((global const uint4 *) (base))[(size_t) (ib) * (R) + (row)])', '#define SOA_Q(base, ib, row, R) as_uchar16(((global const uint4 *) (base))[(size_t) (row) * (NBX) + (ib) % (NBX)])')"
   "soa_summs_two_roundings|s.replace('            const float m0 = SOA_H(D, NBH, N_EMBD, 1, ib - 1, row), m1 = SOA_H(D, NBH, N_EMBD, 1, ib, row);\n            summs = summs + fma(m0, ls[ib - 1], m1 * ls[ib]);', '            const float m0 = SOA_H(D, NBH, N_EMBD, 1, ib - 1, row), m1 = SOA_H(D, NBH, N_EMBD, 1, ib, row);\n            summs = (summs + m0 * ls[ib - 1]) + m1 * ls[ib];')"
+  "tiled_untiled_index|s.replace('#define TIL_I(ib, row, NB) ((((size_t) (row) >> 6) * (size_t) (NB) + (size_t) (ib)) * 64 + ((size_t) (row) & 63))', '#define TIL_I(ib, row, NB) ((((size_t) (row) >> 6) * (size_t) (NB) + (size_t) (ib)) * 64 + ((size_t) ((row) + 1) & 63))')"
+  "tiled_wrong_parity|s.replace('row_block_v(ag, ib & 1, TIL_Q(', 'row_block_v(ag, (ib >> 1) & 1, TIL_Q(')"
   "one_accumulator_per_lane|s.replace('for (int ib = p; ib < NBX; ib += 2) {', 'for (int ib = p ? NBX : 0; ib < NBX; ib += 1) {')"
 )
 fail=0

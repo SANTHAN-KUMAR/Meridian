@@ -79,13 +79,18 @@ uint16_t f32_to_f16_rne(float f) {
 
 // Repack one Q4 matrix (rows x nb blocks, GGUF block layout) into variant 2's planes: qs [ib][row] 16 B,
 // d [ib][row], and for Q4_1 m [ib][row]. A pure byte permutation (same size).
-static void repack_matrix(const uint8_t * src, uint8_t * dst, size_t rows, size_t nb, int q41) {
+// plane index of (ib, row): variant 2 [ib][row]; variant 3 tiled [row/64][ib][row%64] (gx_kernels.cl TIL_I)
+static inline size_t plane_index(size_t ib, size_t r, size_t rows, size_t nb, int tiled) {
+    return tiled ? ((r >> 6) * nb + ib) * 64 + (r & 63) : ib * rows + r;
+}
+
+static void repack_matrix(const uint8_t * src, uint8_t * dst, size_t rows, size_t nb, int q41, int tiled) {
     const size_t bs = q41 ? 20 : 18, qo = q41 ? 4 : 2;
     uint8_t * qs = dst, * dp = dst + nb * rows * 16, * mp = dst + nb * rows * 18;
     for (size_t r = 0; r < rows; r++)
         for (size_t ib = 0; ib < nb; ib++) {
             const uint8_t * b = src + (r * nb + ib) * bs;
-            const size_t j = ib * rows + r;
+            const size_t j = plane_index(ib, r, rows, nb, tiled);
             memcpy(qs + j * 16, b + qo, 16);
             memcpy(dp + j * 2, b, 2);
             if (q41) memcpy(mp + j * 2, b + 2, 2);
@@ -197,9 +202,13 @@ extern "C" gx_ctx * gx_init(cl_context ctx, cl_device_id dev, gx_params p, char 
         gx_free(g);
         return nullptr;
     }
-    if (p.variant < 0 || p.variant > 2) { seterr(err, errlen, "variant must be 0, 1 or 2"); gx_free(g); return nullptr; }
+    if (p.variant < 0 || p.variant > 3) { seterr(err, errlen, "variant must be 0, 1, 2 or 3"); gx_free(g); return nullptr; }
+    if (p.variant == 3 && (p.n_ff % 64 || p.n_embd % 64 || p.n_ff == p.n_embd)) {
+        seterr(err, errlen, "variant 3 needs n_ff, n_embd multiples of 64 and n_ff != n_embd"); gx_free(g); return nullptr;
+    }
     const size_t wg_need = p.variant ? 64 : 256;
-    static const char * kn1[3] = {"gx_gate_up", "gx_gate_up_row", "gx_gate_up_soa"}, * kn2[3] = {"gx_down", "gx_down_row", "gx_down_soa"};
+    static const char * kn1[4] = {"gx_gate_up", "gx_gate_up_row", "gx_gate_up_soa", "gx_gate_up_tiled"},
+                      * kn2[4] = {"gx_down", "gx_down_row", "gx_down_soa", "gx_down_tiled"};
     g->k1 = p_clCreateKernel(g->prog, kn1[p.variant], &e);
     if (e == CL_SUCCESS) g->k2 = p_clCreateKernel(g->prog, kn2[p.variant], &e);
     for (cl_kernel k : {g->k1, g->k2}) {
@@ -519,9 +528,10 @@ extern "C" int gx_repack_expert(const gx_ctx * g, const gx_slot * s, void * mapp
     if (!g || !s || !mapped || (down_type != GX_DOWN_Q4_0 && down_type != GX_DOWN_Q4_1)) return -1;
     const size_t ne = (size_t) g->p.n_embd, nf = (size_t) g->p.n_ff;
     uint8_t * base = (uint8_t *) mapped;
-    repack_matrix((const uint8_t *) src_gate, base, nf, ne / 32, 0);
-    repack_matrix((const uint8_t *) src_up, base + (s->off_up - s->off_gate), nf, ne / 32, 0);
-    repack_matrix((const uint8_t *) src_down, base + (s->off_down - s->off_gate), ne, nf / 32, down_type == GX_DOWN_Q4_1);
+    const int tl = g->p.variant == 3;
+    repack_matrix((const uint8_t *) src_gate, base, nf, ne / 32, 0, tl);
+    repack_matrix((const uint8_t *) src_up, base + (s->off_up - s->off_gate), nf, ne / 32, 0, tl);
+    repack_matrix((const uint8_t *) src_down, base + (s->off_down - s->off_gate), ne, nf / 32, down_type == GX_DOWN_Q4_1, tl);
     gx_ctx * gm = const_cast<gx_ctx *>(g);
     std::lock_guard<std::mutex> lk(gm->mu);
     gm->slot_dtype[{s->block, s->off_gate}] = down_type;
@@ -530,13 +540,13 @@ extern "C" int gx_repack_expert(const gx_ctx * g, const gx_slot * s, void * mapp
 
 
 // Inverse of repack_matrix: planes back to GGUF blocks.
-static void unpack_matrix(const uint8_t * src, uint8_t * dst, size_t rows, size_t nb, int q41) {
+static void unpack_matrix(const uint8_t * src, uint8_t * dst, size_t rows, size_t nb, int q41, int tiled) {
     const size_t bs = q41 ? 20 : 18, qo = q41 ? 4 : 2;
     const uint8_t * qs = src, * dp = src + nb * rows * 16, * mp = src + nb * rows * 18;
     for (size_t r = 0; r < rows; r++)
         for (size_t ib = 0; ib < nb; ib++) {
             uint8_t * b = dst + (r * nb + ib) * bs;
-            const size_t j = ib * rows + r;
+            const size_t j = plane_index(ib, r, rows, nb, tiled);
             memcpy(b + qo, qs + j * 16, 16);
             memcpy(b, dp + j * 2, 2);
             if (q41) memcpy(b + 2, mp + j * 2, 2);
@@ -555,8 +565,9 @@ extern "C" int gx_unpack_expert(const gx_ctx * g, const gx_slot * s, const void 
     }
     const size_t ne = (size_t) g->p.n_embd, nf = (size_t) g->p.n_ff;
     const uint8_t * base = (const uint8_t *) mapped;
-    if (dst_gate) unpack_matrix(base, (uint8_t *) dst_gate, nf, ne / 32, 0);
-    if (dst_up) unpack_matrix(base + (s->off_up - s->off_gate), (uint8_t *) dst_up, nf, ne / 32, 0);
-    if (dst_down) unpack_matrix(base + (s->off_down - s->off_gate), (uint8_t *) dst_down, ne, nf / 32, down_type == GX_DOWN_Q4_1);
+    const int tl = g->p.variant == 3;
+    if (dst_gate) unpack_matrix(base, (uint8_t *) dst_gate, nf, ne / 32, 0, tl);
+    if (dst_up) unpack_matrix(base + (s->off_up - s->off_gate), (uint8_t *) dst_up, nf, ne / 32, 0, tl);
+    if (dst_down) unpack_matrix(base + (s->off_down - s->off_gate), (uint8_t *) dst_down, ne, nf / 32, down_type == GX_DOWN_Q4_1, tl);
     return 0;
 }

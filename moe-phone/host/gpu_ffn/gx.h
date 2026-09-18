@@ -45,7 +45,8 @@ typedef struct gx_params {
     int debug_h;    /* 1: keep the fp32 SwiGLU output for gx_debug_h (tests only) */
     int variant;    /* work mapping, identical arithmetic: 0 = 8 work-items per row (lane-mapped),
                        1 = one work-item per row (whole-block loads), 2 = variant 1 on the repacked slot layout
-                       (every slot must be written with gx_repack_expert). All held to the same bit-exact test. */
+                       (every slot must be written with gx_repack_expert), 3 = variant 2's planes tiled by 64-row
+                       groups (also written with gx_repack_expert). All held to the same bit-exact test. */
     int profile;    /* 1: create the dispatch queue with CL_QUEUE_PROFILING_ENABLE and record each dispatch's
                        device time (first kernel start to last kernel end) in gx_stats / gx_last_timing */
     int spin_wait;  /* 1: gx_wait polls the dispatch's last command instead of blocking in clFinish (the waiting
@@ -110,14 +111,14 @@ int  gx_slot_unmap(gx_ctx * g, const gx_slot * s, void * p);
 const void * gx_slot_map_read(gx_ctx * g, const gx_slot * s);
 int  gx_slot_unmap_read(gx_ctx * g, const gx_slot * s, const void * p);
 
-/* Variant 2 only: write one expert into a slot in the repacked layout, instead of copying its three GGUF
+/* Variants 2 and 3 only: write one expert into a slot in the repacked layout, instead of copying its three GGUF
  * slices. Call between gx_slot_map_write (mapped = the pointer it returned) and gx_slot_unmap. src_* are the
  * expert's slices in GGUF block layout (gate, up: Q4_0; down: down_type). A byte permutation of the same
  * size, so slot sizes and offsets are unchanged. Returns 0, or -1 on bad arguments. Thread-safe. */
 int gx_repack_expert(const gx_ctx * g, const gx_slot * s, void * mapped, const void * src_gate, const void * src_up,
                      const void * src_down, int down_type);
 
-/* Variant 2 only: the exact inverse of gx_repack_expert. Reads a repacked slot (mapped = the gate-slice
+/* Variants 2 and 3 only: the exact inverse of gx_repack_expert. Reads a repacked slot (mapped = the gate-slice
  * pointer from gx_slot_map_read or gx_slot_map_write) and writes the expert's three slices back in GGUF block
  * layout into caller buffers (gate, up: n_ff * n_embd/32 * 18 bytes; down: n_embd * n_ff/32 * 18 or 20), for
  * the CPU paths (overflow experts, risk recompute) that run ggml on the bytes. Any dst_* may be NULL to skip

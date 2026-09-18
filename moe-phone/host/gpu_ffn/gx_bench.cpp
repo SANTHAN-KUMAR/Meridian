@@ -1,6 +1,7 @@
 // gx_bench.cpp — dispatch latency and throughput of gx, for M6 on the phone. Correctness is gx_test's job;
 // this only times. On the laptop it is a functional smoke test and its numbers mean nothing (NVIDIA copies).
-//   gx_bench [--iters N] [--variants 0,1,2] [--ks 1,..,8] [--slots N] [--spin 0,1]
+//   gx_bench [--iters N] [--variants 0,1,2,3] [--ks 1,..,8] [--slots N] [--spin 0,1] [--memprobe-only 1]
+// A memory-only probe (MEMPROBE lines: aos / soa / tiled read orders, no arithmetic) runs once first.
 // A 1.5 s k=8 warm-up precedes timing, and the (down type, k) cells are timed in interleaved rounds of 10.
 // Pool: one expert per block (the recommended shape), N slots per down type (default 32), filled with
 // random but valid blocks through map/unmap. Each timed dispatch uses k slots rotating through the pool so
@@ -38,15 +39,83 @@ static void fill_q4(std::mt19937 & rng, uint8_t * p, size_t bytes, int blk) {   
     }
 }
 
+// Memory-only probe (M6 run 3 follow-up): read the gate matrix of a slot (768 rows x 64 blocks) with no arithmetic,
+// in three orders, one work-item per row, 64 per group, rotating over the pool's slots:
+//   mode 0 "aos"   v0/v1: row-major 18-byte blocks, work-item streams its own row (vload16 at 2 + ib*18)
+//   mode 1 "soa"   v2:    16-byte chunks [ib][row]: coalesced per block, a new page per block
+//   mode 2 "tiled" v3:    [row/64][ib][row%64]: coalesced and one contiguous region per work-group
+// Reported: device GB/s of the 16 qs bytes per block (the d bytes are not read), from profiling events.
+static const char * k_mem_src = R"CL(
+kernel void mem_rd(global const uchar * w, int mode, int R, int NB, global uint * sink) {
+    const int row = get_global_id(0);
+    uint4 acc = (uint4)(0);
+    for (int ib = 0; ib < NB; ib++) {
+        uint4 v;
+        if (mode == 0) v = as_uint4(vload16(0, w + ((size_t) row * NB + ib) * 18 + 2));
+        else if (mode == 1) v = ((global const uint4 *) w)[(size_t) ib * R + row];
+        else v = ((global const uint4 *) w)[(((size_t) row >> 6) * NB + ib) * 64 + (row & 63)];
+        acc ^= v;
+    }
+    sink[row] = acc.x ^ acc.y ^ acc.z ^ acc.w;
+}
+)CL";
+
+static void mem_probe(cl_context ctx, cl_device_id dev, const std::vector<gx_slot> & slots, int iters) {
+    cl_int e;
+    cl_command_queue q = clCreateCommandQueue(ctx, dev, CL_QUEUE_PROFILING_ENABLE, &e);
+    cl_program p = clCreateProgramWithSource(ctx, 1, &k_mem_src, nullptr, &e);
+    if (e == CL_SUCCESS) e = clBuildProgram(p, 1, &dev, "-cl-std=CL1.2", nullptr, nullptr);
+    if (e != CL_SUCCESS) { printf("MEMPROBE status=build_failed %d\n", e); return; }
+    cl_kernel k = clCreateKernel(p, "mem_rd", &e);
+    cl_mem sink = clCreateBuffer(ctx, CL_MEM_WRITE_ONLY, 768 * 4, nullptr, &e);
+    const int R = 768, NB = 64;
+    static const char * names[3] = {"aos", "soa", "tiled"};
+    for (int round = 0; round < 2; round++)          // two passes, modes interleaved, to expose drift
+        for (int mode = 0; mode < 3; mode++) {
+            std::vector<double> t;
+            for (int it = 0; it < iters; it++) {
+                const gx_slot & s = slots[(size_t) it % slots.size()];
+                clSetKernelArg(k, 0, sizeof(cl_mem), &s.block);
+                clSetKernelArg(k, 1, sizeof(int), &mode);
+                clSetKernelArg(k, 2, sizeof(int), &R);
+                clSetKernelArg(k, 3, sizeof(int), &NB);
+                clSetKernelArg(k, 4, sizeof(cl_mem), &sink);
+                const size_t g = R, l = 64;
+                cl_event ev = nullptr;
+                // the slot's gate slice starts at off_gate; the kernel indexes from the buffer start, so use slots at 0
+                if (s.off_gate != 0) continue;
+                clEnqueueNDRangeKernel(q, k, 1, nullptr, &g, &l, 0, nullptr, &ev);
+                clWaitForEvents(1, &ev);
+                cl_ulong a = 0, b = 0;
+                clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof a, &a, nullptr);
+                clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof b, &b, nullptr);
+                clReleaseEvent(ev);
+                t.push_back((b - a) / 1e6);
+            }
+            if (t.empty()) { printf("MEMPROBE status=no_slot_at_offset_0\n"); return; }
+            std::sort(t.begin(), t.end());
+            const double med = t[t.size() / 2], bytes = (double) R * NB * 16;
+            printf("MEMPROBE pass=%d order=%s n=%zu device_median_ms=%.4f device_p90_ms=%.4f GBps=%.2f\n", round, names[mode], t.size(),
+                   med, t[t.size() * 9 / 10], bytes / (med / 1e3) / 1e9);
+            fflush(stdout);
+        }
+    clReleaseMemObject(sink);
+    clReleaseKernel(k);
+    clReleaseProgram(p);
+    clReleaseCommandQueue(q);
+}
+
 int main(int argc, char ** argv) {
     int iters = 300, nslots = 32;
-    std::vector<int> variants = {0, 1, 2}, ks = {1, 2, 3, 4, 5, 6, 7, 8}, spins = {0, 1};
+    int memprobe_only = 0;
+    std::vector<int> variants = {0, 1, 2, 3}, ks = {1, 2, 3, 4, 5, 6, 7, 8}, spins = {0, 1};
     for (int i = 1; i + 1 < argc; i += 2) {
         if (!strcmp(argv[i], "--iters")) iters = atoi(argv[i + 1]);
         else if (!strcmp(argv[i], "--variants")) variants = ints(argv[i + 1]);
         else if (!strcmp(argv[i], "--ks")) ks = ints(argv[i + 1]);
         else if (!strcmp(argv[i], "--slots")) nslots = atoi(argv[i + 1]);
         else if (!strcmp(argv[i], "--spin")) spins = ints(argv[i + 1]);
+        else if (!strcmp(argv[i], "--memprobe-only")) memprobe_only = atoi(argv[i + 1]);
     }
     cl_platform_id plat;
     cl_device_id dev;
@@ -80,7 +149,7 @@ int main(int argc, char ** argv) {
                 fill_q4(rng, src.data() + 2 * GU, DN[dt], dt ? 20 : 18);
                 const double t0 = now_ms();
                 uint8_t * p = (uint8_t *) gx_slot_map_write(g, &s);
-                if (variant == 2) {   // variant 2 slots hold the repacked layout (the engine's promotion path)
+                if (variant >= 2) {   // variants 2, 3: slots hold the repacked layout (the engine's promotion path)
                     gx_repack_expert(g, &s, p, src.data(), src.data() + GU, src.data() + 2 * GU, dt);
                 } else {
                     memcpy(p, src.data(), GU);
@@ -93,6 +162,14 @@ int main(int argc, char ** argv) {
             }
         std::sort(wr.begin(), wr.end());
         printf("SLOTWRITE variant=%d n=%zu median_ms=%.3f p90_ms=%.3f\n", variant, wr.size(), wr[wr.size() / 2], wr[wr.size() * 9 / 10]);
+        static bool probed = false;
+        if (!probed) {   // memory-only probe once, on this context's slots (one expert per block: off_gate = 0)
+            probed = true;
+            std::vector<gx_slot> all(sl[0]);
+            all.insert(all.end(), sl[1].begin(), sl[1].end());
+            mem_probe(ctx, dev, all, iters);
+        }
+        if (memprobe_only) { for (auto & v : sl) for (auto & s2 : v) gx_slot_free(g, &s2); gx_free(g); return 0; }
         std::vector<float> out(8 * 2048);
         // GPU clock ramp (M6 run 2: the first rows ran slow): 1.5 s of k=8 dispatches before any timing, then
         // every (down type, k) cell is visited in rounds of 10 dispatches, in a rotated order each round, so a
