@@ -111,6 +111,23 @@ Per byte of weights, in the same run on the same cores: `ffn_moe_down` 26 GB/s, 
 If they ran at down's rate, expert arithmetic falls from ≈ 58 to ≈ 40 ms at the trace's clock
 `[CL: node_ledger.expert_ms_if_gate_up_ran_at_down_rate]`, and proportionally more at capped clocks.
 
+> **Correction, 2026-09-18 evening (validation by the analysis session, prompted by the phone
+> session). Read this before coding against the anomaly.**
+> - **Leading hypothesis: it is the quant type, not MUL_MAT_ID.** In this GGUF, gate and up are
+>   Q4_0 and down is Q4_1, so "up vs down per byte" compares two different CPU `vec_dot` kernels.
+>   The byte counts are already normalised (18 vs 20 bytes per 32 weights), so the 20-vs-18 point
+>   alone does not explain the gap. A kernel-type difference could explain part or all of it.
+> - **The size is smaller than 1.68×.** The median includes stall: reads land gate, then up, then
+>   down, so up can wait on its own slices too. In the fastest 5–10% of calls (the same trace, same
+>   filter) up is about 1.4× slower per byte than down, not 1.7×. Recomputed from
+>   `bmoe_trace/trace_nodes.csv`: p5 up 28.6 vs down 40.8 GB/s, p10 25.4 vs 37.2.
+> - **The per-op sweep does not corroborate it as the next paragraph says.** Its CPU rates, which
+>   are also Q4_0 gate/up against Q4_1 down, are 14.9–25.7 GB/s for gate/up and 17.5–25.0 GB/s for
+>   down, medians about 19.8 and 21.8, a ratio of about 1.1× inside a 1.6× run-to-run spread. Clocks
+>   were not logged for that sweep.
+> - **The clean test is the same shape and type for both:** bench gate/up as Q4_1, or down as Q4_0,
+>   and measure it in-engine (node trace), where the gap appears, as well as in isolation.
+
 Candidate mechanisms **[H]**, all checkable in one bench session (§4, X1):
 
 1. **Thread granularity.** Gate/up are 768 rows per expert; split across 4 threads that is 192 rows
@@ -123,8 +140,9 @@ Candidate mechanisms **[H]**, all checkable in one bench session (§4, X1):
    expert has its own 768-wide input. If the shared input is re-quantised or re-fetched per expert,
    that is pure waste.
 
-The independent per-op sweep shows the same direction (gate/up slower per byte than down on the CPU,
-`matmul_sweep.json`), so this is not a tracing artefact.
+~~The independent per-op sweep shows the same direction (gate/up slower per byte than down on the CPU,
+`matmul_sweep.json`), so this is not a tracing artefact.~~ Withdrawn: see the correction above. The
+sweep shows about 1.1× within its own noise, so it neither confirms nor rules out the in-engine gap.
 
 ### 1.4 Already decided by the project's own measurements **[X]**
 
