@@ -1,0 +1,8 @@
+| model                          |       size |     params | backend    | ngl | threads | dev          |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | --: | ------: | ------------ | --------------: | -------------------: |
+| olmoe A1.7B Q4_0               |   3.66 GiB |     6.92 B | OpenCL,HTP |  99 |       4 | HTP0         |            pp64 |       317.75 ± 12.85 |
+| olmoe A1.7B Q4_0               |   3.66 GiB |     6.92 B | OpenCL,HTP |  99 |       4 | HTP0         |           tg128 |         35.46 ± 0.60 |
+
+build: 1248fd8 (49)
+=0 handle 0xb4000079ee31ca80
+ggml-hex: HTP0 op batching: n-bufs 16 n-tensors 7 n-ops 1 vmem 3355443200

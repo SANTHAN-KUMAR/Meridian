@@ -1,0 +1,20 @@
+2026-09-18T10:15:21+05:30 START reps=2 n_gen=128 pkg=com.moephone.npu2
+2026-09-18T10:15:21+05:30 model warmed into page cache
+2026-09-18T10:15:21+05:30 arms: 8
+2026-09-18T10:15:49+05:30 htp_default_rep1 [HTP0] env='' :: pp64 |       297.35 tg128 |         43.59 
+2026-09-18T10:16:25+05:30 htp_oppoll_rep1 [HTP0] env='GGML_HEXAGON_OPPOLL=1' :: pp64 |       338.34 tg128 |         43.64 
+2026-09-18T10:17:02+05:30 htp_hostbuf_rep1 [HTP0] env='GGML_HEXAGON_HOSTBUF=1' :: pp64 |       327.15 tg128 |         43.75 
+2026-09-18T10:17:39+05:30 htp_both_rep1 [HTP0] env='GGML_HEXAGON_OPPOLL=1;GGML_HEXAGON_HOSTBUF=1' :: pp64 |       340.55 tg128 |         43.68 
+2026-09-18T10:18:15+05:30 htp_ndev2_rep1 [HTP0] env='GGML_HEXAGON_DEVICES=2' :: pp64 |       334.42 tg128 |         43.35 
+2026-09-18T10:18:52+05:30 htp_nobatch_rep1 [HTP0] env='GGML_HEXAGON_OPBATCH=1' :: pp64 |       317.84 tg128 |         36.20 
+2026-09-18T10:19:44+05:30 gpu_rep1 [GPUOpenCL] env='' :: pp64 |        131.41 tg128 |         49.96 
+2026-09-18T10:20:32+05:30 cpu_rep1 [CPU] env='' :: pp64 |        26.64 tg128 |         43.91 
+2026-09-18T10:21:08+05:30 htp_oppoll_rep2 [HTP0] env='GGML_HEXAGON_OPPOLL=1' :: pp64 |        328.30 tg128 |         43.83 
+2026-09-18T10:21:45+05:30 htp_hostbuf_rep2 [HTP0] env='GGML_HEXAGON_HOSTBUF=1' :: pp64 |       329.00 tg128 |         43.79 
+2026-09-18T10:22:21+05:30 htp_both_rep2 [HTP0] env='GGML_HEXAGON_OPPOLL=1;GGML_HEXAGON_HOSTBUF=1' :: pp64 |       343.75 tg128 |         43.67 
+2026-09-18T10:23:08+05:30 htp_ndev2_rep2 [HTP0] env='GGML_HEXAGON_DEVICES=2' :: pp64 |       299.53 tg128 |         42.07 
+2026-09-18T10:23:55+05:30 htp_nobatch_rep2 [HTP0] env='GGML_HEXAGON_OPBATCH=1' :: pp64 |       317.75 tg128 |         35.46 
+2026-09-18T10:24:52+05:30 gpu_rep2 [GPUOpenCL] env='' :: pp64 |        127.95 tg128 |         51.42 
+2026-09-18T10:26:37+05:30 cpu_rep2 [CPU] env='' :: pp64 |        28.30 tg128 |        17.03 
+2026-09-18T10:27:13+05:30 htp_default_rep2 [HTP0] env='' :: pp64 |        328.93 tg128 |         44.11 
+2026-09-18T10:27:33+05:30 DONE
