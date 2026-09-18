@@ -1,0 +1,213 @@
+01:34:59 waiting: kgsl ab 01:31:56
+sh bmoe_kgsl.sh ab
+01:40:04 waiting: kgsl ab 01:31:56
+sh bmoe_kgsl.sh ab
+01:45:09 waiting: kgsl ab 01:31:56
+sh bmoe_kgsl.sh ab
+01:50:14 waiting: kgsl ab 01:31:56
+sh bmoe_kgsl.sh ab
+01:55:20 waiting: kgsl ab 01:31:56
+sh bmoe_kgsl.sh ab
+02:00:25 waiting: kgsl ab 01:31:56
+sh bmoe_kgsl.sh ab
+02:05:29 waiting: kgsl ab 01:31:56
+sh bmoe_kgsl.sh ab
+02:05:45 phone free, starting run 5
+/run/media/santhankumar/New Volume/identifying-variation/moe-phone/host/gpu_ffn/out/android_next/gx_test: 1 file pushed, 0 skipped. 148.7 MB/s (1435664 bytes in 0.009s)
+/run/media/santhankumar/New Volume/identifying-variation/moe-phone/host/gpu_ffn/out/android_next/gx_pool_test: 1 file pushed, 0 skipped. 347.2 MB/s (1436456 bytes in 0.004s)
+/run/media/santhankumar/New Volume/identifying-variation/moe-phone/host/gpu_ffn/out/android_next/gx_bench: 1 file pushed, 0 skipped. 409.8 MB/s (2102488 bytes in 0.005s)
+/run/media/santhankumar/New Volume/identifying-variation/moe-phone/host/gpu_ffn/out/arm/ggml_ref_arm: 1 file pushed, 0 skipped. 124.0 MB/s (18001536 bytes in 0.138s)
+4 files pushed, 0 skipped. 79.8 MB/s (22976144 bytes in 0.275s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/qwen3_L00.bin: 1 file pushed, 0 skipped. 45.1 MB/s (22028340 bytes in 0.466s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/qwen3_L05.bin: 1 file pushed, 0 skipped. 53.8 MB/s (11018276 bytes in 0.195s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/qwen3_L06.bin: 1 file pushed, 0 skipped. 47.8 MB/s (21241908 bytes in 0.423s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/qwen3_L12.bin: 1 file pushed, 0 skipped. 112.3 MB/s (5316636 bytes in 0.045s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/qwen3_L24.bin: 1 file pushed, 0 skipped. 47.5 MB/s (21241908 bytes in 0.427s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/qwen3_L36.bin: 1 file pushed, 0 skipped. 46.5 MB/s (21241908 bytes in 0.436s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/qwen3_L47.bin: 1 file pushed, 0 skipped. 48.0 MB/s (21241908 bytes in 0.422s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_00.bin: 1 file pushed, 0 skipped. 386.3 MB/s (2662424 bytes in 0.007s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_01.bin: 1 file pushed, 0 skipped. 84.0 MB/s (5316636 bytes in 0.060s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_02.bin: 1 file pushed, 0 skipped. 56.8 MB/s (8265760 bytes in 0.139s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_03.bin: 1 file pushed, 0 skipped. 49.0 MB/s (11018276 bytes in 0.214s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_04.bin: 1 file pushed, 0 skipped. 46.4 MB/s (13279272 bytes in 0.273s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_05.bin: 1 file pushed, 0 skipped. 46.6 MB/s (15933484 bytes in 0.326s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_06.bin: 1 file pushed, 0 skipped. 47.4 MB/s (19275824 bytes in 0.388s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_07.bin: 1 file pushed, 0 skipped. 44.7 MB/s (22028340 bytes in 0.470s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_08.bin: 1 file pushed, 0 skipped. 369.2 MB/s (2662424 bytes in 0.007s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_09.bin: 1 file pushed, 0 skipped. 95.0 MB/s (5316636 bytes in 0.053s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_10.bin: 1 file pushed, 0 skipped. 56.2 MB/s (8265760 bytes in 0.140s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_11.bin: 1 file pushed, 0 skipped. 48.7 MB/s (11018276 bytes in 0.216s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_12.bin: 1 file pushed, 0 skipped. 40.0 MB/s (13279272 bytes in 0.317s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_13.bin: 1 file pushed, 0 skipped. 47.2 MB/s (15933484 bytes in 0.322s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_14.bin: 1 file pushed, 0 skipped. 43.0 MB/s (19275824 bytes in 0.427s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_15.bin: 1 file pushed, 0 skipped. 47.1 MB/s (22028340 bytes in 0.446s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_16.bin: 1 file pushed, 0 skipped. 378.6 MB/s (2662424 bytes in 0.007s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_17.bin: 1 file pushed, 0 skipped. 111.7 MB/s (5316636 bytes in 0.045s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_18.bin: 1 file pushed, 0 skipped. 57.4 MB/s (8265760 bytes in 0.137s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/rand_19.bin: 1 file pushed, 0 skipped. 50.7 MB/s (11018276 bytes in 0.207s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/quant_blocks.f32: 1 file pushed, 0 skipped. 72.1 MB/s (8388608 bytes in 0.111s)
+/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/776493a2-6bd6-44c3-95ca-f7e463b046d4/scratchpad/gxcases/swiglu_pairs.f32: 1 file pushed, 0 skipped. 70.3 MB/s (8392704 bytes in 0.114s)
+DEVICE name="QUALCOMM Adreno(TM) 829" driver="OpenCL 3.0 QUALCOMM build: 0842.44 Compiler E031.50.19.29" fp32_denorm=0 fp32_fma=0 fp32_cr_divide=0
+DIV n=16777216 mismatches=0
+QUANT blocks=65536 gpu_q8_0_mismatch=0 gpu_q8_1_mismatch=0 host_q8_0_mismatch=0
+SWIGLU n=1049088 mismatches=21333 of_which_denormal_input=7721 unflagged_mismatches(normal inputs)=0 flagged=512096
+CASE qwen3_L00.bin    v0 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0119 arm_rel_vs_fp64=0.0119
+CASE qwen3_L00.bin    v1 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0119 arm_rel_vs_fp64=0.0119
+CASE qwen3_L00.bin    v2 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0119 arm_rel_vs_fp64=0.0119
+CASE qwen3_L00.bin    v3 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0119 arm_rel_vs_fp64=0.0119
+CASE qwen3_L05.bin    v0 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0106 arm_rel_vs_fp64=0.0106
+CASE qwen3_L05.bin    v1 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0106 arm_rel_vs_fp64=0.0106
+CASE qwen3_L05.bin    v2 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0106 arm_rel_vs_fp64=0.0106
+CASE qwen3_L05.bin    v3 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0106 arm_rel_vs_fp64=0.0106
+CASE qwen3_L06.bin    v0 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0152 arm_rel_vs_fp64=0.0152
+CASE qwen3_L06.bin    v1 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0152 arm_rel_vs_fp64=0.0152
+CASE qwen3_L06.bin    v2 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0152 arm_rel_vs_fp64=0.0152
+CASE qwen3_L06.bin    v3 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0152 arm_rel_vs_fp64=0.0152
+CASE qwen3_L12.bin    v0 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0145 arm_rel_vs_fp64=0.0145
+CASE qwen3_L12.bin    v1 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0145 arm_rel_vs_fp64=0.0145
+CASE qwen3_L12.bin    v2 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0145 arm_rel_vs_fp64=0.0145
+CASE qwen3_L12.bin    v3 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0145 arm_rel_vs_fp64=0.0145
+CASE qwen3_L24.bin    v0 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.016 arm_rel_vs_fp64=0.016
+CASE qwen3_L24.bin    v1 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.016 arm_rel_vs_fp64=0.016
+CASE qwen3_L24.bin    v2 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.016 arm_rel_vs_fp64=0.016
+CASE qwen3_L24.bin    v3 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.016 arm_rel_vs_fp64=0.016
+CASE qwen3_L36.bin    v0 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0157 arm_rel_vs_fp64=0.0157
+CASE qwen3_L36.bin    v1 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0157 arm_rel_vs_fp64=0.0157
+CASE qwen3_L36.bin    v2 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0157 arm_rel_vs_fp64=0.0157
+CASE qwen3_L36.bin    v3 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0157 arm_rel_vs_fp64=0.0157
+CASE qwen3_L47.bin    v0 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0213 arm_rel_vs_fp64=0.0213
+CASE qwen3_L47.bin    v1 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0213 arm_rel_vs_fp64=0.0213
+CASE qwen3_L47.bin    v2 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0213 arm_rel_vs_fp64=0.0213
+CASE qwen3_L47.bin    v3 down=Q4_0 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0213 arm_rel_vs_fp64=0.0213
+CASE rand_00.bin      v0 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0125 arm_rel_vs_fp64=0.0125
+CASE rand_00.bin      v1 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0125 arm_rel_vs_fp64=0.0125
+CASE rand_00.bin      v2 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0125 arm_rel_vs_fp64=0.0125
+CASE rand_00.bin      v3 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0125 arm_rel_vs_fp64=0.0125
+CASE rand_01.bin      v0 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0106 arm_rel_vs_fp64=0.0106
+CASE rand_01.bin      v1 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0106 arm_rel_vs_fp64=0.0106
+CASE rand_01.bin      v2 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0106 arm_rel_vs_fp64=0.0106
+CASE rand_01.bin      v3 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0106 arm_rel_vs_fp64=0.0106
+CASE rand_02.bin      v0 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.00988 arm_rel_vs_fp64=0.00988
+CASE rand_02.bin      v1 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.00988 arm_rel_vs_fp64=0.00988
+CASE rand_02.bin      v2 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.00988 arm_rel_vs_fp64=0.00988
+CASE rand_02.bin      v3 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.00988 arm_rel_vs_fp64=0.00988
+CASE rand_03.bin      v0 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.015 arm_rel_vs_fp64=0.015
+CASE rand_03.bin      v1 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.015 arm_rel_vs_fp64=0.015
+CASE rand_03.bin      v2 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.015 arm_rel_vs_fp64=0.015
+CASE rand_03.bin      v3 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.015 arm_rel_vs_fp64=0.015
+CASE rand_04.bin      v0 down=Q4_0 k=5 arm=1 down_diff_bits=0/10240 max_ulp=0 h_diff_bits=0/3840 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0272 arm_rel_vs_fp64=0.0272
+CASE rand_04.bin      v1 down=Q4_0 k=5 arm=1 down_diff_bits=0/10240 max_ulp=0 h_diff_bits=0/3840 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0272 arm_rel_vs_fp64=0.0272
+CASE rand_04.bin      v2 down=Q4_0 k=5 arm=1 down_diff_bits=0/10240 max_ulp=0 h_diff_bits=0/3840 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0272 arm_rel_vs_fp64=0.0272
+CASE rand_04.bin      v3 down=Q4_0 k=5 arm=1 down_diff_bits=0/10240 max_ulp=0 h_diff_bits=0/3840 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0272 arm_rel_vs_fp64=0.0272
+CASE rand_05.bin      v0 down=Q4_0 k=6 arm=1 down_diff_bits=0/12288 max_ulp=0 h_diff_bits=0/4608 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0102 arm_rel_vs_fp64=0.0102
+CASE rand_05.bin      v1 down=Q4_0 k=6 arm=1 down_diff_bits=0/12288 max_ulp=0 h_diff_bits=0/4608 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0102 arm_rel_vs_fp64=0.0102
+CASE rand_05.bin      v2 down=Q4_0 k=6 arm=1 down_diff_bits=0/12288 max_ulp=0 h_diff_bits=0/4608 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0102 arm_rel_vs_fp64=0.0102
+CASE rand_05.bin      v3 down=Q4_0 k=6 arm=1 down_diff_bits=0/12288 max_ulp=0 h_diff_bits=0/4608 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0102 arm_rel_vs_fp64=0.0102
+CASE rand_06.bin      v0 down=Q4_1 k=7 arm=1 down_diff_bits=0/14336 max_ulp=0 h_diff_bits=0/5376 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0148 arm_rel_vs_fp64=0.0148
+CASE rand_06.bin      v1 down=Q4_1 k=7 arm=1 down_diff_bits=0/14336 max_ulp=0 h_diff_bits=0/5376 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0148 arm_rel_vs_fp64=0.0148
+CASE rand_06.bin      v2 down=Q4_1 k=7 arm=1 down_diff_bits=0/14336 max_ulp=0 h_diff_bits=0/5376 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0148 arm_rel_vs_fp64=0.0148
+CASE rand_06.bin      v3 down=Q4_1 k=7 arm=1 down_diff_bits=0/14336 max_ulp=0 h_diff_bits=0/5376 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0148 arm_rel_vs_fp64=0.0148
+CASE rand_07.bin      v0 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0157 arm_rel_vs_fp64=0.0157
+CASE rand_07.bin      v1 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0157 arm_rel_vs_fp64=0.0157
+CASE rand_07.bin      v2 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0157 arm_rel_vs_fp64=0.0157
+CASE rand_07.bin      v3 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0157 arm_rel_vs_fp64=0.0157
+CASE rand_08.bin      v0 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0146 arm_rel_vs_fp64=0.0146
+CASE rand_08.bin      v1 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0146 arm_rel_vs_fp64=0.0146
+CASE rand_08.bin      v2 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0146 arm_rel_vs_fp64=0.0146
+CASE rand_08.bin      v3 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0146 arm_rel_vs_fp64=0.0146
+CASE rand_09.bin      v0 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0267 arm_rel_vs_fp64=0.0267
+CASE rand_09.bin      v1 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0267 arm_rel_vs_fp64=0.0267
+CASE rand_09.bin      v2 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0267 arm_rel_vs_fp64=0.0267
+CASE rand_09.bin      v3 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0267 arm_rel_vs_fp64=0.0267
+CASE rand_10.bin      v0 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0154 arm_rel_vs_fp64=0.0154
+CASE rand_10.bin      v1 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0154 arm_rel_vs_fp64=0.0154
+CASE rand_10.bin      v2 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0154 arm_rel_vs_fp64=0.0154
+CASE rand_10.bin      v3 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0154 arm_rel_vs_fp64=0.0154
+CASE rand_11.bin      v0 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0146 arm_rel_vs_fp64=0.0146
+CASE rand_11.bin      v1 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0146 arm_rel_vs_fp64=0.0146
+CASE rand_11.bin      v2 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0146 arm_rel_vs_fp64=0.0146
+CASE rand_11.bin      v3 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0146 arm_rel_vs_fp64=0.0146
+CASE rand_12.bin      v0 down=Q4_0 k=5 arm=1 down_diff_bits=0/10240 max_ulp=0 h_diff_bits=0/3840 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0138 arm_rel_vs_fp64=0.0138
+CASE rand_12.bin      v1 down=Q4_0 k=5 arm=1 down_diff_bits=0/10240 max_ulp=0 h_diff_bits=0/3840 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0138 arm_rel_vs_fp64=0.0138
+CASE rand_12.bin      v2 down=Q4_0 k=5 arm=1 down_diff_bits=0/10240 max_ulp=0 h_diff_bits=0/3840 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0138 arm_rel_vs_fp64=0.0138
+CASE rand_12.bin      v3 down=Q4_0 k=5 arm=1 down_diff_bits=0/10240 max_ulp=0 h_diff_bits=0/3840 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0138 arm_rel_vs_fp64=0.0138
+CASE rand_13.bin      v0 down=Q4_0 k=6 arm=1 down_diff_bits=0/12288 max_ulp=0 h_diff_bits=0/4608 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0165 arm_rel_vs_fp64=0.0165
+CASE rand_13.bin      v1 down=Q4_0 k=6 arm=1 down_diff_bits=0/12288 max_ulp=0 h_diff_bits=0/4608 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0165 arm_rel_vs_fp64=0.0165
+CASE rand_13.bin      v2 down=Q4_0 k=6 arm=1 down_diff_bits=0/12288 max_ulp=0 h_diff_bits=0/4608 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0165 arm_rel_vs_fp64=0.0165
+CASE rand_13.bin      v3 down=Q4_0 k=6 arm=1 down_diff_bits=0/12288 max_ulp=0 h_diff_bits=0/4608 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0165 arm_rel_vs_fp64=0.0165
+CASE rand_14.bin      v0 down=Q4_1 k=7 arm=1 down_diff_bits=0/14336 max_ulp=0 h_diff_bits=0/5376 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0306 arm_rel_vs_fp64=0.0306
+CASE rand_14.bin      v1 down=Q4_1 k=7 arm=1 down_diff_bits=0/14336 max_ulp=0 h_diff_bits=0/5376 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0306 arm_rel_vs_fp64=0.0306
+CASE rand_14.bin      v2 down=Q4_1 k=7 arm=1 down_diff_bits=0/14336 max_ulp=0 h_diff_bits=0/5376 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0306 arm_rel_vs_fp64=0.0306
+CASE rand_14.bin      v3 down=Q4_1 k=7 arm=1 down_diff_bits=0/14336 max_ulp=0 h_diff_bits=0/5376 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0306 arm_rel_vs_fp64=0.0306
+CASE rand_15.bin      v0 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0147 arm_rel_vs_fp64=0.0147
+CASE rand_15.bin      v1 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0147 arm_rel_vs_fp64=0.0147
+CASE rand_15.bin      v2 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0147 arm_rel_vs_fp64=0.0147
+CASE rand_15.bin      v3 down=Q4_1 k=8 arm=1 down_diff_bits=0/16384 max_ulp=0 h_diff_bits=0/6144 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0147 arm_rel_vs_fp64=0.0147
+CASE rand_16.bin      v0 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0113 arm_rel_vs_fp64=0.0113
+CASE rand_16.bin      v1 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0113 arm_rel_vs_fp64=0.0113
+CASE rand_16.bin      v2 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0113 arm_rel_vs_fp64=0.0113
+CASE rand_16.bin      v3 down=Q4_0 k=1 arm=1 down_diff_bits=0/2048 max_ulp=0 h_diff_bits=0/768 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0113 arm_rel_vs_fp64=0.0113
+CASE rand_17.bin      v0 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0169 arm_rel_vs_fp64=0.0169
+CASE rand_17.bin      v1 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0169 arm_rel_vs_fp64=0.0169
+CASE rand_17.bin      v2 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0169 arm_rel_vs_fp64=0.0169
+CASE rand_17.bin      v3 down=Q4_0 k=2 arm=1 down_diff_bits=0/4096 max_ulp=0 h_diff_bits=0/1536 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0169 arm_rel_vs_fp64=0.0169
+CASE rand_18.bin      v0 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0134 arm_rel_vs_fp64=0.0134
+CASE rand_18.bin      v1 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0134 arm_rel_vs_fp64=0.0134
+CASE rand_18.bin      v2 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0134 arm_rel_vs_fp64=0.0134
+CASE rand_18.bin      v3 down=Q4_1 k=3 arm=1 down_diff_bits=0/6144 max_ulp=0 h_diff_bits=0/2304 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0134 arm_rel_vs_fp64=0.0134
+CASE rand_19.bin      v0 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0239 arm_rel_vs_fp64=0.0239
+CASE rand_19.bin      v1 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0239 arm_rel_vs_fp64=0.0239
+CASE rand_19.bin      v2 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0239 arm_rel_vs_fp64=0.0239
+CASE rand_19.bin      v3 down=Q4_1 k=4 arm=1 down_diff_bits=0/8192 max_ulp=0 h_diff_bits=0/3072 rel_vs_arm=0 rel_vs_x86=nan rel_vs_fp64=0.0239 arm_rel_vs_fp64=0.0239
+ROUNDTRIP repack/unpack experts=256 mismatched=0 wrong_down_type_checks=256 undetected=0
+PREMISE min_nonzero_gate_up=0x1.6b9ap-18 (>= 2^-126)
+DETECTOR flagged_slots(v0/v1/v2/v3)=13/13/13/13 flagged_real_slots=0/0/0/0 unflagged_diff=0/0/0/0 swiglu_flagged=512096 swiglu_unflagged_mismatches=0 -> PASS_WITH_DETECTOR
+SUMMARY cases=27 missing_arm_ref=0 down_diff_bits(v0/v1/v2/v3)=0/0/0/0 of 262144 h_diff_bits(v0/v1/v2/v3)=0/0/0/0 of 98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=0/0/0 swiglu=21333/1049088 gx_errors=0 -> NOT bit-exact
+/data/local/tmp/gx/gx_test.json: 1 file pulled, 0 skipped. 0.9 MB/s (32161 bytes in 0.033s)
+POOL per_block=1 blocks=48/48 block_bytes=2752512 :: max_mem_alloc=2147483648 global_mem=5819543552
+ALLOC per_block=1 ops=20000 invariant_violations=0 capacity_new=48 capacity_after=48
+POOLCASES per_block=1 cases=7 down_values=94208 diff_bits=0 (x overwritten after dispatch) timing_bad=0
+CONCURRENT per_block=1 case=qwen3_L00.bin dispatches=200 io_map_write_unmap=183 io_errors=0 diff_bits=0
+NEGCTRL per_block=1 dispatch_while_mapped: saw_old=0 saw_new=1 (neither=0) | after_unmap_saw_new=1
+READMAP per_block=1 rounds=100 read_bytes_bad=0 dispatch_diff_bits=0 mean_read_map_ms=8.3396 mean_dispatch_to_wait_ms=11.5573
+STATS per_block=1 dispatches=309 errors=0 maps=240 unmaps=240 map_errors=0 bytes_mapped=657260544 map_ms_mean=0.7147 unmap_ms_mean=1.7937 read_maps=100 slots_live=0 alloc_fail=6860 timed=309 device_ms_mean=2.2639 host_ms_mean=5.9033
+POOL per_block=4 blocks=12/12 block_bytes=11010048 :: max_mem_alloc=2147483648 global_mem=5819543552
+ALLOC per_block=4 ops=20000 invariant_violations=0 capacity_new=48 capacity_after=48
+POOLCASES per_block=4 cases=7 down_values=94208 diff_bits=0 (x overwritten after dispatch) timing_bad=0
+CONCURRENT per_block=4 case=qwen3_L00.bin dispatches=200 io_map_write_unmap=165 io_errors=0 diff_bits=0
+NEGCTRL per_block=4 dispatch_while_mapped: saw_old=0 saw_new=1 (neither=0) | after_unmap_saw_new=1
+READMAP per_block=4 rounds=100 read_bytes_bad=0 dispatch_diff_bits=0 mean_read_map_ms=6.1997 mean_dispatch_to_wait_ms=17.6136
+STATS per_block=4 dispatches=309 errors=0 maps=222 unmaps=222 map_errors=0 bytes_mapped=607715328 map_ms_mean=0.6925 unmap_ms_mean=3.3677 read_maps=100 slots_live=0 alloc_fail=6531 timed=309 device_ms_mean=2.2546 host_ms_mean=8.8203
+LAYOUTGUARD variant=2 plain_slot_refused=1 wrong_down_type_refused=1 repacked_slot_ok=1 refused=2
+LAYOUTGUARD variant=3 plain_slot_refused=1 wrong_down_type_refused=1 repacked_slot_ok=1 refused=2
+POOL_TEST PASS (0 failures)
+DEVICE name="QUALCOMM Adreno(TM) 829" iters=150 slots_per_type=32
+POOL variant=0 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=0 n=64 median_ms=0.987 p90_ms=1.060
+MEMPROBE pass=0 order=aos n=150 device_median_ms=0.0242 device_p90_ms=0.0250 GBps=32.50
+MEMPROBE pass=0 order=soa n=150 device_median_ms=0.0259 device_p90_ms=0.0267 GBps=30.36
+MEMPROBE pass=0 order=tiled n=150 device_median_ms=0.0256 device_p90_ms=0.0264 GBps=30.72
+MEMPROBE pass=1 order=aos n=150 device_median_ms=0.0241 device_p90_ms=0.0249 GBps=32.63
+MEMPROBE pass=1 order=soa n=150 device_median_ms=0.0260 device_p90_ms=0.0270 GBps=30.25
+MEMPROBE pass=1 order=tiled n=150 device_median_ms=0.0256 device_p90_ms=0.0264 GBps=30.72
+BENCH spin=1 variant=0 down=Q4_0 k=1 n=150 median_ms=0.6013 p10_ms=0.5246 p90_ms=0.9086 GBps_at_median=4.41 device_median_ms=0.2662 device_p90_ms=0.2685
+BENCH spin=1 variant=0 down=Q4_0 k=2 n=150 median_ms=0.8235 p10_ms=0.7509 p90_ms=1.0847 GBps_at_median=6.45 device_median_ms=0.4922 device_p90_ms=0.4964
+BENCH spin=1 variant=0 down=Q4_0 k=3 n=150 median_ms=1.0682 p10_ms=0.9746 p90_ms=1.3346 GBps_at_median=7.45 device_median_ms=0.7167 device_p90_ms=0.7672
+BENCH spin=1 variant=0 down=Q4_0 k=4 n=150 median_ms=1.3398 p10_ms=1.1771 p90_ms=1.6215 GBps_at_median=7.92 device_median_ms=0.9572 device_p90_ms=0.9620
+STATS variant=0 dispatches=1014 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=4812
+POOL variant=1 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=1 n=64 median_ms=0.993 p90_ms=1.270
+BENCH spin=1 variant=1 down=Q4_0 k=1 n=150 median_ms=0.5986 p10_ms=0.5816 p90_ms=0.7112 GBps_at_median=4.43 device_median_ms=0.3912 device_p90_ms=0.3935
+BENCH spin=1 variant=1 down=Q4_0 k=2 n=150 median_ms=0.7345 p10_ms=0.7213 p90_ms=0.8611 GBps_at_median=7.23 device_median_ms=0.5223 device_p90_ms=0.5251
+BENCH spin=1 variant=1 down=Q4_0 k=3 n=150 median_ms=0.9228 p10_ms=0.9016 p90_ms=1.2820 GBps_at_median=8.63 device_median_ms=0.7031 device_p90_ms=0.7183
+BENCH spin=1 variant=1 down=Q4_0 k=4 n=150 median_ms=1.0582 p10_ms=1.0117 p90_ms=1.4511 GBps_at_median=10.03 device_median_ms=0.8087 device_p90_ms=0.8413
+STATS variant=1 dispatches=948 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=4284
+POOL variant=3 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=3 n=64 median_ms=1.625 p90_ms=2.193
+BENCH spin=1 variant=3 down=Q4_0 k=1 n=150 median_ms=0.7132 p10_ms=0.6278 p90_ms=1.0064 GBps_at_median=3.72 device_median_ms=0.3868 device_p90_ms=0.3882
+BENCH spin=1 variant=3 down=Q4_0 k=2 n=150 median_ms=0.8402 p10_ms=0.7330 p90_ms=1.1230 GBps_at_median=6.32 device_median_ms=0.4957 device_p90_ms=0.4976
+BENCH spin=1 variant=3 down=Q4_0 k=3 n=150 median_ms=0.9983 p10_ms=0.8789 p90_ms=1.3458 GBps_at_median=7.98 device_median_ms=0.6407 device_p90_ms=0.6422
+BENCH spin=1 variant=3 down=Q4_0 k=4 n=150 median_ms=1.2279 p10_ms=1.0323 p90_ms=1.3699 GBps_at_median=8.65 device_median_ms=0.6883 device_p90_ms=0.6891
+STATS variant=3 dispatches=974 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=4492
+results in /run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/gx_m6_020545
+02:08:21 run 5 exit=0
