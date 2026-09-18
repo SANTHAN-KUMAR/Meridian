@@ -946,6 +946,15 @@ CLAIMS = [
          text="even the base configuration runs with ~370 MiB of the engine swapped and ~21-23 major faults per decode token (arena campaign base 20.7; stacked campaign base 22.7, stack 23.4): a cached expert that was swapped out costs more than a miss, since its pages fault in one by one, synchronously",
          artifact="fault_stack.json", expected=22.7, tol=0.1,
          value=lambda A: round(A["fstack"]["arms"]["base"]["majflt_per_token_median"], 1)),
+    # ------------------------- SWAP GUARD, LAPTOP MECHANISM CHECK (patch 0018; gates/swapguard_laptop.py; NOT a phone rate)
+    dict(id="swapguard_lossless",
+         text="LAPTOP, forced swap (OLMoE in a 2 GB cgroup with zram swap): the swap guard is lossless -- the generated text is byte-identical with the guard off, sampled and full",
+         artifact="swapguard_laptop.json", expected=True, tol=0,
+         value=lambda A: A["sgl"]["text_identical_all_modes"]),
+    dict(id="swapguard_faults",
+         text="LAPTOP, forced swap: the full guard removes 96.6% of major faults per token (4943 -> 170) and 36.9% of the compute term (49.1 -> 31.0 ms): the faults were being paid on compute threads. It trades them for flash re-reads (65 -> 166 MiB/token, stall 84 -> 109 ms), so the net is set by the device's fault vs flash costs -- a phone question (M6), not settled here",
+         artifact="swapguard_laptop.json", expected=0.9657, tol=0.001,
+         value=lambda A: A["sgl"]["majflt_reduction_full_vs_off"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1196,6 +1205,7 @@ def load_all():
         "dmaps": load("densemap_sensitivity.json"),
         "farena": load("fault_arena2.json"),
         "fstack": load("fault_stack.json"),
+        "sgl": load("swapguard_laptop.json"),
     }
 
 

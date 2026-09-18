@@ -1,0 +1,38 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/swapguard_laptop",
+ "modes": {
+  "0": {
+   "text_md5": "1c63f08d8d75e48c4e77e49d8ad4308e",
+   "majflt_per_token": 4943.3125,
+   "compute_ms": 49.1145,
+   "stall_ms": 84.44800000000001,
+   "wall_ms": 139.6275,
+   "read_MiB_per_token": 65.4765625,
+   "guard_checks": 0,
+   "guard_swapped_hits": 0
+  },
+  "1": {
+   "text_md5": "1c63f08d8d75e48c4e77e49d8ad4308e",
+   "majflt_per_token": 959.0,
+   "compute_ms": 36.141999999999996,
+   "stall_ms": 85.59100000000001,
+   "wall_ms": 137.35399999999998,
+   "read_MiB_per_token": 102.095458984375,
+   "guard_checks": 6829,
+   "guard_swapped_hits": 662
+  },
+  "2": {
+   "text_md5": "1c63f08d8d75e48c4e77e49d8ad4308e",
+   "majflt_per_token": 169.625,
+   "compute_ms": 30.981,
+   "stall_ms": 108.96350000000001,
+   "wall_ms": 152.6175,
+   "read_MiB_per_token": 166.160888671875,
+   "guard_checks": 6829,
+   "guard_swapped_hits": 1858
+  }
+ },
+ "text_identical_all_modes": true,
+ "majflt_reduction_full_vs_off": 0.9656859646239238,
+ "compute_reduction_full_vs_off": 0.369208685825978
+}

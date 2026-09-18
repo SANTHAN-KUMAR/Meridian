@@ -1,0 +1,134 @@
+--- a/cli/main.cpp	2026-09-18 21:55:41.597054049 +0530
++++ b/cli/main.cpp	2026-09-18 22:00:33.706834766 +0530
+@@ -530,6 +530,7 @@
+         "                          predicted below the drop threshold are not speculated.\n"
+         "      --predict-spec-max N  speculated predicted misses per layer [0..8] (default 2;\n"
+         "                          0 = retention only, the prediction spends no flash at all)\n"
++        "      --swap-guard N      re-read cache hits that zram swapped out instead of faulting them in (0 off, 1 sample, 2 full)\n"
+         "      --spec-adopt-selective  keep speculative reads the router confirms instead of\n"
+         "                          cancelling and re-reading them (moe-phone; lossless)\n"
+         "      --predict-spec-rank R   speculate only predicted misses of predicted rank < R\n"
+@@ -720,6 +721,8 @@
+             cfg.moe.expert_slru = true;
+         else if (a == "--slru-protected-frac")
+             cfg.moe.slru_protected_frac = std::atof(next("--slru-protected-frac"));
++        else if (a == "--swap-guard")
++            cfg.moe.swap_guard = std::atoi(next("--swap-guard"));
+         else if (a == "--defer-evict")
+             cfg.moe.defer_evict = true;
+         else if (a == "--recycle-pages")
+--- a/core/include/bmoe/config.h	2026-09-18 21:55:41.603210713 +0530
++++ b/core/include/bmoe/config.h	2026-09-18 22:00:33.713840146 +0530
+@@ -100,6 +100,13 @@
+     // Structural, from the SLRU literature (Karedla et al. 1994 use 60-80%), not fitted here: the
+     // sweep that produced the 8-11% figures reports every value it tried rather than choosing one.
+     double slru_protected_frac = 0.8;
++    // moe-phone 0018 swap guard: Android compresses idle anonymous memory into zram, so an expert the cache
++    // counts as a HIT can be partly swapped out; touching it then faults its pages back one by one on a compute
++    // thread (claims r1_arena_majflt, r1_base_majflt). With the guard, each hit's slices are checked with
++    // mincore() at staging; a swapped expert is demoted to a MISS: its pages are dropped (MADV_DONTNEED
++    // discards the swap entries without swapping in) and it is re-read by O_DIRECT like any miss.
++    // 0 = off, 1 = sample (first and last page of each slice), 2 = full (every page). Plain LRU mode only.
++    int swap_guard = 0;
+ 
+ 
+     bool o_direct = true;     // bypass the page cache (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+--- a/core/src/moe/expert_stream_source.h	2026-09-18 21:55:41.612836853 +0530
++++ b/core/src/moe/expert_stream_source.h	2026-09-18 22:00:33.726711124 +0530
+@@ -211,6 +211,11 @@
+     // `commit_only_proj` >= 0 commits only that projection's pages on a miss (two-wave publish:
+     // the caller contracts to commit the rest via commit_proj_pages before emitting their jobs).
+     bool touch_entry(int il, int e, bool & hit, bool promote = true, int commit_only_proj = -1);
++    // moe-phone 0018 swap guard
++    bool entry_swapped(int il, int e);
++    int swap_guard_ = 0;
++    long long guard_checks_ = 0, guard_swapped_ = 0, guard_ns_ = 0;
++    std::vector<unsigned char> guard_vec_;
+ 
+     // Commit the pages of one (layer, expert, projection) cache slice so a read can land in it.
+     bool commit_proj_pages(int il, int e, int p);
+--- a/core/src/moe/expert_stream_source.cpp	2026-09-18 21:55:41.608247740 +0530
++++ b/core/src/moe/expert_stream_source.cpp	2026-09-18 22:00:33.719358366 +0530
+@@ -54,6 +54,12 @@
+     resident_first_ = cfg.expert_resident_first; // moe-phone
+     slru_ = cfg.expert_slru;                     // moe-phone
+     slru_prot_frac_ = cfg.slru_protected_frac;
++    swap_guard_ = cfg.swap_guard;                // moe-phone 0018
++    if (swap_guard_ && (cfg.slot_arena || cfg.recycle_pages || cfg.defer_evict)) {
++        std::fprintf(stderr, "bmoe: --swap-guard supports the plain LRU cache only (not --slot-arena/--recycle-pages/--defer-evict); off\n");
++        swap_guard_ = 0;
++    }
++    if (swap_guard_) std::fprintf(stderr, "bmoe: swap-guard: on (mode %d)\n", swap_guard_);
+     if (slru_) {
+         cprot_.assign((size_t) n_layer_ * (size_t) n_expert_, 0);
+         std::fprintf(stderr, "bmoe: expert cache eviction = segmented LRU (protected share %.2f of the "
+@@ -1254,11 +1260,59 @@
+     return true;
+ }
+ 
++// moe-phone 0018: true if any page of any of the entry's slices is not in RAM (for anonymous memory, mincore()
++// reports a swapped-out page as not resident). Mode 1 checks the first and last page of each slice, mode 2 all.
++bool ExpertStreamSource::entry_swapped(int il, int e) {
++#if defined(__linux__)
++    const LayerExperts & L = layers_[il];
++    for (int p = 0; p < MoeRecipe::max_exps; ++p) {
++        const uint64_t slice = L.proj[p].nb2;
++        if (slice == 0 || !lbuf_[p][il]) continue;
++        const uintptr_t s0 = (uintptr_t) lbuf_[p][il] + (uintptr_t) e * slice;
++        const uintptr_t a0 = s0 & ~(uintptr_t) (page_ - 1);
++        const uintptr_t a1 = (s0 + slice + page_ - 1) & ~(uintptr_t) (page_ - 1);
++        const size_t npages = (a1 - a0) / page_;
++        if (swap_guard_ == 1) {
++            unsigned char v = 0;
++            if (mincore((void *) a0, page_, &v) != 0 || !(v & 1)) return true;
++            if (npages > 1 && (mincore((void *) (a1 - page_), page_, &v) != 0 || !(v & 1))) return true;
++        } else {
++            if (guard_vec_.size() < npages) guard_vec_.resize(npages);
++            if (mincore((void *) a0, a1 - a0, guard_vec_.data()) != 0) return true;
++            for (size_t i = 0; i < npages; ++i)
++                if (!(guard_vec_[i] & 1)) return true;
++        }
++    }
++#else
++    (void) il; (void) e;
++#endif
++    return false;
++}
++
+ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, int commit_only_proj) {
+     const int32_t id = il * n_expert_ + e;
+     clookups_++;
+     cstamp_[id] = cgen_;
+     if (cvalid_[id]) {
++        // moe-phone 0018: a hit whose pages zram swapped out is demoted to a miss. Safe here: staging runs before
++        // any thread computes this layer, the entry stays resident and linked, and the caller's miss path re-reads
++        // every projection into the same addresses (both load paths; not in two-wave mode, where the caller
++        // commits projections itself).
++        if (swap_guard_ && commit_only_proj < 0) {
++            const auto tg0 = clock_t_::now();
++            ++guard_checks_;
++            const bool sw = entry_swapped(il, e);
++            guard_ns_ += (long long) std::chrono::duration_cast<std::chrono::nanoseconds>(clock_t_::now() - tg0).count();
++            if (sw) {
++                ++guard_swapped_;
++                release_entry_pages(id); // plain LRU: MADV_DONTNEED on the slices' whole pages (swap entries dropped)
++                cspec_[id] = 0;
++                if (promote) { lru_unlink(id); if (slru_ && !cprot_[id]) slru_promote(id); else if (slru_) prot_push_front(id); else lru_push_front(id); }
++                ++rereads_;
++                hit = false;
++                return true;
++            }
++        }
+         chits_++;
+         if (cspec_[id]) { // this hit was served by a speculative prefetch — count it useful once
+             spec_useful_.fetch_add(1);
+@@ -1799,6 +1853,9 @@
+ void ExpertStreamSource::shutdown() {
+     if (arena_)
+         std::fprintf(stderr, "bmoe: slot-arena: slots %lld reused %lld blocks %zu\n", arena_slots_, arena_reuse_, arena_blocks_.size());
++    if (swap_guard_)
++        std::fprintf(stderr, "bmoe: swap-guard: checks %lld swapped-hits %lld (re-read) guard %.3f ms total\n",
++                     guard_checks_, guard_swapped_, guard_ns_ / 1e6);
+     if (spec_adopt_sel_)
+         std::fprintf(stderr, "bmoe: spec-adopt-selective: quiesces %lld adopted %lld cancelled %lld (%.1f MiB unread) "
+                              "left-to-finish %lld\n", sel_quiesces_, sel_adopted_, sel_cancelled_,
