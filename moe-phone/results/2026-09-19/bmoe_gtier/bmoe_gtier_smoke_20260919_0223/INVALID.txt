@@ -1,0 +1,1 @@
+INVALID: the stack row exited 1 with 'unknown arg' (bare --gpu-spin-wait swallowed --gpu-tier-prior); no tier row ran. Fixed in device/bmoe_gtier.sh (FIX 02:30); flags validated on the laptop engine before the rerun.

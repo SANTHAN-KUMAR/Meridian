@@ -1,0 +1,8 @@
+stack_flags=[--gpu-tier-mb 1000 --gpu-backend gx --gpu-variant 1 --gpu-spin-wait --gpu-tier-prior /data/local/tmp/moe-stream/qwen3_gtier_prior.txt --gpu-max-per-layer 3 --gpu-promotions-per-token 1] binary=bmoe-i8mm-0022 md5=4263e767a5e1c552820e91683fc71d52
+=== base_reps1 02:23:44 batt=72% mem_ready=6943MiB waited=0s foreign=[] BEFORE quiesce: stopped=76 cpu_busy_of_800=27 top3=system_server:6.0,top:5.0,[kworker/5:2-mm_percpu_wq]:1.0, wake=Awake status=0 cap0=3321600 cap6=3801600 hw0=3321600 hw6=3801600 shell_front_mC=30772 gate=ok waited=0 
+exit=0 AFTER wake=Dozing status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=32280 generation: 64 tokens, 0.220 s/token (4.546 tok/s) moe-stream: read 8870.2 MiB (138.60 MiB/token), decode 0.220 s/token (compute 0.122 + cache mgmt 0.033 + flash I/O 0.279 s/token, 498 MiB/s) moe-cache: 79.2% hit, resident 4997.8 MiB, budget 5000 MiB (auto) moe-cache: 4426 evictions, 2739 re-reads (42.8/token) — bytes the cache had already paid for once moe-overlap: stall 0.064 s/token (flash reads overlapped with FFN compute) 
+=== stack_reps1 02:27:56 batt=72% mem_ready=7154MiB waited=0s foreign=[] BEFORE quiesce: stopped=76 cpu_busy_of_800=111 top3=android.system.suspend-service:25.0,system_server:15.0,top:6.0, wake=Dozing status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=31865 gate=timeout waited=30 
+exit=1 AFTER wake=Dozing status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=31865 
+text_reference=base_reps1.out
+text_match base_reps1.out OK
+text_match stack_reps1.out DIFFERS

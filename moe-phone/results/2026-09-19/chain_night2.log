@@ -14,3 +14,9 @@
 2026-09-19T01:36:16+05:30 [night3] start (0022 engine): waiting for the kgsl A/B
 2026-09-19T02:08:28+05:30 [night3] kgsl A/B ended without DONE (/data/local/tmp/moe-stream/bmoe_kgsl_ab_20260919_0131/)
 2026-09-19T02:08:29+05:30 [night3] kgsl A/B pulled: /run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/bmoe_kgsl/bmoe_kgsl_ab_20260919_0131
+2026-09-19T02:23:32+05:30 [night3] gx window: no gx run within 15 min
+2026-09-19T02:23:33+05:30 [night3] gtier variant 1 (GTIER_VARIANT file: present)
+2026-09-19T02:28:09+05:30 [night3] pulled /data/local/tmp/moe-stream/bmoe_gtier_smoke_20260919_0223/
+2026-09-19T02:28:09+05:30 [night3] gtier smoke ok=0 dev= risk= :: generation: 64 tokens, 0.220 s/token (4.546 tok/s) 
+2026-09-19T02:28:14+05:30 [night3] phone restored
+2026-09-19T02:29:25+05:30 [night3] [tier] start (script fixed: --gpu-spin-wait 1)

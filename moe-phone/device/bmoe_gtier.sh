@@ -43,6 +43,9 @@
 # unrolled float4 accumulators, bit-exact). M6 run 5 (gx_m6_020545), k=3 spin, down Q4_0, host / device ms: v0 1.07/0.72,
 # v1 0.92/0.70, v3 1.00/0.64. v1 has the lowest host time (what the CPU waits on) and keeps the native layout (no repack on
 # promotion, no unpack on overflow). The A/B rule above is unchanged.
+# FIX 2026-09-19 02:30: smoke bmoe_gtier_smoke_20260919_0223 was invalid -- the stack row exited 1 with "unknown arg" because
+# --gpu-spin-wait takes a value and the bare flag swallowed --gpu-tier-prior. Now "--gpu-spin-wait 1"; the exact TIER
+# string is validated on the laptop engine (same CLI) before each push.
 #   GT_BIN=... GT_VARIANT=... sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
 set -u
 MODE=${1:-smoke}
@@ -53,7 +56,7 @@ M=$H/Qwen3-30B-A3B-Q4_0.gguf
 O=$H/bmoe_gtier_${MODE}_$(date +%Y%m%d_%H%M); mkdir -p "$O"
 P="Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field"
 BASE="--chatml --ubatch 512 --moe-stream --cache-mb auto --cache-floor-mb 1024 --cache-ceil-mb 5000 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-threads 4 --io-cpu-mask 0f --expert-slru --predict-prefetch --spec-adopt-selective"
-SPINF=""; [ "$GT_SPIN" = 1 ] && SPINF="--gpu-spin-wait"
+SPINF=""; [ "$GT_SPIN" = 1 ] && SPINF="--gpu-spin-wait 1"
 TIER="--gpu-tier-mb 1000 --gpu-backend gx --gpu-variant $GT_VARIANT $SPINF --gpu-tier-prior $H/qwen3_gtier_prior.txt --gpu-max-per-layer 3 --gpu-promotions-per-token 1"
 if [ -e $H/.phone_busy ]; then echo "phone busy: $(cat $H/.phone_busy)" | tee "$O/REFUSED"; exit 3; fi
 echo "gtier $MODE $(date +%H:%M:%S)" > $H/.phone_busy
