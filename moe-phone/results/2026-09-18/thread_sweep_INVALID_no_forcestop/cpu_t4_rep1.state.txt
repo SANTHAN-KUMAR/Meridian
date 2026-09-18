@@ -1,0 +1,1 @@
+wake=Awake status=0 cap0=3321600 cap6=3801600 hw0=3321600 hw6=3801600 shell_front_mC=32802

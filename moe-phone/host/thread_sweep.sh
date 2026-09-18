@@ -28,10 +28,17 @@ M=/data/data/$PKG/files/olmoe.gguf
 N=${N:-128}
 REPS=${1:-3}
 mkdir -p "$R"
+exec 9>"/tmp/claude-1000/thread_sweep.lock"; flock -n 9 || { echo "another thread_sweep holds the lock" >&2; exit 3; }
 log() { echo "$(date -Iseconds) $*" >> "$R/driver.log"; }
 
 run_one() {  # tag threads
   local tag=$1 t=$2 i=0
+  # FRESH PROCESS PER ROW. The 14:50 run reused one app process for every row; it grew to 3 GB RSS / 21 GB
+  # virtual, MemAvailable fell to 1.9 GB and the rate collapsed from 49 to 0.90 tok/s within one repeat
+  # (results/2026-09-18/thread_sweep_INVALID_no_forcestop). Each row now starts from a force-stopped app, and
+  # the free memory it started with is logged next to its rate.
+  adb shell "am force-stop $PKG" >/dev/null 2>&1 </dev/null; sleep 3
+  local mem; mem=$(adb shell "awk '/MemAvailable/{print int(\$2/1024)}' /proc/meminfo" </dev/null | tr -d '\r')
   adb shell "run-as $PKG sh -c 'rm -f files/out.txt files/bench.txt'" >/dev/null 2>&1
   adb shell "input keyevent KEYCODE_WAKEUP; am start -n $PKG/com.moephone.npu.Run --es bench '-m~~$M~~-p~~0~~-n~~$N~~-r~~2~~-t~~$t~~-ngl~~0'" >/dev/null 2>&1
   while [ $i -lt 120 ]; do
@@ -42,7 +49,7 @@ run_one() {  # tag threads
   adb shell "run-as $PKG sh -c 'cat files/bench.txt'" > "$R/$tag.txt" 2>/dev/null
   adb shell "run-as $PKG sh -c 'cat files/out.txt'"   > "$R/$tag.runner.txt" 2>/dev/null
   adb shell '. /data/local/tmp/moe-stream/thermal_gate.sh; thermal_state' > "$R/$tag.state.txt" 2>/dev/null
-  log "$tag :: $(grep -oE 'tg[0-9]+ *\| *[0-9.]+' "$R/$tag.txt" | tail -1)"
+  log "$tag memavail_before=${mem}MiB :: $(grep -oE 'tg[0-9]+ *\| *[0-9.]+' "$R/$tag.txt" | tail -1)"
 }
 
 log "START reps=$REPS n_gen=$N pkg=$PKG"
