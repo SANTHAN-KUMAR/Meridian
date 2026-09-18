@@ -414,7 +414,7 @@ int main(int argc, char ** argv) {
     fprintf(js, "], \"cases_n\": %zu, \"missing_arm_ref\": %zu, \"down_values\": %zu, \"down_diff_bits\": %zu, "
                 "\"h_values\": %zu, \"h_diff_bits\": %zu, \"down_values_row\": %zu, \"down_diff_bits_row\": %zu, "
                 "\"h_values_row\": %zu, \"h_diff_bits_row\": %zu, \"gx_errors\": %zu, \"gx_stats_errors\": %llu, "
-                "\"flagged_slots\": [%zu, %zu], \"flagged_real_slots\": [%zu, %zu], \"unflagged_diff\": [%zu, %zu], \"min_nonzero_gate_up\": %a}\n",
+                "\"flagged_slots\": [%zu, %zu], \"flagged_real_slots\": [%zu, %zu], \"unflagged_diff\": [%zu, %zu], \"min_nonzero_gate_up\": %.9g}\n",
             n_cases, missing_arm, tot_down[0], tot_down_diff[0], tot_h[0], tot_h_diff[0], tot_down[1], tot_down_diff[1], tot_h[1],
             tot_h_diff[1], gx_errors, st_err, flagged_slots[0], flagged_slots[1], flagged_real[0], flagged_real[1],
             unflagged_diff[0], unflagged_diff[1], min_gu);

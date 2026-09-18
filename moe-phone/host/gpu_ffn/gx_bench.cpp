@@ -4,7 +4,8 @@
 // Pool: one expert per block (the recommended shape), N slots per down type (default 32), filled with
 // random but valid blocks through map/unmap. Each timed dispatch uses k slots rotating through the pool so
 // consecutive dispatches read different weights (as consecutive layers do), dispatch -> gx_wait wall time.
-// Output: BENCH lines (variant, down type, k, n, median/p10/p90 ms, GB/s of weights at the median) and one
+// Output: BENCH lines (variant, down type, k, n, host median/p10/p90 ms dispatch->wait, GB/s of weights at the
+// median, device (profiling-event) median/p90 ms; profiling is on, as in the engine) and one
 // SLOTWRITE line (map + 2.6 MB memcpy + unmap per slot).
 #include "gx.h"
 
@@ -38,7 +39,7 @@ static void fill_q4(std::mt19937 & rng, uint8_t * p, size_t bytes, int blk) {   
 
 int main(int argc, char ** argv) {
     int iters = 300, nslots = 32;
-    std::vector<int> variants = {0, 1}, ks = {1, 2, 4, 8};
+    std::vector<int> variants = {0, 1}, ks = {1, 2, 3, 4, 5, 6, 7, 8};
     for (int i = 1; i + 1 < argc; i += 2) {
         if (!strcmp(argv[i], "--iters")) iters = atoi(argv[i + 1]);
         else if (!strcmp(argv[i], "--variants")) variants = ints(argv[i + 1]);
@@ -58,7 +59,7 @@ int main(int argc, char ** argv) {
     for (auto & v : x) v = (float) ((int) (rng() % 2001) - 1000) / 250.0f;
     for (int variant : variants) {
         char err[1024];
-        gx_ctx * g = gx_init(ctx, dev, gx_params{2048, 768, 0, variant}, err, sizeof err);
+        gx_ctx * g = gx_init(ctx, dev, gx_params{2048, 768, 0, variant, 1}, err, sizeof err);
         if (!g) { printf("BENCH variant=%d status=init_failed why=\"%s\"\n", variant, err); continue; }
         const size_t span = 2 * GU + DN[1];   // Q4_1-sized block holds either type (all sizes are 4 KB multiples)
         const int got = gx_pool_create(g, span, 2 * nslots, err, sizeof err);
@@ -88,7 +89,7 @@ int main(int argc, char ** argv) {
         std::vector<float> out(8 * 2048);
         for (int dt = 0; dt < 2; dt++)
             for (int k : ks) {
-                std::vector<double> t;
+                std::vector<double> t, td;
                 gx_slot use[GX_MAX_K];
                 for (int it = -20; it < iters; it++) {
                     for (int j = 0; j < k; j++) use[j] = sl[dt][((it + 20) * k + j) % nslots];
@@ -97,13 +98,17 @@ int main(int argc, char ** argv) {
                     const int rw = rc ? rc : gx_wait(g);
                     const double dtm = now_ms() - t0;
                     if (rc || rw) { printf("BENCH status=dispatch_error rc=%d\n", rc ? rc : rw); return 1; }
-                    if (it >= 0) t.push_back(dtm);
+                    uint64_t dn = 0, hn = 0;
+                    gx_last_timing(g, &dn, &hn);
+                    if (it >= 0) { t.push_back(dtm); td.push_back(dn / 1e6); }
                 }
                 std::sort(t.begin(), t.end());
+                std::sort(td.begin(), td.end());
                 const double med = t[t.size() / 2];
                 const double bytes = (double) k * (2 * GU + DN[dt]);
-                printf("BENCH variant=%d down=%s k=%d n=%zu median_ms=%.4f p10_ms=%.4f p90_ms=%.4f GBps_at_median=%.2f\n", variant,
-                       dt ? "Q4_1" : "Q4_0", k, t.size(), med, t[t.size() / 10], t[t.size() * 9 / 10], bytes / (med / 1e3) / 1e9);
+                printf("BENCH variant=%d down=%s k=%d n=%zu median_ms=%.4f p10_ms=%.4f p90_ms=%.4f GBps_at_median=%.2f "
+                       "device_median_ms=%.4f device_p90_ms=%.4f\n", variant, dt ? "Q4_1" : "Q4_0", k, t.size(), med, t[t.size() / 10],
+                       t[t.size() * 9 / 10], bytes / (med / 1e3) / 1e9, td[td.size() / 2], td[td.size() * 9 / 10]);
                 fflush(stdout);
             }
         const gx_stats st = gx_get_stats(g);

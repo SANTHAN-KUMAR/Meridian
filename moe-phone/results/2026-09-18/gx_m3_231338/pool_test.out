@@ -1,0 +1,15 @@
+POOL per_block=1 blocks=48/48 block_bytes=2752512 :: max_mem_alloc=2053734400 global_mem=8214937600
+ALLOC per_block=1 ops=20000 invariant_violations=0 capacity_new=48 capacity_after=48
+POOLCASES per_block=1 cases=7 down_values=94208 diff_bits=0 (x overwritten after dispatch) timing_bad=0
+CONCURRENT per_block=1 case=qwen3_L00.bin dispatches=200 io_map_write_unmap=129 io_errors=0 diff_bits=0
+NEGCTRL per_block=1 dispatch_while_mapped: saw_old=1 saw_new=0 (neither=0) | after_unmap_saw_new=1
+READMAP per_block=1 rounds=100 read_bytes_bad=0 dispatch_diff_bits=0 mean_read_map_ms=0.2201 mean_dispatch_to_wait_ms=0.6148
+STATS per_block=1 dispatches=309 errors=0 maps=186 unmaps=186 map_errors=0 bytes_mapped=508624896 map_ms_mean=0.1418 unmap_ms_mean=0.2524 read_maps=100 slots_live=0 alloc_fail=6860 timed=309 device_ms_mean=0.1258 host_ms_mean=0.4083
+POOL per_block=4 blocks=12/12 block_bytes=11010048 :: max_mem_alloc=2053734400 global_mem=8214937600
+ALLOC per_block=4 ops=20000 invariant_violations=0 capacity_new=48 capacity_after=48
+POOLCASES per_block=4 cases=7 down_values=94208 diff_bits=0 (x overwritten after dispatch) timing_bad=0
+CONCURRENT per_block=4 case=qwen3_L00.bin dispatches=200 io_map_write_unmap=146 io_errors=0 diff_bits=0
+NEGCTRL per_block=4 dispatch_while_mapped: saw_old=1 saw_new=0 (neither=0) | after_unmap_saw_new=1
+READMAP per_block=4 rounds=100 read_bytes_bad=0 dispatch_diff_bits=0 mean_read_map_ms=0.2176 mean_dispatch_to_wait_ms=0.6031
+STATS per_block=4 dispatches=309 errors=0 maps=203 unmaps=203 map_errors=0 bytes_mapped=555417600 map_ms_mean=0.1453 unmap_ms_mean=0.2394 read_maps=100 slots_live=0 alloc_fail=6531 timed=309 device_ms_mean=0.1257 host_ms_mean=0.4159
+POOL_TEST PASS (0 failures)

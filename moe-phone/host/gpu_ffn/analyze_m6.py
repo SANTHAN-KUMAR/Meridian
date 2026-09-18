@@ -71,11 +71,12 @@ def main():
     bpath = os.path.join(R, "bench.out")
     if os.path.exists(bpath):
         for line in open(bpath):
-            m = re.match(r"BENCH variant=(\d) down=(\S+) k=(\d+) n=(\d+) median_ms=([\d.]+) p10_ms=([\d.]+) p90_ms=([\d.]+) GBps_at_median=([\d.]+)", line)
+            m = re.match(r"BENCH variant=(\d) down=(\S+) k=(\d+) n=(\d+) median_ms=([\d.]+) p10_ms=([\d.]+) p90_ms=([\d.]+) GBps_at_median=([\d.]+)(?: device_median_ms=([\d.]+) device_p90_ms=([\d.]+))?", line)
             if m:
                 bench.append(dict(variant=int(m.group(1)), down=m.group(2), k=int(m.group(3)), n=int(m.group(4)),
                                   median_ms=float(m.group(5)), p10_ms=float(m.group(6)), p90_ms=float(m.group(7)),
-                                  GBps=float(m.group(8))))
+                                  GBps=float(m.group(8)), device_median_ms=float(m.group(9)) if m.group(9) else None,
+                                  device_p90_ms=float(m.group(10)) if m.group(10) else None))
             m = re.match(r"SLOTWRITE variant=(\d) n=(\d+) median_ms=([\d.]+) p90_ms=([\d.]+)", line)
             if m:
                 out.setdefault("slotwrite", []).append(dict(variant=int(m.group(1)), median_ms=float(m.group(3)),
@@ -87,13 +88,30 @@ def main():
         if key not in best or b["median_ms"] < best[key]["median_ms"]:
             best[key] = {"variant": b["variant"], "median_ms": b["median_ms"], "GBps": b["GBps"]}
     out["fastest_variant"] = best
+    # least-squares line median_ms = a + b*k per (variant, down, host|device): a = fixed per-dispatch overhead
+    fits = {}
+    for v in sorted({b["variant"] for b in bench}):
+        for dn in sorted({b["down"] for b in bench}):
+            rows = [b for b in bench if b["variant"] == v and b["down"] == dn]
+            for kind, key in (("host", "median_ms"), ("device", "device_median_ms")):
+                pts = [(b["k"], b[key]) for b in rows if b[key] is not None]
+                if len(pts) >= 3:
+                    n = len(pts); sx = sum(p[0] for p in pts); sy = sum(p[1] for p in pts)
+                    sxx = sum(p[0] ** 2 for p in pts); sxy = sum(p[0] * p[1] for p in pts)
+                    slope = (n * sxy - sx * sy) / (n * sxx - sx * sx); icpt = (sy - slope * sx) / n
+                    fits[f"v{v}_{dn}_{kind}"] = {"intercept_ms": icpt, "per_expert_ms": slope, "n_k": n}
+    out["latency_fit"] = fits
     p = os.path.join(R, "m6_summary.json")
     json.dump(out, open(p, "w"), indent=1)
     print(json.dumps({k: out[k] for k in ("verdict", "detector", "premise", "swiglu")}, indent=1))
     for c, d in out.get("swiglu_mismatch_classes", {}).items():
         print(f"swiglu mismatch class {c:26s} n={d['n']:6d} flagged={d['flagged']}")
     for b in bench:
-        print(f"v{b['variant']} {b['down']} k={b['k']}: median {b['median_ms']:.3f} ms, p90 {b['p90_ms']:.3f} ms, {b['GBps']:.2f} GB/s")
+        dv = f", device {b['device_median_ms']:.3f} ms" if b.get("device_median_ms") is not None else ""
+        print(f"v{b['variant']} {b['down']} k={b['k']}: host median {b['median_ms']:.3f} ms, p90 {b['p90_ms']:.3f} ms, "
+              f"{b['GBps']:.2f} GB/s{dv}")
+    for key, f in fits.items():
+        print(f"fit {key}: intercept {f['intercept_ms']:.3f} ms + {f['per_expert_ms']:.3f} ms/expert")
     print("wrote", p)
     return 0
 
