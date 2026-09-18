@@ -31,7 +31,7 @@ campaign() {  # script mode
   mkdir -p "$R/${1%.sh}"; adb pull "$d" "$R/${1%.sh}" >/dev/null 2>&1 </dev/null; log "pulled $d"
   LAST="$R/${1%.sh}/$(basename "$d")"
 }
-log "start: waiting for the kgsl A/B"
+log "start (0022 engine): waiting for the kgsl A/B"
 while :; do
   reconnect
   d=$(A "ls -d $H/bmoe_kgsl_ab_*/ 2>/dev/null | tail -1" | tr -d '\r')
@@ -52,7 +52,15 @@ fi
 # the variant decision is written by the agent from the gx bench; wait up to 10 min for it, else v0
 w=0; while [ $w -lt 10 ] && [ ! -f "$R/GTIER_VARIANT" ]; do sleep 60; w=$((w+1)); done
 V=$(cat "$R/GTIER_VARIANT" 2>/dev/null | tr -dc 0-9); V=${V:-0}
-export GTENV="GT_BIN=bmoe-i8mm-0021 GT_VARIANT=$V GT_SPIN=1"
+# engine bmoe-i8mm-0022: libgx 58b13dd (unrolled float4 accumulators, bit-exact); pushed and md5-checked here
+SP=/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/2d806460-912e-4de7-a437-dc77597a5bb6/scratchpad
+A "mkdir -p $H/bmoe-i8mm-0022" >/dev/null
+for f in "$SP/bmoe-i8mm-0022"/*; do adb push "$f" "$H/bmoe-i8mm-0022/" >/dev/null 2>&1 </dev/null; done
+adb push "$MP/device/bmoe_gtier.sh" "$H/" >/dev/null 2>&1 </dev/null
+want=$(grep bmoe-cli "$SP/bmoe-i8mm-0022/MD5" | cut -d' ' -f1); got=$(A "md5sum $H/bmoe-i8mm-0022/bmoe-cli" | cut -d' ' -f1)
+[ "$want" = "$got" ] || { log "FATAL: pushed 0022 md5 $got != $want"; finish 1; }
+A "chmod 755 $H/bmoe-i8mm-0022/bmoe-cli" >/dev/null
+export GTENV="GT_BIN=bmoe-i8mm-0022 GT_VARIANT=$V GT_SPIN=1"
 log "gtier variant $V (GTIER_VARIANT file: $( [ -f "$R/GTIER_VARIANT" ] && echo present || echo absent ))"
 A "svc power stayon true; settings put system screen_off_timeout 1800000; dumpsys deviceidle disable" >/dev/null 2>&1
 campaign bmoe_gtier.sh smoke

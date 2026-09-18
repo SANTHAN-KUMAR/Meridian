@@ -29,3 +29,7 @@ The first v3 rows (00:50) were void: an engine bug (`variant_ != 2`) wrote v3 sl
 never repacked. The gx session found it. libgx's detector flagged every such slot, so no wrong value reached the
 output. The engine now repacks for every variant >= 2, and libgx HEAD refuses to dispatch an unrepacked slot under
 v2/v3.
+
+## Unrolled kernels (gx 58b13dd), 01:35
+Rows u1, u3 and u3w match v1 / v1w byte for byte, with 0 risk flags and 0 failures (u3: 973 / 644 copy-outs). The phone engine for the
+tier A/B is bmoe-i8mm-0022 (bmoe-cli md5 4263e767a5e1c552820e91683fc71d52).
