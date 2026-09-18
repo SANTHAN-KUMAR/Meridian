@@ -8,7 +8,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <time.h>
+
+#include <map>
+#include <mutex>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -23,7 +28,8 @@ const char * k_src =
     X(clGetDeviceInfo) X(clCreateCommandQueue) X(clCreateProgramWithSource) X(clBuildProgram)                 \
     X(clGetProgramBuildInfo) X(clCreateKernel) X(clGetKernelWorkGroupInfo) X(clCreateBuffer) X(clSetKernelArg) \
     X(clEnqueueNDRangeKernel) X(clEnqueueWriteBuffer) X(clEnqueueReadBuffer) X(clFlush) X(clFinish)          \
-    X(clReleaseMemObject) X(clReleaseKernel) X(clReleaseProgram) X(clReleaseCommandQueue)
+    X(clReleaseMemObject) X(clReleaseKernel) X(clReleaseProgram) X(clReleaseCommandQueue)                    \
+    X(clEnqueueMapBuffer) X(clEnqueueUnmapMemObject) X(clWaitForEvents) X(clReleaseEvent)
 
 #define X(f) decltype(&::f) p_##f = nullptr;
 GX_CL_FUNCS(X)
@@ -70,8 +76,6 @@ uint16_t f32_to_f16_rne(float f) {
     return (uint16_t) (sign | r);
 }
 
-}  // namespace
-
 extern "C" void gx_quantize_q8_0(const float * x, void * vy, int n) {
     // quantize_row_q8_0, ggml-cpu/arch/arm/quants.c (the __ARM_NEON branch): amax over |x|; d = amax/127
     // and id = 1/d as IEEE fp32 divisions; y.d = fp16(d); q = round-half-even(x * id).
@@ -91,6 +95,19 @@ extern "C" void gx_quantize_q8_0(const float * x, void * vy, int n) {
     }
 }
 
+uint64_t now_ns() {
+    timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (uint64_t) t.tv_sec * 1000000000ull + (uint64_t) t.tv_nsec;
+}
+
+struct PoolBlock {
+    cl_mem m = nullptr;
+    std::map<size_t, size_t> free_ext;   // offset -> bytes, coalesced
+};
+
+}  // namespace
+
 struct gx_ctx {
     cl_context ctx = nullptr;
     cl_device_id dev = nullptr;
@@ -104,6 +121,12 @@ struct gx_ctx {
     int last_k = 0;
     bool pending = false;
     gx_stats st{};
+    // pool (gx_pool_create); guarded by mu, as are the pool/map counters in st
+    std::mutex mu;
+    cl_command_queue q_io = nullptr;
+    size_t block_bytes = 0;
+    std::vector<PoolBlock> blocks;
+    std::map<std::pair<cl_mem, size_t>, size_t> slot_span;   // (block, off_gate) -> bytes
 };
 
 static void seterr(char * err, size_t n, const std::string & s) {
@@ -115,6 +138,8 @@ extern "C" void gx_free(gx_ctx * g) {
     if (g->q) p_clFinish(g->q);
     for (cl_mem m : {g->xq, g->offs, g->hq, g->out, g->hdbg})
         if (m) p_clReleaseMemObject(m);
+    for (PoolBlock & b : g->blocks) p_clReleaseMemObject(b.m);
+    if (g->q_io) p_clReleaseCommandQueue(g->q_io);
     if (g->k1) p_clReleaseKernel(g->k1);
     if (g->k2) p_clReleaseKernel(g->k2);
     if (g->prog) p_clReleaseProgram(g->prog);
@@ -213,9 +238,12 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
     if (e == CL_SUCCESS)
         e = p_clEnqueueReadBuffer(g->q, g->out, CL_FALSE, 0, sizeof(float) * k * ne, out, 0, nullptr, nullptr);
     if (e == CL_SUCCESS) e = p_clFlush(g->q);
-    g->st.dispatches++;
-    if (e != CL_SUCCESS) { g->st.errors++; return e; }
-    g->st.experts += k;
+    {
+        std::lock_guard<std::mutex> lk(g->mu);
+        g->st.dispatches++;
+        if (e != CL_SUCCESS) { g->st.errors++; return e; }
+        g->st.experts += k;
+    }
     g->last_k = k;
     g->pending = true;
     return 0;
@@ -225,11 +253,133 @@ extern "C" int gx_wait(gx_ctx * g) {
     if (!g->pending) return 0;
     const cl_int e = p_clFinish(g->q);
     g->pending = false;
-    if (e != CL_SUCCESS) g->st.errors++;
+    if (e != CL_SUCCESS) {
+        std::lock_guard<std::mutex> lk(g->mu);
+        g->st.errors++;
+    }
     return e;
 }
 
-extern "C" gx_stats gx_get_stats(const gx_ctx * g) { return g->st; }
+extern "C" gx_stats gx_get_stats(const gx_ctx * g) {
+    std::lock_guard<std::mutex> lk(const_cast<gx_ctx *>(g)->mu);
+    return g->st;
+}
+
+static size_t align4k(size_t n) { return (n + 4095) & ~(size_t) 4095; }
+
+extern "C" int gx_pool_create(gx_ctx * g, size_t block_bytes, int n_blocks, char * err, size_t errlen) {
+    std::lock_guard<std::mutex> lk(g->mu);
+    if (!g->blocks.empty() || g->q_io) { seterr(err, errlen, "pool already created"); return -1; }
+    cl_ulong max_alloc = 0, global_mem = 0;
+    p_clGetDeviceInfo(g->dev, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof max_alloc, &max_alloc, nullptr);
+    p_clGetDeviceInfo(g->dev, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof global_mem, &global_mem, nullptr);
+    const std::string lim = "max_mem_alloc=" + std::to_string(max_alloc) + " global_mem=" + std::to_string(global_mem);
+    if (block_bytes == 0 || block_bytes % 4096 || n_blocks < 1 || block_bytes > max_alloc) {
+        seterr(err, errlen, "block_bytes must be a nonzero multiple of 4096 and <= max_mem_alloc; " + lim);
+        return -1;
+    }
+    cl_int e;
+    g->q_io = p_clCreateCommandQueue(g->ctx, g->dev, 0, &e);
+    if (e != CL_SUCCESS) { g->q_io = nullptr; seterr(err, errlen, "io queue " + std::to_string(e)); return -1; }
+    g->block_bytes = block_bytes;
+    std::string why;
+    for (int i = 0; i < n_blocks; i++) {
+        cl_mem m = p_clCreateBuffer(g->ctx, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, block_bytes, nullptr, &e);
+        if (e != CL_SUCCESS) { why = "clCreateBuffer " + std::to_string(e) + " at block " + std::to_string(i); break; }
+        // touch it once through a map so allocation failures surface here, not at the first expert
+        void * p = p_clEnqueueMapBuffer(g->q_io, m, CL_TRUE, CL_MAP_WRITE_INVALIDATE_REGION, 0, block_bytes, 0, nullptr, nullptr, &e);
+        if (e == CL_SUCCESS) {
+            cl_event ev = nullptr;
+            e = p_clEnqueueUnmapMemObject(g->q_io, m, p, 0, nullptr, &ev);
+            if (e == CL_SUCCESS) e = p_clWaitForEvents(1, &ev);
+            if (ev) p_clReleaseEvent(ev);
+        }
+        if (e != CL_SUCCESS) { p_clReleaseMemObject(m); why = "map/unmap " + std::to_string(e) + " at block " + std::to_string(i); break; }
+        PoolBlock b;
+        b.m = m;
+        b.free_ext[0] = block_bytes;
+        g->blocks.push_back(b);
+    }
+    g->st.pool_blocks = g->blocks.size();
+    g->st.pool_bytes = g->blocks.size() * block_bytes;
+    seterr(err, errlen, lim + (why.empty() ? "" : "; stopped: " + why));
+    return (int) g->blocks.size();
+}
+
+extern "C" int gx_slot_alloc(gx_ctx * g, size_t bg, size_t bu, size_t bd, gx_slot * out) {
+    const size_t ag = align4k(bg), au = align4k(bu), span = ag + au + align4k(bd);
+    std::lock_guard<std::mutex> lk(g->mu);
+    for (PoolBlock & b : g->blocks) {
+        for (auto it = b.free_ext.begin(); it != b.free_ext.end(); ++it) {
+            if (it->second < span) continue;
+            const size_t off = it->first, rest = it->second - span;
+            b.free_ext.erase(it);
+            if (rest) b.free_ext[off + span] = rest;
+            *out = gx_slot{b.m, off, off + ag, off + ag + au};
+            g->slot_span[{b.m, off}] = span;
+            g->st.slots_live++;
+            return 1;
+        }
+    }
+    g->st.slot_alloc_fail++;
+    return 0;
+}
+
+extern "C" void gx_slot_free(gx_ctx * g, const gx_slot * s) {
+    std::lock_guard<std::mutex> lk(g->mu);
+    auto sp = g->slot_span.find({s->block, s->off_gate});
+    if (sp == g->slot_span.end()) { g->st.errors++; return; }
+    const size_t span = sp->second;
+    g->slot_span.erase(sp);
+    g->st.slots_live--;
+    for (PoolBlock & b : g->blocks) {
+        if (b.m != s->block) continue;
+        size_t off = s->off_gate, len = span;
+        auto nx = b.free_ext.lower_bound(off);
+        if (nx != b.free_ext.end() && nx->first == off + len) { len += nx->second; nx = b.free_ext.erase(nx); }
+        if (nx != b.free_ext.begin()) {
+            auto pv = std::prev(nx);
+            if (pv->first + pv->second == off) { off = pv->first; len += pv->second; b.free_ext.erase(pv); }
+        }
+        b.free_ext[off] = len;
+        return;
+    }
+}
+
+extern "C" void * gx_slot_map_write(gx_ctx * g, const gx_slot * s) {
+    size_t span;
+    {
+        std::lock_guard<std::mutex> lk(g->mu);
+        auto sp = g->slot_span.find({s->block, s->off_gate});
+        if (sp == g->slot_span.end()) { g->st.map_errors++; return nullptr; }
+        span = sp->second;
+    }
+    const uint64_t t0 = now_ns();
+    cl_int e;
+    void * p = p_clEnqueueMapBuffer(g->q_io, s->block, CL_TRUE, CL_MAP_WRITE_INVALIDATE_REGION, s->off_gate, span, 0, nullptr,
+                                    nullptr, &e);
+    const uint64_t t1 = now_ns();
+    std::lock_guard<std::mutex> lk(g->mu);
+    if (e != CL_SUCCESS) { g->st.map_errors++; return nullptr; }
+    g->st.maps++;
+    g->st.bytes_mapped += span;
+    g->st.map_ns += t1 - t0;
+    return p;
+}
+
+extern "C" int gx_slot_unmap(gx_ctx * g, const gx_slot * s, void * p) {
+    const uint64_t t0 = now_ns();
+    cl_event ev = nullptr;
+    cl_int e = p_clEnqueueUnmapMemObject(g->q_io, s->block, p, 0, nullptr, &ev);
+    if (e == CL_SUCCESS) e = p_clWaitForEvents(1, &ev);   // completed: later dispatches see the bytes
+    if (ev) p_clReleaseEvent(ev);
+    const uint64_t t1 = now_ns();
+    std::lock_guard<std::mutex> lk(g->mu);
+    if (e != CL_SUCCESS) { g->st.map_errors++; return e; }
+    g->st.unmaps++;
+    g->st.unmap_ns += t1 - t0;
+    return 0;
+}
 
 extern "C" int gx_debug_h(gx_ctx * g, int k, float * h) {
     if (!g->p.debug_h || k < 1 || k > g->last_k) return CL_INVALID_OPERATION;

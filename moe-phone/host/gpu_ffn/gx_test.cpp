@@ -195,7 +195,12 @@ int main(int argc, char ** argv) {
         const char * s = src.c_str();
         cl_program p = clCreateProgramWithSource(ctx, 1, &s, nullptr, &e);
         e = clBuildProgram(p, 1, &dev, "-cl-std=CL1.2 -DN_EMBD=2048 -DN_FF=768", nullptr, nullptr);
-        if (e != CL_SUCCESS) { fprintf(stderr, "test program build failed %d\n", e); return 1; }
+        if (e != CL_SUCCESS) {
+            static char log[1 << 16];
+            clGetProgramBuildInfo(p, dev, CL_PROGRAM_BUILD_LOG, sizeof log - 1, log, nullptr);
+            fprintf(stderr, "test program build failed %d:\n%s\n", e, log);
+            return 1;
+        }
         cl_kernel kd = clCreateKernel(p, "t_div", &e);
         cl_mem ba = clCreateBuffer(ctx, CL_MEM_COPY_HOST_PTR, N * 4, a.data(), &e);
         cl_mem bb = clCreateBuffer(ctx, CL_MEM_COPY_HOST_PTR, N * 4, b.data(), &e);

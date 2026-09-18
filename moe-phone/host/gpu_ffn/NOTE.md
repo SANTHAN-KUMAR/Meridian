@@ -56,8 +56,10 @@ fast-math, so that every unfused multiply-add stays unfused.
 
 ## 3. Acceptance (laptop): method and result
 
-Produced by `run_accept.sh` into `results/2026-09-18/gx_m3_220511/`:
-- `gx_test.json`, `gx_test.out`, `controls.out`, `disasm_identity.txt`, `manifest.json`, `STAMP`.
+Produced by `run_accept.sh` into `results/2026-09-18/gx_m3_220511/` (first run) and
+`gx_m3_221524/` (the current kernel file, with the pool test added):
+- `gx_test.json`, `gx_test.out`, `controls.out`, `pool_test.out`, `disasm_identity.txt`,
+  `manifest.json`, `STAMP`.
 
 **Reference.** `ggml_ref.cpp` runs ggml's own graph (`mul_mat_id` → `ggml_swiglu_split` →
 `mul_mat_id`, as llama.cpp's `build_moe_ffn` emits for Qwen3-MoE). It is built as a static aarch64
@@ -109,6 +111,47 @@ Two findings came from controls that were initially missed:
 - The 127/amax mutation escaped the end-to-end cases, because h rarely lands near a rounding tie.
   That gap is why the crafted-block quantizer test exists. That test detects it in about half of the
   blocks aimed at it.
+
+## 3b. The expert pool (API for the engine; all OpenCL stays inside libgx)
+
+- `gx_pool_create(g, block_bytes, n_blocks)`: allocates `READ_ONLY | ALLOC_HOST_PTR` blocks and
+  returns how many it got. It touches each block once through a map, so allocation failures surface
+  here. It logs `max_mem_alloc` and `global_mem`.
+- `gx_slot_alloc(g, gate, up, down)`: one expert = three slices, contiguous in one block, each offset
+  4096-aligned for O_DIRECT. First fit, with coalescing on `gx_slot_free`.
+- `gx_slot_map_write`: maps exactly the slot's range with `WRITE_INVALIDATE_REGION`.
+- `gx_slot_unmap`: unmaps and waits for completion on its own event, so every later `gx_dispatch`
+  sees the bytes.
+- Map and unmap run on a second command queue and may be called from I/O threads while
+  `gx_dispatch` runs on the compute thread. The allocator and counters are mutex-guarded.
+- `gx_stats` adds: pool blocks and bytes, live slots, allocation failures, maps, unmaps, map errors,
+  bytes mapped, and map/unmap time.
+
+`gx_pool_test` (laptop, NVIDIA; `pool_test.out`) runs every check for two pool shapes, one slot per
+block and four slots per block:
+- **Allocator:** 20,000 random alloc/free operations over the two slot sizes (Q4_0-down and
+  Q4_1-down experts), with no alignment, bounds or overlap violation. Capacity after freeing
+  everything equals capacity when new.
+- **Correctness:** dispatch from pool slots is bit-exact against ggml ARM on all 7 real cases.
+- **Concurrency:** 200 dispatches stayed bit-exact while an I/O thread mapped, wrote and unmapped
+  other slots in the same blocks.
+- **Negative control:** a dispatch issued while the slot is still mapped with new bytes saw the
+  **old** bytes. So on a copying driver, a protocol violation is detectable. After the unmap, the new
+  bytes are seen.
+- **What the laptop cannot show:** on Adreno's zero-copy memory, the same violation might show the
+  new bytes, or a mix, and go unnoticed.
+- **The region question stays open for Adreno:** can a kernel read one region of a buffer while
+  another region of it is mapped? The spec wording is ambiguous.
+- **Recommendation:** one slot per block until M6's stress test answers both points.
+
+## 3c. Variant 1 (row per work-item): written, NOT wired, NOT tested
+
+`gx_kernels.cl` also contains `gx_gate_up_row` and `gx_down_row`. They do the same arithmetic with
+one work-item per output row, holding all 8 lane accumulators, and read whole blocks.
+- They compile, but nothing dispatches them, and no test or control has run on them.
+- They exist to be a throughput candidate at M6.
+- Before any use they need a `gx_params` selector, the full `gx_test` run, and their own negative
+  controls.
 
 ## 4. What is NOT established
 

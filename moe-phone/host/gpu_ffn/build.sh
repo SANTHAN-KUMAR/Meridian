@@ -1,7 +1,7 @@
 #!/bin/bash
 # build.sh — build gx (fused expert FFN) and its references.
 #   host/gpu_ffn/build.sh inc       regenerate gx_kernels.inc from gx_kernels.cl (committed; the engine includes it)
-#   host/gpu_ffn/build.sh host      out/host/{gx_test, ggml_ref_x86}      (laptop OpenCL + laptop ggml)
+#   host/gpu_ffn/build.sh host      out/host/{gx_test, gx_pool_test, ggml_ref_x86}   (laptop OpenCL + laptop ggml)
 #   host/gpu_ffn/build.sh arm-ref   out/arm/ggml_ref_arm                  (aarch64 static, run with qemu-aarch64-static)
 #   host/gpu_ffn/build.sh android   out/android/libgx.a                   (for the engine's Android build)
 # Env: NDK, CL_HDR (Khronos headers), GGML_SRC (a llama.cpp ggml tree, headers), GGML_HOST (x86 libggml*.so),
@@ -30,9 +30,11 @@ case "$what" in
     O=$HERE/out/host; mkdir -p "$O"
     c++ -std=c++17 -O2 -ffp-contract=off -I"$HERE" -I"$CL_HDR" "$HERE/gx.cpp" "$HERE/gx_test.cpp" \
       -l:libOpenCL.so.1 -ldl -o "$O/gx_test"
+    c++ -std=c++17 -O2 -ffp-contract=off -I"$HERE" -I"$CL_HDR" "$HERE/gx.cpp" "$HERE/gx_pool_test.cpp" \
+      -l:libOpenCL.so.1 -ldl -lpthread -o "$O/gx_pool_test"
     c++ -std=c++17 -O2 -I"$GGML_SRC/include" "$HERE/ggml_ref.cpp" -L"$GGML_HOST" -lggml -lggml-base -lggml-cpu \
       -Wl,-rpath,"$GGML_HOST" -o "$O/ggml_ref_x86"
-    echo "built $O/gx_test $O/ggml_ref_x86" ;;
+    echo "built $O/gx_test $O/gx_pool_test $O/ggml_ref_x86" ;;
   arm-ref)
     O=$HERE/out/arm; mkdir -p "$O"
     $CXX_A64 -std=c++17 -O2 -static -I"$GGML_SRC/include" "$HERE/ggml_ref.cpp" \

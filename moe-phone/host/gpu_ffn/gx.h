@@ -66,8 +66,40 @@ int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx_slot * slo
 /* Block until the last dispatch has written out. Returns 0 or a CL error. */
 int gx_wait(gx_ctx * g);
 
-/* Counters for telemetry (CLAUDE.md §6.3): dispatches, errors. */
-typedef struct gx_stats { uint64_t dispatches, experts, errors; } gx_stats;
+/* ---- GPU expert pool: GPU-visible memory owned by libgx, so the engine never calls OpenCL itself.
+ * Blocks are CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR buffers. A slot is one expert: its gate, up and
+ * down slices, contiguous in one block, each slice offset 4096-aligned (O_DIRECT). The CPU writes a slot
+ * only between gx_slot_map_write and gx_slot_unmap, and never computes from pool memory.
+ *
+ * Protocol (the only one verified on the phone, host/gpu_zerocopy/NOTE.md): map a slot's exact byte range
+ * with CL_MAP_WRITE_INVALIDATE_REGION, write it (pread/memcpy), unmap. gx_slot_unmap returns only after the
+ * unmap has completed, so every gx_dispatch enqueued after it returns sees the new bytes. A slot must not be
+ * passed to gx_dispatch while it is mapped, and must not be freed or re-mapped while a dispatch that reads
+ * it is pending (gx_wait first). Map/unmap may be called from other threads than gx_dispatch; they use
+ * their own command queue and blocking completion.
+ *
+ * OpenCL leaves open whether a kernel may read one region of a buffer while a different region of the
+ * same buffer is mapped. block_bytes == one slot avoids the question entirely (one expert per buffer);
+ * gx_pool_create accepts larger blocks, and M6 must test them before the engine relies on them. */
+
+/* Allocate n_blocks blocks of block_bytes. Returns the number actually allocated (0..n_blocks), or -1 on a
+ * hard error; writes the driver limits and the reason for any shortfall to err. May be called once. */
+int  gx_pool_create(gx_ctx * g, size_t block_bytes, int n_blocks, char * err, size_t errlen);
+/* One expert's slot. Returns 1 and fills *out, or 0 if no block has room. Thread-safe. */
+int  gx_slot_alloc(gx_ctx * g, size_t bytes_gate, size_t bytes_up, size_t bytes_down, gx_slot * out);
+void gx_slot_free(gx_ctx * g, const gx_slot * s);
+/* Map the slot's whole byte range for writing; returns the pointer to its gate slice (up and down follow at
+ * off_up - off_gate and off_down - off_gate), or NULL on error. Thread-safe. */
+void * gx_slot_map_write(gx_ctx * g, const gx_slot * s);
+/* Unmap and wait for completion. Returns 0 or a CL error. Thread-safe. */
+int  gx_slot_unmap(gx_ctx * g, const gx_slot * s, void * p);
+
+/* Counters for telemetry (CLAUDE.md §6.3). */
+typedef struct gx_stats {
+    uint64_t dispatches, experts, errors;
+    uint64_t pool_blocks, pool_bytes, slots_live, slot_alloc_fail;
+    uint64_t maps, unmaps, map_errors, bytes_mapped, map_ns, unmap_ns;
+} gx_stats;
 gx_stats gx_get_stats(const gx_ctx * g);
 
 /* Tests only (debug_h = 1): after gx_wait, copy the last dispatch's fp32 SwiGLU output, k * n_ff. */

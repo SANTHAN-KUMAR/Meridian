@@ -5,9 +5,10 @@
 #   2. disassembly identity: quantize_row_q8_{0,1}, vec_dot_q4_{0,1}_q8_{0,1}, ggml_vec_swiglu_f32
 #   3. cases: random stress cases + real Qwen3-30B-A3B expert slices read by offset (make_cases.py)
 #   4. references: ggml_ref_arm under qemu-aarch64-static (bit-exact target) and ggml_ref_x86
-#   5. gx_test (bit comparison + errors) and negative_controls.sh (each mutation must be detected)
+#   5. gx_test (bit comparison + errors), negative_controls.sh (each mutation must be detected) and
+#      gx_pool_test (pool allocator, dispatch from pool slots, concurrent map/unmap, dispatch-while-mapped)
 # Output: results/<date>/gx_m3_<time>/ (never overwritten): gx_test.json, gx_test.out, controls.out,
-#         disasm_identity.txt, manifest.json, STAMP. Case files stay in a scratch directory (hundreds of MB).
+#         pool_test.out, disasm_identity.txt, manifest.json, STAMP. Case files stay in a scratch directory (hundreds of MB).
 #   host/gpu_ffn/run_accept.sh <scratch_dir> [gguf]
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -48,10 +49,12 @@ set +e
 t=${PIPESTATUS[0]}
 "$HERE/negative_controls.sh" "$S" | tee "$R/controls.out"
 c=${PIPESTATUS[0]}
+"$HERE/out/host/gx_pool_test" "$S" | tee "$R/pool_test.out"
+pt=${PIPESTATUS[0]}
 {
   echo "date=$(date -Is) git=$(git -C "$MP" rev-parse --short HEAD) dirty=$(git -C "$MP" status --porcelain -- host/gpu_ffn | wc -l)"
   echo "gguf=$GGUF engine_so=$ENGINE_SO qemu=$(qemu-aarch64-static --version | head -1)"
-  echo "kernel_md5=$(md5sum < "$HERE/gx_kernels.cl" | cut -c1-16) gx_test_exit=$t controls_exit=$c"
+  echo "kernel_md5=$(md5sum < "$HERE/gx_kernels.cl" | cut -c1-16) gx_test_exit=$t controls_exit=$c pool_test_exit=$pt"
 } > "$R/STAMP"
 cat "$R/STAMP"
 echo "results in $R"

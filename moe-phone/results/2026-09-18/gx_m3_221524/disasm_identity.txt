@@ -1,0 +1,5 @@
+quantize_row_q8_0 ref=e9d950086042b6b8 engine=e9d950086042b6b8 IDENTICAL
+quantize_row_q8_1 ref=90737c53bdfd9306 engine=90737c53bdfd9306 IDENTICAL
+ggml_vec_dot_q4_0_q8_0 ref=352c463c6a6cf423 engine=352c463c6a6cf423 IDENTICAL
+ggml_vec_dot_q4_1_q8_1 ref=ddc193b9c5e1f1d4 engine=ddc193b9c5e1f1d4 IDENTICAL
+ggml_vec_swiglu_f32 ref=4513462b5960dd32 engine=4513462b5960dd32 IDENTICAL

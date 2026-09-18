@@ -184,4 +184,93 @@ kernel void gx_down(global const uchar * w0, global const uchar * w1, global con
         out[(size_t) s * N_EMBD + row] = dt == DT_Q4_1 ? summs + v : v;
     }
 }
+
+// ---------------------------------------------------------------------------------------------------
+// Variant 1 ("row"): the same arithmetic with one work-item per output row. The work-item holds all 8
+// NEON lane accumulators of its row (acc[p*4 + j]: accumulator p = block parity, lane j) and walks the
+// blocks in order, so each accumulator sees exactly the operations, in exactly the order, of variant 0
+// and of ggml. Only the mapping of work to work-items changes: whole 18/20-byte blocks per load, the
+// activation blocks staged once per work-group in local memory.
+// ---------------------------------------------------------------------------------------------------
+
+// acc[p*4 + j] = fma(float(lane_dot_j), dx*dy, acc[...]) for one block; off = 8 for Q4_0, 0 for Q4_1.
+static void row_block(float * acc, int p, global const uchar * qs, float sc, int off, local const char * yq) {
+    const uchar16 q = vload16(0, qs);
+    const char16 yl = vload16(0, yq), yh = vload16(0, yq + 16);
+    const int16 lo = convert_int16(q & (uchar16)(15)) - off, hi = convert_int16(q >> (uchar16)(4)) - off;
+    const int16 a = convert_int16(yl), c = convert_int16(yh);
+    const int16 pr = lo * a + hi * c;
+    acc[p * 4 + 0] = fma((float) (pr.s0 + pr.s1 + pr.s2 + pr.s3), sc, acc[p * 4 + 0]);
+    acc[p * 4 + 1] = fma((float) (pr.s4 + pr.s5 + pr.s6 + pr.s7), sc, acc[p * 4 + 1]);
+    acc[p * 4 + 2] = fma((float) (pr.s8 + pr.s9 + pr.sa + pr.sb), sc, acc[p * 4 + 2]);
+    acc[p * 4 + 3] = fma((float) (pr.sc + pr.sd + pr.se + pr.sf), sc, acc[p * 4 + 3]);
+}
+
+static float hsum8p(const float * l) {
+    return ((l[0] + l[1]) + (l[2] + l[3])) + ((l[4] + l[5]) + (l[6] + l[7]));
+}
+
+// Grid (64 * NBH / 2, k), local (64, 1): 64 rows = 2 blocks of h per work-group.
+kernel void gx_gate_up_row(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
+                           global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
+                           global const ulong * offs, global const uchar * xq, global uchar * hq,
+                           global float * hdbg, int dbg, int dt) {
+    local char  lx[NBX * 32];
+    local float ldx[NBX];   // fp16 d widened to fp32 (exact)
+    local float lh[64];
+    const int t = get_local_id(0), s = get_group_id(1);
+    const int row = get_group_id(0) * 64 + t;
+    for (int i = t; i < NBX; i += 64) {
+        ldx[i] = vload_half(0, (global const half *) (xq + i * YB0));
+        for (int b = 0; b < 32; b++) lx[i * 32 + b] = (char) xq[i * YB0 + 2 + b];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    global const uchar * W = pick(s, w0, w1, w2, w3, w4, w5, w6, w7);
+    global const uchar * G = W + offs[s * 3 + 0] + (size_t) row * NBX * QB0;
+    global const uchar * U = W + offs[s * 3 + 1] + (size_t) row * NBX * QB0;
+    float ag[8] = {0, 0, 0, 0, 0, 0, 0, 0}, au[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    for (int ib = 0; ib < NBX; ib++) {
+        const float dy = ldx[ib];
+        global const uchar * gb = G + ib * QB0;
+        global const uchar * ub = U + ib * QB0;
+        row_block(ag, ib & 1, gb + 2, vload_half(0, (global const half *) gb) * dy, 8, lx + ib * 32);
+        row_block(au, ib & 1, ub + 2, vload_half(0, (global const half *) ub) * dy, 8, lx + ib * 32);
+    }
+    const float h = gx_swiglu(hsum8p(ag), hsum8p(au));
+    lh[t] = h;
+    if (dbg) hdbg[s * N_FF + row] = h;
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (t < 2) q8_block(lh + 32 * t, hq + ((size_t) s * NBH + get_group_id(0) * 2 + t) * YB1, dt == DT_Q4_1);
+}
+
+// Grid (N_EMBD, k), local (64, 1).
+kernel void gx_down_row(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
+                        global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
+                        global const ulong * offs, global const uchar * hq, global float * out, int dt) {
+    local char  ly[NBH * 32];
+    local float ld[NBH], ls[NBH];
+    const int t = get_local_id(0), s = get_group_id(1);
+    const int row = get_group_id(0) * 64 + t;
+    global const uchar * Y = hq + (size_t) s * NBH * YB1;
+    for (int i = t; i < NBH; i += 64) {
+        ld[i] = vload_half(0, (global const half *) (Y + i * YB1));
+        ls[i] = vload_half(1, (global const half *) (Y + i * YB1));
+        for (int b = 0; b < 32; b++) ly[i * 32 + b] = (char) Y[i * YB1 + 4 + b];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    const int qb = dt == DT_Q4_1 ? QB1 : QB0, qo = dt == DT_Q4_1 ? 4 : 2, bias = dt == DT_Q4_1 ? 0 : 8;
+    global const uchar * D = pick(s, w0, w1, w2, w3, w4, w5, w6, w7) + offs[s * 3 + 2] + (size_t) row * NBH * qb;
+    float acc[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    float summs = 0.0f;
+    for (int ib = 0; ib < NBH; ib++) {
+        global const uchar * xb = D + ib * qb;
+        row_block(acc, ib & 1, xb + qo, vload_half(0, (global const half *) xb) * ld[ib], bias, ly + ib * 32);
+        if (dt == DT_Q4_1 && (ib & 1)) {
+            const float m0 = vload_half(1, (global const half *) (xb - QB1)), m1 = vload_half(1, (global const half *) xb);
+            summs = summs + fma(m0, ls[ib - 1], m1 * ls[ib]);
+        }
+    }
+    const float v = hsum8p(acc);
+    out[(size_t) s * N_EMBD + row] = dt == DT_Q4_1 ? summs + v : v;
+}
 )GXCL"
