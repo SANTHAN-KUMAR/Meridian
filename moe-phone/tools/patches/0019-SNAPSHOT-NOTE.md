@@ -9,3 +9,7 @@ Why a snapshot and not an incremental patch: the incremental series 0010–0018 
 no longer replays cleanly onto 74ba18f (hunks fail in main.cpp, config.h, expert_stream_source.*). The older
 `0019-bigmoeonedge-gpu-expert-tier-standin.patch` predates the gx backend and --gpu-spin-wait. It is superseded by this
 snapshot and kept only as history.
+
+Update 2026-09-19 00:45: the snapshot also carries `--arena-kgsl` (slot arena in OpenCL ALLOC_HOST_PTR memory, CPU-only,
+`gpu_pinned_alloc` in gpu_tier.cpp). The Android build is bmoe-i8mm-0020kgsl, bmoe-cli md5 0596bb92787f70a2e441dedec1c91717.
+It is a superset of 0019v2.

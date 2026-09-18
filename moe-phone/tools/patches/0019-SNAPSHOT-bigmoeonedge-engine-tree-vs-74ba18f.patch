@@ -13,10 +13,10 @@ index e21da45..76c29d4 100644
 +target_link_libraries(bmoe_entry PRIVATE bmoe_core)
 +set_target_properties(bmoe_entry PROPERTIES OUTPUT_NAME bmoe_entry)
 diff --git a/cli/main.cpp b/cli/main.cpp
-index ea3c2b7..897274d 100644
+index ea3c2b7..4df6b9b 100644
 --- a/cli/main.cpp
 +++ b/cli/main.cpp
-@@ -445,6 +445,16 @@ static void print_usage(const char * argv0) {
+@@ -445,6 +445,17 @@ static void print_usage(const char * argv0) {
          "      --cache-floor-mb N  with --cache-mb auto: RAM to leave free (default 1536)\n"
          "      --cache-ceil-mb N   with --cache-mb auto: upper bound on the budget (0 = no cap)\n"
          "      --io-threads N      parallel expert-read lanes [1..%d] (default 4)\n"
@@ -25,6 +25,7 @@ index ea3c2b7..897274d 100644
 +        "      --ppl-batch N       with --ppl: N teacher-forced tokens per decode (prices a verify batch) (moe-phone)\n"
 +        "      --attn-device N     run the attention matmuls on ggml device N (HTP0 / GPUOpenCL), experts stay streamed on CPU (moe-phone)\n"
 +        "      --slot-arena        expert slices in never-released pool slots read via a MUL_MAT_ID pointer hook (moe-phone)\n"
++        "      --arena-kgsl        --slot-arena with its blocks in OpenCL host-mapped GPU-driver memory, CPU use only (moe-phone)\n"
 +        "      --expert-resident-first  compute a layer's resident experts before the ones still being read (moe-phone)\n"
 +        "      --expert-slru       segmented-LRU eviction: probation + protected, O(1) (moe-phone)\n"
 +        "      --slru-protected-frac F  protected share of the budget with --expert-slru (default 0.80)\n"
@@ -33,7 +34,7 @@ index ea3c2b7..897274d 100644
          "      --no-odirect        do not bypass the page cache for expert reads\n"
          "      --dense-weights M   dense (non-expert) weight policy: mmap | warm | anon (default) | ahwb\n"
          "                          (warm = page-cache them at load, best when the model fits in RAM;\n"
-@@ -468,6 +478,7 @@ static void print_usage(const char * argv0) {
+@@ -468,6 +479,7 @@ static void print_usage(const char * argv0) {
          "      --load-all          debug: read ALL experts each token (A/B baseline)\n"
          "      --force-cache       allow a cache-mb in the pathological band\n"
          "      --overlap           overlap async expert reads with FFN compute (needs the fork)\n"
@@ -41,7 +42,7 @@ index ea3c2b7..897274d 100644
          "      --io-two-wave       publish a layer's first-projection reads before committing the\n"
          "                          rest, so the lanes start sooner (needs --overlap and the cache;\n"
          "                          experimental, off by default pending the on-device A/B)\n"
-@@ -519,6 +530,15 @@ static void print_usage(const char * argv0) {
+@@ -519,6 +531,15 @@ static void print_usage(const char * argv0) {
          "                          predicted below the drop threshold are not speculated.\n"
          "      --predict-spec-max N  speculated predicted misses per layer [0..8] (default 2;\n"
          "                          0 = retention only, the prediction spends no flash at all)\n"
@@ -57,7 +58,7 @@ index ea3c2b7..897274d 100644
          "      --list-archs        print supported MoE architectures and exit\n"
          "\n"
          "  Env overrides (flag wins): BMOE_CACHE_MB, BMOE_IO_THREADS, BMOE_PROGRESS, BMOE_OVERLAP, BMOE_PREFETCH, "
-@@ -585,7 +605,15 @@ static void print_predict_report(const RunSummary & s) {
+@@ -585,7 +606,15 @@ static void print_predict_report(const RunSummary & s) {
      }
  }
  
@@ -73,7 +74,7 @@ index ea3c2b7..897274d 100644
      RunConfig cfg;
      std::string csv_path;
      std::string route_trace_path;
-@@ -681,6 +709,44 @@ int main(int argc, char ** argv) {
+@@ -681,6 +710,46 @@ int main(int argc, char ** argv) {
              cfg.moe.cache_floor_mb = std::atoi(next("--cache-floor-mb"));
          else if (a == "--cache-ceil-mb")
              cfg.moe.cache_ceil_mb = std::atoi(next("--cache-ceil-mb"));
@@ -85,6 +86,8 @@ index ea3c2b7..897274d 100644
 +            cfg.attn_device = next("--attn-device");
 +        else if (a == "--slot-arena")
 +            cfg.moe.slot_arena = true;
++        else if (a == "--arena-kgsl")
++            cfg.moe.slot_arena = cfg.moe.arena_kgsl = true;
 +        else if (a == "--expert-resident-first")
 +            cfg.moe.expert_resident_first = true;
 +        else if (a == "--expert-slru")
@@ -118,7 +121,7 @@ index ea3c2b7..897274d 100644
          else if (a == "--io-threads")
              cfg.moe.io_threads = std::atoi(next("--io-threads"));
          else if (a == "--no-odirect")
-@@ -718,6 +784,8 @@ int main(int argc, char ** argv) {
+@@ -718,6 +787,8 @@ int main(int argc, char ** argv) {
              cfg.moe.force_cache = true;
          else if (a == "--overlap")
              cfg.moe.overlap = true;
@@ -127,7 +130,7 @@ index ea3c2b7..897274d 100644
          else if (a == "--io-two-wave")
              cfg.moe.io_two_wave = true;
          else if (a == "--prefetch")
-@@ -757,6 +825,12 @@ int main(int argc, char ** argv) {
+@@ -757,6 +828,12 @@ int main(int argc, char ** argv) {
              cfg.moe.predict_prefetch = true;
          else if (a == "--predict-spec-max")
              cfg.moe.predict_spec_max = std::atoi(next("--predict-spec-max"));
@@ -185,10 +188,10 @@ index 8d37f72..f0f8ba0 100644
 +    message(STATUS "bmoe: GPU expert tier gx backend ON (${BMOE_GX_SRC})")
 +endif()
 diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
-index fbed9b6..9a4cb43 100644
+index fbed9b6..1a88fc2 100644
 --- a/core/include/bmoe/config.h
 +++ b/core/include/bmoe/config.h
-@@ -61,6 +61,74 @@ struct MoeStreamConfig {
+@@ -61,6 +61,78 @@ struct MoeStreamConfig {
      // Clamped to [1, io_threads_max]. 4 is the measured sweet spot on UFS4 phones.
      int io_threads = 4;
  
@@ -213,6 +216,10 @@ index fbed9b6..9a4cb43 100644
 +    // no MADV_DONTNEED, no mremap, no first-touch faults after warm-up. Incompatible with --recycle-pages,
 +    // --defer-evict and --repack-experts (checked at init).
 +    bool slot_arena = false;
++    // moe-phone: the slot arena's blocks are OpenCL CL_MEM_ALLOC_HOST_PTR buffers (GPU driver memory), mapped once for
++    // the process lifetime and used by the CPU only: memory outside the process's anonymous LRU, so zram cannot take it
++    // (host/pinned_arena/pinprobe.cpp decides whether this holds). Implies slot_arena. Needs a build with libgx.
++    bool arena_kgsl = false;
 +
 +    // moe-phone: let the MUL_MAT_ID kernel compute a layer's already-resident experts BEFORE the ones
 +    // still being read, instead of consuming them in ascending expert id. Needs the fork's
@@ -263,7 +270,7 @@ index fbed9b6..9a4cb43 100644
      bool o_direct = true;     // bypass the page cache (O_DIRECT / FILE_FLAG_NO_BUFFERING)
      bool load_all = false;    // debug/A-B: load ALL experts each token (full-sweep baseline)
      bool force_cache = false; // allow a cache_mb in the pathological band (tests/experiments)
-@@ -70,6 +138,9 @@ struct MoeStreamConfig {
+@@ -70,6 +142,9 @@ struct MoeStreamConfig {
      // expert (via the fork's expert-ready hook) only if that expert's slice is not yet in.
      // Requires the Helldez/llama.cpp fork submodule (the hook); run() fails fast otherwise.
      bool overlap = false;
@@ -273,7 +280,7 @@ index fbed9b6..9a4cb43 100644
  
      // Two-wave batch publish (#118). A layer's read batch normally becomes visible to the I/O
      // lanes only after ALL of its staging finished — up to three page-commit syscalls per cold
-@@ -224,6 +295,35 @@ struct MoeStreamConfig {
+@@ -224,6 +299,35 @@ struct MoeStreamConfig {
      // speculation, if any, is small (the stall a prefetch can remove is head-of-line only).
      int predict_spec_max = 2;
  
@@ -309,7 +316,7 @@ index fbed9b6..9a4cb43 100644
      // ── route-ahead: commit to the prediction (lossy; opt-in; experimental) ───────────
      // With N > 0, decode routing at MoE layer L is REPLACED by the ranking layer L's own gate
      // matrix produced on the hidden state N layers earlier in the same forward pass — the
-@@ -348,6 +448,21 @@ struct RunConfig {
+@@ -348,6 +452,21 @@ struct RunConfig {
      std::string prompt = "The capital of Japan is";
      int n_predict = 128;
      int n_threads = 4;
@@ -574,7 +581,7 @@ index f86db01..6487c67 100644
      // full attention, others a Mamba-style SSM block, but every MoE layer names its experts
      // with the standard split suffixes, so streaming is one row. There is also an always-on
 diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
-index 860acb8..9227da3 100644
+index 860acb8..95e0c03 100644
 --- a/core/src/moe/expert_stream_source.cpp
 +++ b/core/src/moe/expert_stream_source.cpp
 @@ -12,6 +12,13 @@
@@ -612,7 +619,7 @@ index 860acb8..9227da3 100644
      two_wave_ = cfg.io_two_wave;
      prefetch_sync_ = cfg.prefetch_sync && !cfg.overlap; // serial only: overlap lane 0 is a worker
      // Under route-ahead the speculated ids of a layer ARE the ids its topk will commit, so the
-@@ -53,8 +74,21 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+@@ -53,8 +74,22 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
      // it. Off for every guessing predictor: adopting a wrong guess would make the load wait on
      // reads it does not need.
      spec_adopt_ = cfg.route_ahead > 0;
@@ -624,6 +631,7 @@ index 860acb8..9227da3 100644
 +    recycle_pages_ = cfg.recycle_pages;
 +    defer_evict_ = cfg.defer_evict;
 +    arena_ = cfg.slot_arena;
++    arena_kgsl_ = cfg.arena_kgsl;
 +    if (arena_ && (cfg.recycle_pages || cfg.defer_evict)) {
 +        std::fprintf(stderr, "bmoe: --slot-arena cannot be combined with --recycle-pages / --defer-evict\n");
 +        return false;
@@ -634,7 +642,7 @@ index 860acb8..9227da3 100644
      page_ = pio::vm_page(); // the real OS page size, for the dense-residency probe in any cache mode
  
      // Largest full-tensor byte size per projection, over all bound layers → shared-slot
-@@ -195,6 +229,22 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+@@ -195,6 +230,22 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
          clookups_ = 0;
      }
  
@@ -657,7 +665,7 @@ index 860acb8..9227da3 100644
      // Read pool: one reader per shard file, each owning a private fd + bounce per lane so concurrent
      // preads never contend, and the O_DIRECT request + its verify/fallback (per file — a shard set
      // could in principle straddle storage with different O_DIRECT behaviour). The dense-weights
-@@ -286,6 +336,10 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+@@ -286,6 +337,10 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
      for (int lane = first_worker_lane; lane < io_threads_; ++lane)
          io_pool_.emplace_back(&ExpertStreamSource::io_worker, this, lane);
  
@@ -668,7 +676,7 @@ index 860acb8..9227da3 100644
      // effective_direct_ (set where the readers opened) is the run's o_direct fact — see above.
      std::fprintf(stderr, "bmoe: expert streaming ON  n_expert=%d o_direct=%d io_threads=%d cache=%zu MiB shards=%zu\n",
                   n_expert_, (int) effective_direct_, io_threads_, cache_max_ >> 20, readers_.size());
-@@ -313,6 +367,16 @@ bool ExpertStreamSource::read_slice(int lane, const IoJob & j) {
+@@ -313,6 +368,16 @@ bool ExpertStreamSource::read_slice(int lane, const IoJob & j) {
      const auto t0 = clock_t_::now();
      const long long window = readers_[(size_t) j.file]->read(lane, j.dst, j.off, j.nbytes);
      if (window < 0) return false;
@@ -685,7 +693,7 @@ index 860acb8..9227da3 100644
  
      if (io_trace_on_) {
          const uint64_t lat_ns =
-@@ -381,6 +445,16 @@ void ExpertStreamSource::io_drain(int lane, uint64_t my_gen) {
+@@ -381,6 +446,16 @@ void ExpertStreamSource::io_drain(int lane, uint64_t my_gen) {
  }
  
  void ExpertStreamSource::io_worker(int lane) {
@@ -702,7 +710,7 @@ index 860acb8..9227da3 100644
      uint64_t seen = 0;
      for (;;) {
          {
-@@ -448,6 +522,7 @@ void ExpertStreamSource::prefetch(int il, const int32_t * ids, int n_ids) {
+@@ -448,6 +523,7 @@ void ExpertStreamSource::prefetch(int il, const int32_t * ids, int n_ids) {
              if (e < 0 || e >= n_expert_) continue;
              const int32_t id = il * n_expert_ + e;
              if (cvalid_[id] || spec_remaining_[id] != 0) continue; // already resident or already queued
@@ -710,7 +718,7 @@ index 860acb8..9227da3 100644
              cand.push_back(e);
          }
      }
-@@ -459,7 +534,8 @@ void ExpertStreamSource::prefetch(int il, const int32_t * ids, int n_ids) {
+@@ -459,7 +535,8 @@ void ExpertStreamSource::prefetch(int il, const int32_t * ids, int n_ids) {
          for (int p = 0; p < MoeRecipe::max_exps; ++p) {
              const uint64_t slice = L.proj[p].nb2;
              if (slice == 0) continue;
@@ -720,7 +728,7 @@ index 860acb8..9227da3 100644
              uintptr_t a0 = (uintptr_t) dst & ~(uintptr_t) (page_ - 1);
              uintptr_t a1 = ((uintptr_t) dst + slice + page_ - 1) & ~(uintptr_t) (page_ - 1);
              if (!pio::vm_commit((void *) a0, (size_t) (a1 - a0))) { // low on memory — stop quietly
-@@ -542,7 +618,7 @@ void ExpertStreamSource::drain_spec(int lane, uint64_t worker_seen) {
+@@ -542,7 +619,7 @@ void ExpertStreamSource::drain_spec(int lane, uint64_t worker_seen) {
                      // The adoption wait watches per-entry counters, not just the in-flight count.
                      io_cv_done_.notify_all();
                  }
@@ -729,7 +737,7 @@ index 860acb8..9227da3 100644
                  // Forget-on-failure: zeroing the counter keeps the adoption wait from parking
                  // forever, and !cvalid means a later demand read re-buys the entry.
                  spec_remaining_[j.flag] = 0;
-@@ -556,7 +632,11 @@ void ExpertStreamSource::drain_spec(int lane, uint64_t worker_seen) {
+@@ -556,7 +633,11 @@ void ExpertStreamSource::drain_spec(int lane, uint64_t worker_seen) {
  // Quiesce speculation before real staging: cancel queued reads, wait out in-flight ones, then on
  // this (eval) thread integrate every fully-read entry into the cache and release the rest. All LRU
  // mutation happens here, single-threaded, so it never races the real staging that follows.
@@ -742,7 +750,7 @@ index 860acb8..9227da3 100644
      // Adoption (route-ahead only): the layer about to stage COMMITTED to the ids its speculation
      // was issued for, so its queued spec reads are not bets to discard — they are the layer's own
      // demand reads, already staged and possibly partly done. Keep exactly those, drop the rest of
-@@ -719,17 +799,56 @@ size_t ExpertStreamSource::worst_cycle_bytes(int top_k) const {
+@@ -719,17 +800,56 @@ size_t ExpertStreamSource::worst_cycle_bytes(int top_k) const {
  
  // ── LRU plumbing ────────────────────────────────────────────────────────────────────
  void ExpertStreamSource::lru_unlink(int32_t id) {
@@ -801,7 +809,7 @@ index 860acb8..9227da3 100644
  void ExpertStreamSource::lru_push_front(int32_t id) {
      cprev_[id] = -1;
      cnext_[id] = chead_;
-@@ -764,21 +883,112 @@ void ExpertStreamSource::release_entry_pages(int32_t id) {
+@@ -764,21 +884,123 @@ void ExpertStreamSource::release_entry_pages(int32_t id) {
      for (int p = 0; p < MoeRecipe::max_exps; ++p) {
          const uint64_t slice = layers_[il].proj[p].nb2;
          if (slice == 0) continue; // absent slot in a fused layout
@@ -842,7 +850,18 @@ index 860acb8..9227da3 100644
 +    if (fl.empty()) {
 +        // grow the pool by 32 slots; pages are populated on first write and never released
 +        const size_t n = 32, sz = (size_t) slice * n;
-+        void * blk = pio::vm_reserve(sz);
++        void * blk = nullptr;
++        if (arena_kgsl_) {
++            std::string err;
++            blk = gpu_pinned_alloc(sz, &err);
++            if (!blk) { // never fall back silently to anonymous memory: the run would measure the other arm
++                std::fprintf(stderr, "bmoe: arena-kgsl FATAL: block of %zu bytes: %s\n", sz, err.c_str());
++                std::abort();
++            }
++            arena_kgsl_bytes_ += sz;
++        } else {
++            blk = pio::vm_reserve(sz);
++        }
 +        if (!blk) return nullptr;
 +        arena_blocks_.push_back({blk, sz});
 +        for (size_t k = 0; k < n; ++k) fl.push_back((char *) blk + (size_t) slice * k);
@@ -916,7 +935,7 @@ index 860acb8..9227da3 100644
  }
  
  // ── route-trace support: describe what a routing costs, without changing it ─────────
-@@ -794,7 +1004,12 @@ void ExpertStreamSource::retain(int il, const int32_t * ids, int n_ids) {
+@@ -794,7 +1016,12 @@ void ExpertStreamSource::retain(int il, const int32_t * ids, int n_ids) {
          const int32_t id = il * n_expert_ + e;
          if (!cvalid_[id]) continue; // absent: keeping it is prefetch's job, not retention's
          lru_unlink(id);
@@ -930,7 +949,7 @@ index 860acb8..9227da3 100644
      }
  }
  
-@@ -808,7 +1023,7 @@ void ExpertStreamSource::settle_spec() {
+@@ -808,7 +1035,7 @@ void ExpertStreamSource::settle_spec() {
      // settles right before every issue, so the full quiesce here cancelled the future layers'
      // committed reads one callback before their load could adopt them. Integrate-only instead.
      if (!active_ || cache_max_ == 0) return;
@@ -939,7 +958,7 @@ index 860acb8..9227da3 100644
          // Cheap exit without touching the lanes' mutex: this runs before every route-ahead issue
          // (40 times a token) and usually has nothing to integrate. spec_done_pending_ is the
          // publisher's own count, so a relaxed read either sees work — and we take the lock — or
-@@ -819,6 +1034,87 @@ void ExpertStreamSource::settle_spec() {
+@@ -819,6 +1046,87 @@ void ExpertStreamSource::settle_spec() {
      }
  }
  
@@ -1027,7 +1046,7 @@ index 860acb8..9227da3 100644
  // Integrate every completed speculative entry into the LRU cache, cancelling nothing — the
  // route-ahead settle. Eval-thread only (LRU mutation), like the quiesce that subsumes it.
  void ExpertStreamSource::spec_integrate_done() {
-@@ -852,7 +1148,11 @@ void ExpertStreamSource::spec_integrate_done() {
+@@ -852,7 +1160,11 @@ void ExpertStreamSource::spec_integrate_done() {
          // perfect prefetch paying its bytes twice (measured: +34% read/token, drop off). A
          // committed read enters HOT; its own routing arrives to promote it within N layers
          // anyway.
@@ -1040,7 +1059,7 @@ index 860acb8..9227da3 100644
              lru_push_front(id);
          else
              lru_push_back(id);
-@@ -891,6 +1191,415 @@ void ExpertStreamSource::drain_adopted(int adopt_il) {
+@@ -891,6 +1203,415 @@ void ExpertStreamSource::drain_adopted(int adopt_il) {
      }
  }
  
@@ -1456,7 +1475,7 @@ index 860acb8..9227da3 100644
  void ExpertStreamSource::query_residency(int il, const int32_t * ids, int n_ids, uint8_t * out) const {
      for (int i = 0; i < n_ids; ++i)
          out[i] = 0;
-@@ -900,6 +1609,7 @@ void ExpertStreamSource::query_residency(int il, const int32_t * ids, int n_ids,
+@@ -900,6 +1621,7 @@ void ExpertStreamSource::query_residency(int il, const int32_t * ids, int n_ids,
          const int e = ids[i];
          if (e < 0 || e >= n_expert_) continue;
          const int32_t id = il * n_expert_ + e;
@@ -1464,7 +1483,7 @@ index 860acb8..9227da3 100644
          if (!cvalid_[id]) continue;  // miss: this routing pays a read
          out[i] = cspec_[id] ? 2 : 1; // resident; 2 = a speculative prefetch guessed it right
      }
-@@ -916,7 +1626,54 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
+@@ -916,7 +1638,54 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
      const LayerExperts & L = layers_[il];
      const uint64_t slice = L.proj[p].nb2;
      if (slice == 0) return true; // absent slot in a fused layout
@@ -1519,7 +1538,7 @@ index 860acb8..9227da3 100644
      uintptr_t a0 = (uintptr_t) dst & ~(uintptr_t) (page_ - 1);
      uintptr_t a1 = ((uintptr_t) dst + slice + page_ - 1) & ~(uintptr_t) (page_ - 1);
      if (!pio::vm_commit((void *) a0, (size_t) (a1 - a0))) {
-@@ -926,11 +1683,67 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
+@@ -926,11 +1695,67 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
      return true;
  }
  
@@ -1587,7 +1606,7 @@ index 860acb8..9227da3 100644
          chits_++;
          if (cspec_[id]) { // this hit was served by a speculative prefetch — count it useful once
              spec_useful_.fetch_add(1);
-@@ -938,7 +1751,22 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
+@@ -938,7 +1763,22 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
          }
          if (promote) {
              lru_unlink(id);
@@ -1611,7 +1630,7 @@ index 860acb8..9227da3 100644
          }
          hit = true;
          return true;
-@@ -954,6 +1782,7 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
+@@ -954,6 +1794,7 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
          if (!commit_proj_pages(il, e, p)) return false;
      }
      if (ever_evicted_[id]) ++rereads_; // this entry was resident once; the cache is buying it again
@@ -1619,7 +1638,7 @@ index 860acb8..9227da3 100644
      cvalid_[id] = 1;
      cspec_[id] = 0; // a real read, not speculative
      cresident_ += entry_bytes(il);
-@@ -965,6 +1794,11 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
+@@ -965,6 +1806,11 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
  // ── load: stage routed experts, read the batch, evict cold entries to budget ────────
  bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
      if (!active_ || il < 0 || il >= n_layer_ || !layers_[il].bound || !ids || n_ids <= 0) return false;
@@ -1631,7 +1650,7 @@ index 860acb8..9227da3 100644
      if (overlap_) return load_layer_async(il, ids, n_ids);
      LayerExperts & L = layers_[il];
      cgen_++;
-@@ -977,7 +1811,7 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
+@@ -977,7 +1823,7 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
      // Integrate / discard any speculative prefetch before this layer's real staging touches the
      // cache. After this returns no spec read is in flight and completed ones are resident hits. The
      // budget is fixed for the run (auto sizes it once at init), so there is nothing to resize here.
@@ -1640,7 +1659,7 @@ index 860acb8..9227da3 100644
  
      auto stage = [&](int e) -> bool {
          if (cache_max_ == 0) {
-@@ -998,7 +1832,7 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
+@@ -998,7 +1844,7 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
          for (int p = 0; p < MoeRecipe::max_exps; ++p) {
              const uint64_t slice = L.proj[p].nb2;
              if (slice == 0) continue; // absent slot in a fused layout
@@ -1649,7 +1668,7 @@ index 860acb8..9227da3 100644
                               slice, -1, (int16_t) L.proj[p].file_idx, e, (int16_t) il, (int8_t) p, 0});
          }
          return true;
-@@ -1020,7 +1854,8 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
+@@ -1020,7 +1866,8 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
              if (cache_max_) {
                  const int32_t id = il * n_expert_ + e;
                  lru_unlink(id);
@@ -1659,7 +1678,7 @@ index 860acb8..9227da3 100644
              }
              continue;
          }
-@@ -1108,7 +1943,7 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
+@@ -1108,7 +1955,7 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
      // Integrate / discard speculative prefetch before this layer's real staging (the previous
      // batch is already drained above, so this only waits on in-flight spec reads). The budget is
      // fixed for the run, so there is nothing to resize here.
@@ -1668,7 +1687,7 @@ index 860acb8..9227da3 100644
  
      // 2. New generation for this layer. A flag counts as ready only once its gen matches.
      const uint32_t gen = async_gen_.fetch_add(1, std::memory_order_relaxed) + 1;
-@@ -1194,7 +2029,7 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
+@@ -1194,7 +2041,7 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
              for (int e : staged_) {
                  if (!seen_[e]) continue; // cache hit, already marked ready
                  const int32_t flag = (int32_t) ((size_t) p * (size_t) n_expert_ + (size_t) e);
@@ -1677,7 +1696,7 @@ index 860acb8..9227da3 100644
                                   L.proj[p].file_off + (uint64_t) e * slice, slice, flag, (int16_t) L.proj[p].file_idx,
                                   e, (int16_t) il, (int8_t) p, 0});
              }
-@@ -1262,7 +2097,24 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
+@@ -1262,7 +2109,24 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
                  const int32_t id = il * n_expert_ + e;
                  if (!cvalid_[id]) continue;
                  lru_unlink(id);
@@ -1703,7 +1722,7 @@ index 860acb8..9227da3 100644
              }
          }
      }
-@@ -1317,6 +2169,27 @@ static inline void cpu_relax() {
+@@ -1317,6 +2181,27 @@ static inline void cpu_relax() {
  
  // Called from EVERY compute thread, for each routed expert, before it reads that expert's rows.
  // Blocks until the expert's slice for the layer in flight is resident (or the run goes fatal).
@@ -1731,7 +1750,7 @@ index 860acb8..9227da3 100644
  void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
      const void * key = (const void *) src0;
      auto it = std::lower_bound(texp_.begin(), texp_.end(), key,
-@@ -1335,6 +2208,13 @@ void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
+@@ -1335,6 +2220,13 @@ void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
          }
          return;
      }
@@ -1745,7 +1764,7 @@ index 860acb8..9227da3 100644
      const size_t idx = (size_t) p * (size_t) n_expert_ + (size_t) expert;
      const uint32_t want = async_gen_.load(std::memory_order_relaxed);
      if (ready_[idx].gen.load(std::memory_order_acquire) == want) return; // already resident
-@@ -1373,6 +2253,23 @@ void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
+@@ -1373,6 +2265,23 @@ void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
  void ExpertStreamSource::enable_overlap_hook() {
  #ifdef BMOE_HAVE_EXPERT_READY_HOOK
      ggml_cpu_set_expert_ready_hook(&ExpertStreamSource::c_expert_ready, this);
@@ -1769,12 +1788,13 @@ index 860acb8..9227da3 100644
      hook_registered_ = true;
  #endif
  }
-@@ -1411,12 +2308,54 @@ IExpertSource::Stats ExpertStreamSource::stats() const {
+@@ -1411,12 +2320,55 @@ IExpertSource::Stats ExpertStreamSource::stats() const {
  }
  
  void ExpertStreamSource::shutdown() {
 +    if (arena_)
-+        std::fprintf(stderr, "bmoe: slot-arena: slots %lld reused %lld blocks %zu\n", arena_slots_, arena_reuse_, arena_blocks_.size());
++        std::fprintf(stderr, "bmoe: slot-arena: slots %lld reused %lld blocks %zu%s, kgsl %zu MiB\n", arena_slots_, arena_reuse_,
++                     arena_blocks_.size(), arena_kgsl_ ? " (kgsl)" : "", arena_kgsl_bytes_ >> 20);
 +    if (swap_guard_)
 +        std::fprintf(stderr, "bmoe: swap-guard: checks %lld swapped-hits %lld (re-read) guard %.3f ms total\n",
 +                     guard_checks_, guard_swapped_, guard_ns_ / 1e6);
@@ -1825,7 +1845,7 @@ index 860acb8..9227da3 100644
      }
  #endif
 diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
-index 5995b7f..1fb892d 100644
+index 5995b7f..f2369d4 100644
 --- a/core/src/moe/expert_stream_source.h
 +++ b/core/src/moe/expert_stream_source.h
 @@ -22,6 +22,7 @@
@@ -1987,7 +2007,7 @@ index 5995b7f..1fb892d 100644
      std::vector<uint32_t> cstamp_;
      std::vector<uint8_t> cspec_; // 1 if this resident entry was filled speculatively, until first hit
      int32_t chead_ = -1, ctail_ = -1;
-@@ -337,6 +441,31 @@ private:
+@@ -337,6 +441,33 @@ private:
  
      // I/O lane pool
      int io_threads_ = 1;
@@ -1997,6 +2017,8 @@ index 5995b7f..1fb892d 100644
 +    bool recycle_pages_ = false;
 +    bool defer_evict_ = false;                                  // moe-phone --defer-evict
 +    bool arena_ = false;                                        // moe-phone --slot-arena
++    bool arena_kgsl_ = false;                                   // moe-phone --arena-kgsl (blocks from gpu_pinned_alloc)
++    size_t arena_kgsl_bytes_ = 0;
 +    std::vector<char *> arena_ptr_[4];                          // per projection, per entry id: slot or nullptr
 +    std::unordered_map<uint64_t, std::vector<char *>> arena_free_; // slice size -> free slots
 +    std::vector<std::pair<void *, size_t>> arena_blocks_;       // reservations, released at shutdown
@@ -2204,10 +2226,10 @@ index 7d20cf6..65e31b0 100644
      void predict_at_topk(ggml_tensor * t, int il, int nu, int nt); // watchdog + job submission
 diff --git a/core/src/moe/gpu_tier.cpp b/core/src/moe/gpu_tier.cpp
 new file mode 100755
-index 0000000..3232baa
+index 0000000..61541af
 --- /dev/null
 +++ b/core/src/moe/gpu_tier.cpp
-@@ -0,0 +1,339 @@
+@@ -0,0 +1,375 @@
 +// gpu_tier.cpp — moe-phone (patch 0019): backends for the GPU expert tier. See gpu_tier.h.
 +//
 +// Bit-identity argument for CpuExpertFfn (checked end to end by the engine's text-identity acceptance, design §12):
@@ -2534,6 +2556,42 @@ index 0000000..3232baa
 +
 +std::unique_ptr<GpuExpertsBackend> make_gpu_backend_standin() { return std::make_unique<StandinBackend>(); }
 +
++void * gpu_pinned_alloc(size_t bytes, std::string * err) {
++#ifdef BMOE_HAVE_GX
++    // one context and queue for the process (the blocks live until exit; the driver reclaims them)
++    static std::mutex mu;
++    static cl_context ctx = nullptr;
++    static cl_command_queue q = nullptr;
++    std::lock_guard<std::mutex> lk(mu);
++    cl_int e = CL_SUCCESS;
++    if (!ctx) {
++        cl_platform_id plats[8];
++        cl_uint np = 0;
++        cl_device_id dev = nullptr;
++        if (clGetPlatformIDs(8, plats, &np) != CL_SUCCESS || np == 0) { if (err) *err = "no OpenCL platform"; return nullptr; }
++        for (cl_uint i = 0; i < np && !dev; ++i) {
++            cl_uint nd = 0;
++            if (clGetDeviceIDs(plats[i], CL_DEVICE_TYPE_GPU, 1, &dev, &nd) != CL_SUCCESS || nd == 0) dev = nullptr;
++        }
++        if (!dev) { if (err) *err = "no OpenCL GPU device"; return nullptr; }
++        ctx = clCreateContext(nullptr, 1, &dev, nullptr, nullptr, &e);
++        if (!ctx || e != CL_SUCCESS) { ctx = nullptr; if (err) *err = "clCreateContext failed"; return nullptr; }
++        q = clCreateCommandQueue(ctx, dev, 0, &e);
++        if (!q || e != CL_SUCCESS) { q = nullptr; if (err) *err = "clCreateCommandQueue failed"; return nullptr; }
++    }
++    if (!q) { if (err) *err = "no command queue"; return nullptr; }
++    cl_mem m = clCreateBuffer(ctx, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_WRITE, bytes, nullptr, &e);
++    if (!m || e != CL_SUCCESS) { if (err) *err = "clCreateBuffer failed (" + std::to_string(e) + ")"; return nullptr; }
++    void * p = clEnqueueMapBuffer(q, m, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bytes, 0, nullptr, nullptr, &e);
++    if (!p || e != CL_SUCCESS) { if (err) *err = "clEnqueueMapBuffer failed (" + std::to_string(e) + ")"; return nullptr; }
++    return p;
++#else
++    (void) bytes;
++    if (err) *err = "this build has no OpenCL (configure with BMOE_GX_SRC)";
++    return nullptr;
++#endif
++}
++
 +std::unique_ptr<GpuExpertsBackend> make_gpu_backend_gx(int variant, std::string * err, int spin_wait) {
 +#ifdef BMOE_HAVE_GX
 +    auto b = std::make_unique<GxBackend>(variant, spin_wait);
@@ -2549,10 +2607,10 @@ index 0000000..3232baa
 +} // namespace bmoe
 diff --git a/core/src/moe/gpu_tier.h b/core/src/moe/gpu_tier.h
 new file mode 100755
-index 0000000..07dd936
+index 0000000..348351c
 --- /dev/null
 +++ b/core/src/moe/gpu_tier.h
-@@ -0,0 +1,92 @@
+@@ -0,0 +1,96 @@
 +// gpu_tier.h — moe-phone (patch 0019): the device side of the GPU expert tier.
 +//
 +// The engine keeps two tiers of expert residency (moe-phone research/2026-09-18_gpu_expert_path_design.md §12):
@@ -2641,6 +2699,10 @@ index 0000000..07dd936
 +};
 +
 +std::unique_ptr<GpuExpertsBackend> make_gpu_backend_standin();
++// CPU-only memory from the GPU driver: an OpenCL CL_MEM_ALLOC_HOST_PTR buffer of `bytes`, mapped READ|WRITE once and
++// never unmapped (the device never reads it, so the map/unmap coherence protocol does not apply). nullptr + *err when
++// this build has no OpenCL (BMOE_HAVE_GX undefined) or the driver refuses.
++void * gpu_pinned_alloc(size_t bytes, std::string * err);
 +// nullptr when this build has no libgx (BMOE_HAVE_GX undefined) or the device cannot be opened (reason in *err).
 +std::unique_ptr<GpuExpertsBackend> make_gpu_backend_gx(int variant, std::string * err, int spin_wait = 0);
 +
