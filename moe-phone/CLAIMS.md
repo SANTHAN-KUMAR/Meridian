@@ -239,7 +239,9 @@ internally consistent and wrong. That is what the property tests are for.
 | `gx_down_diff_bits` | 0 of them differ in any bit | `gx_m3_*/gx_test.json` | 0.0000 | ok |
 | `gx_h_diff_bits` | 0 of 98,304 SwiGLU values differ | `gx_m3_*/gx_test.json` | 0.0000 | ok |
 | `gx_quant_mismatch_blocks` | 0 of 65,536 crafted near-tie blocks differ from ggml's quantize_row_q8_0/q8_1 (GPU and host paths) | `gx_m3_*/gx_test.json` | 0.0000 | ok |
+| `gx_row_down_diff_bits` | the row-per-work-item variant: 0 of 262,144 down values differ from ggml-cpu ARM | `gx_m3_*/gx_test.json` | 0.0000 | ok |
+| `gx_row_h_diff_bits` | and 0 of 98,304 SwiGLU values differ | `gx_m3_*/gx_test.json` | 0.0000 | ok |
 | `gx_div_mismatches` | the kernels' correctly rounded division matches IEEE division on 16.8M operand pairs | `gx_m3_*/gx_test.json` | 0.0000 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-229 claims checked.
+231 claims checked.

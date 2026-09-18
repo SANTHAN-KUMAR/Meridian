@@ -273,17 +273,22 @@ int main(int argc, char ** argv) {
     fprintf(js, "{\"device\": \"%s\", \"driver\": \"%s\", \"fp32_denorm\": %d, \"div_n\": %zu, \"div_mismatches\": %zu, "
                 "\"quant_blocks\": %ld, \"gpu_q8_0_mismatch\": %ld, \"gpu_q8_1_mismatch\": %ld, \"host_q8_0_mismatch\": %ld, \"cases\": [\n",
             name, ver, !!(fpc & CL_FP_DENORM), div_n, div_bad, q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad);
-    gx_ctx * g = nullptr;
-    size_t tot_down = 0, tot_down_diff = 0, tot_h = 0, tot_h_diff = 0, missing_arm = 0, n_cases = 0, gx_errors = 0;
+    gx_ctx * gv[2] = {nullptr, nullptr};
+    // totals per variant (0 = lane-mapped, 1 = row per work-item); cases are counted once
+    size_t tot_down[2] = {0, 0}, tot_down_diff[2] = {0, 0}, tot_h[2] = {0, 0}, tot_h_diff[2] = {0, 0};
+    size_t missing_arm = 0, n_cases = 0, gx_errors = 0;
     for (size_t fi = 0; fi < files.size(); fi++) {
         Case c;
         const std::string base = dir + "/" + files[fi];
         if (!load_case(base, c)) { fprintf(stderr, "bad case %s\n", base.c_str()); return 1; }
-        if (!g) {
-            char err[4096];
-            g = gx_init(ctx, dev, gx_params{c.ne, c.nf, 1}, err, sizeof err);
-            if (!g) { fprintf(stderr, "gx_init: %s\n", err); return 1; }
-        }
+        for (int v = 0; v < 2; v++)
+            if (!gv[v]) {
+                char err[4096];
+                gv[v] = gx_init(ctx, dev, gx_params{c.ne, c.nf, 1, v}, err, sizeof err);
+                if (!gv[v]) { fprintf(stderr, "gx_init variant %d: %s\n", v, err); return 1; }
+            }
+      for (int v = 0; v < 2; v++) {
+        gx_ctx * g = gv[v];
         const size_t gu = (size_t) c.nf * (c.ne / 32) * 18, per = 2 * gu + (size_t) c.ne * (c.nf / 32) * (c.dt ? 20 : 18);
         // weights in a host-visible buffer, filled through a map (the pool's protocol)
         cl_mem blk = clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, c.w.size(), nullptr, &e);
@@ -306,33 +311,39 @@ int main(int argc, char ** argv) {
             da = compare(out, arm.down, c.k, c.ne);
             ha = compare(h, arm.h, c.k, c.nf);
             de_arm = compare(arm.down, ex, c.k, c.ne);
-            tot_down += da.n; tot_down_diff += da.diff_bits; tot_h += ha.n; tot_h_diff += ha.diff_bits;
-        } else missing_arm++;
+            tot_down[v] += da.n; tot_down_diff[v] += da.diff_bits; tot_h[v] += ha.n; tot_h_diff[v] += ha.diff_bits;
+        } else if (v == 0) missing_arm++;
         if (x86.ok) dx = compare(out, x86.down, c.k, c.ne);
         de_gx = compare(out, ex, c.k, c.ne);
-        n_cases++;
-        printf("CASE %-16s down=%s k=%d arm=%d down_diff_bits=%zu/%zu max_ulp=%lld h_diff_bits=%zu/%zu rel_vs_arm=%.3g "
+        if (v == 0) n_cases++;
+        printf("CASE %-16s v%d down=%s k=%d arm=%d down_diff_bits=%zu/%zu max_ulp=%lld h_diff_bits=%zu/%zu rel_vs_arm=%.3g "
                "rel_vs_x86=%.3g rel_vs_fp64=%.3g arm_rel_vs_fp64=%.3g\n",
-               files[fi].c_str(), c.dt ? "Q4_1" : "Q4_0", c.k, arm.ok, da.diff_bits, da.n, (long long) da.max_ulp, ha.diff_bits, ha.n, da.max_rel,
+               files[fi].c_str(), v, c.dt ? "Q4_1" : "Q4_0", c.k, arm.ok, da.diff_bits, da.n, (long long) da.max_ulp, ha.diff_bits, ha.n, da.max_rel,
                x86.ok ? dx.max_rel : NAN, de_gx.max_rel, arm.ok ? de_arm.max_rel : NAN);
-        fprintf(js, "%s {\"case\": \"%s\", \"down\": \"%s\", \"k\": %d, \"arm_ref\": %d, \"down_n\": %zu, \"down_diff_bits\": %zu, \"down_max_ulp\": %lld, "
+        fprintf(js, "%s {\"case\": \"%s\", \"variant\": %d, \"down\": \"%s\", \"k\": %d, \"arm_ref\": %d, \"down_n\": %zu, \"down_diff_bits\": %zu, \"down_max_ulp\": %lld, "
                     "\"h_n\": %zu, \"h_diff_bits\": %zu, \"h_max_ulp\": %lld, \"rel_vs_arm\": %.6g, \"rel_vs_x86\": %.6g, "
                     "\"rel_vs_fp64\": %.6g, \"arm_rel_vs_fp64\": %.6g, \"gx_error\": %d}\n",
-                fi ? "," : "", files[fi].c_str(), c.dt ? "Q4_1" : "Q4_0", c.k, arm.ok, da.n, da.diff_bits, (long long) da.max_ulp, ha.n, ha.diff_bits,
+                (fi || v) ? "," : "", files[fi].c_str(), v, c.dt ? "Q4_1" : "Q4_0", c.k, arm.ok, da.n, da.diff_bits, (long long) da.max_ulp, ha.n, ha.diff_bits,
                 (long long) ha.max_ulp, arm.ok ? da.max_rel : -1.0, x86.ok ? dx.max_rel : -1.0, de_gx.max_rel,
                 arm.ok ? de_arm.max_rel : -1.0, rc);
+      }
     }
-    const gx_stats st = g ? gx_get_stats(g) : gx_stats{};
+    unsigned long long st_err = 0;
+    for (gx_ctx * g : gv) if (g) st_err += gx_get_stats(g).errors;
+    // variant 0 keeps the unsuffixed names (claims gx_down_*); variant 1 is reported as *_row
     fprintf(js, "], \"cases_n\": %zu, \"missing_arm_ref\": %zu, \"down_values\": %zu, \"down_diff_bits\": %zu, "
-                "\"h_values\": %zu, \"h_diff_bits\": %zu, \"gx_errors\": %zu, \"gx_stats_errors\": %llu}\n",
-            n_cases, missing_arm, tot_down, tot_down_diff, tot_h, tot_h_diff, gx_errors, (unsigned long long) st.errors);
+                "\"h_values\": %zu, \"h_diff_bits\": %zu, \"down_values_row\": %zu, \"down_diff_bits_row\": %zu, "
+                "\"h_values_row\": %zu, \"h_diff_bits_row\": %zu, \"gx_errors\": %zu, \"gx_stats_errors\": %llu}\n",
+            n_cases, missing_arm, tot_down[0], tot_down_diff[0], tot_h[0], tot_h_diff[0], tot_down[1], tot_down_diff[1], tot_h[1],
+            tot_h_diff[1], gx_errors, st_err);
     fclose(js);
-    const bool exact = missing_arm == 0 && n_cases > 0 && tot_down_diff == 0 && tot_h_diff == 0 && div_bad == 0 && gx_errors == 0 &&
+    const bool exact = missing_arm == 0 && n_cases > 0 && tot_down_diff[0] == 0 && tot_h_diff[0] == 0 && tot_down_diff[1] == 0 &&
+                       tot_h_diff[1] == 0 && tot_down[1] == tot_down[0] && div_bad == 0 && gx_errors == 0 &&
                        q8_blocks > 0 && q8_0_bad == 0 && q8_1_bad == 0 && host_q8_0_bad == 0;
-    printf("SUMMARY cases=%zu missing_arm_ref=%zu down_diff_bits=%zu/%zu h_diff_bits=%zu/%zu div_mismatches=%zu "
-           "quant_blocks=%ld q8_mismatch(gpu0/gpu1/host0)=%ld/%ld/%ld gx_errors=%zu -> %s\n",
-           n_cases, missing_arm, tot_down_diff, tot_down, tot_h_diff, tot_h, div_bad, q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad, gx_errors,
-           exact ? "BIT-EXACT vs ggml-cpu ARM" : "NOT bit-exact");
-    if (g) gx_free(g);
+    printf("SUMMARY cases=%zu missing_arm_ref=%zu down_diff_bits(v0/v1)=%zu/%zu of %zu h_diff_bits(v0/v1)=%zu/%zu of %zu "
+           "div_mismatches=%zu quant_blocks=%ld q8_mismatch(gpu0/gpu1/host0)=%ld/%ld/%ld gx_errors=%zu -> %s\n",
+           n_cases, missing_arm, tot_down_diff[0], tot_down_diff[1], tot_down[0], tot_h_diff[0], tot_h_diff[1], tot_h[0], div_bad,
+           q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad, gx_errors, exact ? "BIT-EXACT vs ggml-cpu ARM" : "NOT bit-exact");
+    for (gx_ctx * g : gv) if (g) gx_free(g);
     return exact ? 0 : 3;
 }

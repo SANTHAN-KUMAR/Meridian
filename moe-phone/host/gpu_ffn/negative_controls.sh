@@ -24,6 +24,10 @@ controls=(
   "q8_round_toward_zero|s.replace('convert_int_rte(v[i] * id)', 'convert_int_rtz(v[i] * id)')"
   "q8_scale_127_over_amax|s.replace('const float id = d != 0.0f ? cr_div(1.0f, d) : 0.0f;', 'const float id = d != 0.0f ? cr_div(127.0f, amax) : 0.0f;')"
   "q8_s_from_fp16_d|s.replace('vstore_half_rte(d * (float) sum, 1', 'vstore_half_rte(vload_half(0, (global const half *) yo) * (float) sum, 1')"
+  "row_unfused_fma|s.replace('acc[p * 4 + 0] = fma((float) (pr.s0 + pr.s1 + pr.s2 + pr.s3), sc, acc[p * 4 + 0]);', 'acc[p * 4 + 0] = (float) (pr.s0 + pr.s1 + pr.s2 + pr.s3) * sc + acc[p * 4 + 0];')"
+  "row_sequential_hsum|s.replace('static float hsum8p(const float * l) {\n    return ((l[0] + l[1]) + (l[2] + l[3])) + ((l[4] + l[5]) + (l[6] + l[7]));', 'static float hsum8p(const float * l) {\n    return ((((((l[0] + l[1]) + l[2]) + l[3]) + l[4]) + l[5]) + l[6]) + l[7];')"
+  "row_wrong_parity|s.replace('row_block(ag, ib & 1,', 'row_block(ag, (ib >> 1) & 1,')"
+  "row_summs_two_roundings|s.replace('summs = summs + fma(m0, ls[ib - 1], m1 * ls[ib]);', 'summs = (summs + m0 * ls[ib - 1]) + m1 * ls[ib];')"
   "one_accumulator_per_lane|s.replace('for (int ib = p; ib < NBX; ib += 2) {', 'for (int ib = p ? NBX : 0; ib < NBX; ib += 1) {')"
 )
 fail=0

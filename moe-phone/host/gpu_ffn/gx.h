@@ -43,6 +43,8 @@ typedef struct gx_params {
     int n_embd;     /* 2048 for Qwen3-30B-A3B; multiple of 64 */
     int n_ff;       /* 768; multiple of 64 */
     int debug_h;    /* 1: keep the fp32 SwiGLU output for gx_debug_h (tests only) */
+    int variant;    /* work mapping, identical arithmetic: 0 = 8 work-items per row (lane-mapped),
+                       1 = one work-item per row (whole-block loads). Both are held to the same bit-exact test. */
 } gx_params;
 
 typedef struct gx_slot {

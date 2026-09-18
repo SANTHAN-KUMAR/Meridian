@@ -171,13 +171,15 @@ extern "C" gx_ctx * gx_init(cl_context ctx, cl_device_id dev, gx_params p, char 
         gx_free(g);
         return nullptr;
     }
-    g->k1 = p_clCreateKernel(g->prog, "gx_gate_up", &e);
-    if (e == CL_SUCCESS) g->k2 = p_clCreateKernel(g->prog, "gx_down", &e);
+    if (p.variant != 0 && p.variant != 1) { seterr(err, errlen, "variant must be 0 or 1"); gx_free(g); return nullptr; }
+    const size_t wg_need = p.variant ? 64 : 256;
+    g->k1 = p_clCreateKernel(g->prog, p.variant ? "gx_gate_up_row" : "gx_gate_up", &e);
+    if (e == CL_SUCCESS) g->k2 = p_clCreateKernel(g->prog, p.variant ? "gx_down_row" : "gx_down", &e);
     for (cl_kernel k : {g->k1, g->k2}) {
         size_t wg = 0;
         if (e == CL_SUCCESS) e = p_clGetKernelWorkGroupInfo(k, dev, CL_KERNEL_WORK_GROUP_SIZE, sizeof wg, &wg, nullptr);
-        if (e == CL_SUCCESS && wg < 256) {
-            seterr(err, errlen, "kernel work-group limit " + std::to_string(wg) + " < 256");
+        if (e == CL_SUCCESS && wg < wg_need) {
+            seterr(err, errlen, "kernel work-group limit " + std::to_string(wg) + " < " + std::to_string(wg_need));
             gx_free(g);
             return nullptr;
         }
@@ -230,9 +232,10 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
     if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 9, sizeof(cl_mem), &g->hq);
     if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 10, sizeof(cl_mem), &g->out);
     if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 11, sizeof(cl_int), &dt);
-    const size_t l[2] = {256, 1};
-    const size_t g1[2] = {(size_t) 256 * (nf / 32), (size_t) k};
-    const size_t g2[2] = {(size_t) 256 * (ne / 32), (size_t) k};
+    // variant 0: 256 work-items = 32 rows x 8 lanes per group; variant 1: 64 work-items = 64 rows per group
+    const size_t l[2] = {(size_t) (g->p.variant ? 64 : 256), 1};
+    const size_t g1[2] = {g->p.variant ? (size_t) nf : (size_t) 256 * (nf / 32), (size_t) k};
+    const size_t g2[2] = {g->p.variant ? (size_t) ne : (size_t) 256 * (ne / 32), (size_t) k};
     if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k1, 2, nullptr, g1, l, 0, nullptr, nullptr);
     if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k2, 2, nullptr, g2, l, 0, nullptr, nullptr);
     if (e == CL_SUCCESS)

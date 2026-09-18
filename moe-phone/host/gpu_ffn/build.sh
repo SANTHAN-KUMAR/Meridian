@@ -3,7 +3,7 @@
 #   host/gpu_ffn/build.sh inc       regenerate gx_kernels.inc from gx_kernels.cl (committed; the engine includes it)
 #   host/gpu_ffn/build.sh host      out/host/{gx_test, gx_pool_test, ggml_ref_x86}   (laptop OpenCL + laptop ggml)
 #   host/gpu_ffn/build.sh arm-ref   out/arm/ggml_ref_arm                  (aarch64 static, run with qemu-aarch64-static)
-#   host/gpu_ffn/build.sh android   out/android/libgx.a                   (for the engine's Android build)
+#   host/gpu_ffn/build.sh android   out/android/{libgx.a (for the engine), gx_test, gx_pool_test, gx_bench (M6)}
 # Env: NDK, CL_HDR (Khronos headers), GGML_SRC (a llama.cpp ggml tree, headers), GGML_HOST (x86 libggml*.so),
 #      GGML_A64 (a static aarch64 ggml build: see NOTE.md "ARM reference" for its exact configure line).
 # Memory: single translation units, one at a time; well under 1 GB.
@@ -32,9 +32,11 @@ case "$what" in
       -l:libOpenCL.so.1 -ldl -o "$O/gx_test"
     c++ -std=c++17 -O2 -ffp-contract=off -I"$HERE" -I"$CL_HDR" "$HERE/gx.cpp" "$HERE/gx_pool_test.cpp" \
       -l:libOpenCL.so.1 -ldl -lpthread -o "$O/gx_pool_test"
+    c++ -std=c++17 -O2 -ffp-contract=off -I"$HERE" -I"$CL_HDR" "$HERE/gx.cpp" "$HERE/gx_bench.cpp" \
+      -l:libOpenCL.so.1 -ldl -lpthread -o "$O/gx_bench"
     c++ -std=c++17 -O2 -I"$GGML_SRC/include" "$HERE/ggml_ref.cpp" -L"$GGML_HOST" -lggml -lggml-base -lggml-cpu \
       -Wl,-rpath,"$GGML_HOST" -o "$O/ggml_ref_x86"
-    echo "built $O/gx_test $O/gx_pool_test $O/ggml_ref_x86" ;;
+    echo "built $O/gx_test $O/gx_pool_test $O/gx_bench $O/ggml_ref_x86" ;;
   arm-ref)
     O=$HERE/out/arm; mkdir -p "$O"
     $CXX_A64 -std=c++17 -O2 -static -I"$GGML_SRC/include" "$HERE/ggml_ref.cpp" \
@@ -45,6 +47,12 @@ case "$what" in
     O=$HERE/out/android; mkdir -p "$O"
     $CXX_A64 -std=c++17 -O2 -ffp-contract=off -fPIC -I"$HERE" -I"$CL_HDR" -c "$HERE/gx.cpp" -o "$O/gx.o"
     "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" rcs "$O/libgx.a" "$O/gx.o"
-    echo "built $O/libgx.a" ;;
+    # M6 tools: OpenCL reached through cl_shim.cpp (dlopen of the device's libOpenCL.so); ggml_ref_arm (arm-ref)
+    # is static and runs on the phone unchanged
+    for t in gx_test gx_pool_test gx_bench; do
+      $CXX_A64 -std=c++17 -O2 -ffp-contract=off -I"$HERE" -I"$CL_HDR" "$HERE/$t.cpp" "$O/gx.o" "$HERE/cl_shim.cpp" \
+        -static-libstdc++ -ldl -o "$O/$t"
+    done
+    echo "built $O/libgx.a $O/gx_test $O/gx_pool_test $O/gx_bench" ;;
   *) echo "unknown target $what"; exit 2 ;;
 esac

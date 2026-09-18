@@ -144,16 +144,27 @@ block and four slots per block:
   another region of it is mapped? The spec wording is ambiguous.
 - **Recommendation:** one slot per block until M6's stress test answers both points.
 
-## 3c. Variant 1 (row per work-item): written, NOT wired, NOT tested
+## 3c. Variant 1 (row per work-item): wired and bit-exact
 
-`gx_kernels.cl` also contains `gx_gate_up_row` and `gx_down_row`. They do the same arithmetic with
-one work-item per output row, holding all 8 lane accumulators, and read whole blocks.
-- They compile, but nothing dispatches them, and no test or control has run on them.
-- They exist to be a throughput candidate at M6.
-- Before any use they need a `gx_params` selector, the full `gx_test` run, and their own negative
-  controls.
+`gx_params.variant = 1` selects `gx_gate_up_row` and `gx_down_row`. They do the same arithmetic with
+one work-item per output row. Each work-item holds all 8 NEON lane accumulators and walks the blocks
+in order, reading whole 18- or 20-byte blocks. The activation blocks are staged in local memory, and
+work-groups are 64 work-items.
 
-## 4. What is NOT established
+- **Tests.** `gx_test` runs every case on both variants. Variant 1 is bit-exact too: 0 of 262,144
+  down values and 0 of 98,304 h values differ (claims `gx_row_down_diff_bits`, `gx_row_h_diff_bits`;
+  `results/2026-09-18/gx_m3_222005/`).
+- **Negative controls.** Four target this variant, and all are detected:
+  - an unfused lane fma;
+  - a sequential horizontal sum;
+  - wrong accumulator parity;
+  - summs with two roundings.
+- **Why parity shows in h only.** The wrong-parity control changes only h, by about an ulp. The 8-bit
+  quantization of h absorbs that before down, and the bitwise h comparison is what catches it.
+- **Speed is untested.** Which variant is faster on Adreno is an M6 question. The laptop's relative
+  timings are not evidence for it.
+
+## 4. What is NOT established## 4. What is NOT established
 
 - **Adreno arithmetic.** The laptop GPU reports fp32 denormals, correct fma and a correctly rounded
   divide. Adreno may flush fp32 denormals, or its `fma` may be slow or emulated.
@@ -212,4 +223,8 @@ one work-item per output row, holding all 8 lane accumulators, and read whole bl
 | `make_cases.py` | random, real (GGUF by offset) and crafted cases |
 | `negative_controls.sh` | 10 kernel mutations that must each be detected |
 | `run_accept.sh` | everything above, into a new `results/<date>/gx_m3_<time>/` |
-| `build.sh` | `inc`, `host`, `arm-ref`, `android` |
+| `gx_pool_test.cpp` | pool allocator, dispatch from pool slots, concurrent map/unmap, dispatch-while-mapped control |
+| `gx_bench.cpp` | M6 only: dispatch latency and GB/s per variant, down type and k; slot write cost |
+| `cl_shim.cpp` | OpenCL entry points by `dlopen`, for the Android builds of the three programs above |
+| `run_phone_m6.sh` | M6, prepared and **not run**: correctness first, then the bench |
+| `build.sh` | `inc`, `host`, `arm-ref`, `android` (libgx.a plus the three M6 programs) |
