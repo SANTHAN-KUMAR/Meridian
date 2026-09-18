@@ -13,9 +13,9 @@ REPO=$(cd "$HERE/../../.." && pwd)
 WORK=${WORK:-$(cd "$REPO/.." && pwd)/moe-work}
 NDK=${NDK:-$HOME/Android/Sdk/ndk/30.0.16248370}
 CL_HDR=${CL_HDR:-$WORK/opencl/OpenCL-Headers}
-GGML_SRC=${GGML_SRC:-/tmp/claude-1000/bmoe-prefetch/third_party/llama.cpp/ggml}
-GGML_HOST=${GGML_HOST:-/tmp/claude-1000/bmoe-prefetch/build-host/bin}
-GGML_A64=${GGML_A64:-/tmp/claude-1000/ggml-a64-static/ggml/src}
+GGML_SRC=${GGML_SRC:-$WORK/BigMoeOnEdge/third_party/llama.cpp/ggml}
+GGML_HOST=${GGML_HOST:-/tmp/claude-1000/gxdeps/x86/bin}
+GGML_A64=${GGML_A64:-/tmp/claude-1000/gxdeps/a64/ggml/src}
 CXX_A64="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=aarch64-linux-android29"
 what=${1:-host}
 

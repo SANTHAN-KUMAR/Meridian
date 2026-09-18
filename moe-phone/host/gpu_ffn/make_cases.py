@@ -176,7 +176,7 @@ def main():
     qb.tofile(os.path.join(a.out, "quant_blocks.f32"))
     man.append({"file": "quant_blocks.f32", "source": "crafted quantizer blocks", "blocks": int(qb.shape[0])})
     if a.gguf:
-        gp = os.environ.get("GGUF_PY", "/tmp/claude-1000/bmoe-prefetch/third_party/llama.cpp/gguf-py")
+        gp = os.environ.get("GGUF_PY", os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../../moe-work/BigMoeOnEdge/third_party/llama.cpp/gguf-py"))
         sys.path.insert(0, gp)
         from gguf import GGUFReader   # memory-maps the file; only the bytes read below are touched
         r = GGUFReader(a.gguf)

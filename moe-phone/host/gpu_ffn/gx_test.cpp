@@ -341,33 +341,41 @@ int main(int argc, char ** argv) {
     fprintf(js, "{\"device\": \"%s\", \"driver\": \"%s\", \"fp32_denorm\": %d, \"div_n\": %zu, \"div_mismatches\": %zu, "
                 "\"quant_blocks\": %ld, \"gpu_q8_0_mismatch\": %ld, \"gpu_q8_1_mismatch\": %ld, \"host_q8_0_mismatch\": %ld, \"swiglu_n\": %ld, \"swiglu_mismatches\": %ld, \"swiglu_unflagged_mismatches\": %ld, \"swiglu_flagged\": %ld, \"swiglu_denormal_input_mismatches\": %ld, \"cases\": [\n",
             name, ver, !!(fpc & CL_FP_DENORM), div_n, div_bad, q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad, sw_n, sw_bad, sw_bad_unflagged, sw_flagged, sw_bad_dinput);
-    gx_ctx * gv[2] = {nullptr, nullptr};
+    gx_ctx * gv[3] = {nullptr, nullptr, nullptr};   // variants 0, 1, 2 (2: repacked slots)
     // totals per variant (0 = lane-mapped, 1 = row per work-item); cases are counted once
-    size_t tot_down[2] = {0, 0}, tot_down_diff[2] = {0, 0}, tot_h[2] = {0, 0}, tot_h_diff[2] = {0, 0};
+    size_t tot_down[3] = {0, 0, 0}, tot_down_diff[3] = {0, 0, 0}, tot_h[3] = {0, 0, 0}, tot_h_diff[3] = {0, 0, 0};
     size_t missing_arm = 0, n_cases = 0, gx_errors = 0;
-    size_t flagged_slots[2] = {0, 0}, flagged_real[2] = {0, 0}, unflagged_diff[2] = {0, 0};
+    size_t flagged_slots[3] = {0, 0, 0}, flagged_real[3] = {0, 0, 0}, unflagged_diff[3] = {0, 0, 0};
     float min_gu = INFINITY;   // smallest nonzero |gate|, |up| in the ggml reference: the no-denormal-input premise
     for (size_t fi = 0; fi < files.size(); fi++) {
         Case c;
         const std::string base = dir + "/" + files[fi];
         if (!load_case(base, c)) { fprintf(stderr, "bad case %s\n", base.c_str()); return 1; }
-        for (int v = 0; v < 2; v++)
+        for (int v = 0; v < 3; v++)
             if (!gv[v]) {
                 char err[4096];
-                gv[v] = gx_init(ctx, dev, gx_params{c.ne, c.nf, 1, v, 0, v /* spin_wait: v1 polls, v0 blocks */}, err, sizeof err);
+                gv[v] = gx_init(ctx, dev, gx_params{c.ne, c.nf, 1, v, 0, v & 1 /* spin_wait: v1 polls, v0 and v2 block */}, err, sizeof err);
                 if (!gv[v]) { fprintf(stderr, "gx_init variant %d: %s\n", v, err); return 1; }
             }
-      for (int v = 0; v < 2; v++) {
+      for (int v = 0; v < 3; v++) {
         gx_ctx * g = gv[v];
         const size_t gu = (size_t) c.nf * (c.ne / 32) * 18, per = 2 * gu + (size_t) c.ne * (c.nf / 32) * (c.dt ? 20 : 18);
         // weights in a host-visible buffer, filled through a map (the pool's protocol)
         cl_mem blk = clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, c.w.size(), nullptr, &e);
         void * mp = clEnqueueMapBuffer(q, blk, CL_TRUE, CL_MAP_WRITE_INVALIDATE_REGION, 0, c.w.size(), 0, nullptr, nullptr, &e);
-        memcpy(mp, c.w.data(), c.w.size());
-        clEnqueueUnmapMemObject(q, blk, mp, 0, nullptr, nullptr);
-        clFinish(q);
         std::vector<gx_slot> slots(c.k);
         for (int s = 0; s < c.k; s++) slots[s] = {blk, per * c.ids[s], per * c.ids[s] + gu, per * c.ids[s] + 2 * gu};
+        if (v == 2) {   // variant 2: every expert written through gx_repack_expert
+            for (int ex = 0; ex < c.k; ex++) {
+                const gx_slot se = {blk, per * ex, per * ex + gu, per * ex + 2 * gu};
+                const uint8_t * src = c.w.data() + per * ex;
+                if (gx_repack_expert(g, &se, (uint8_t *) mp + per * ex, src, src + gu, src + 2 * gu, c.dt)) gx_errors++;
+            }
+        } else {
+            memcpy(mp, c.w.data(), c.w.size());
+        }
+        clEnqueueUnmapMemObject(q, blk, mp, 0, nullptr, nullptr);
+        clFinish(q);
         std::vector<float> out((size_t) c.k * c.ne), h((size_t) c.k * c.nf);
         int rc = gx_dispatch(g, 0, c.dt, c.k, slots.data(), c.x.data(), out.data());
         if (!rc) rc = gx_wait(g);
@@ -413,28 +421,32 @@ int main(int argc, char ** argv) {
     // variant 0 keeps the unsuffixed names (claims gx_down_*); variant 1 is reported as *_row
     fprintf(js, "], \"cases_n\": %zu, \"missing_arm_ref\": %zu, \"down_values\": %zu, \"down_diff_bits\": %zu, "
                 "\"h_values\": %zu, \"h_diff_bits\": %zu, \"down_values_row\": %zu, \"down_diff_bits_row\": %zu, "
-                "\"h_values_row\": %zu, \"h_diff_bits_row\": %zu, \"gx_errors\": %zu, \"gx_stats_errors\": %llu, "
+                "\"h_values_row\": %zu, \"h_diff_bits_row\": %zu, \"down_values_soa\": %zu, \"down_diff_bits_soa\": %zu, "
+                "\"h_values_soa\": %zu, \"h_diff_bits_soa\": %zu, \"gx_errors\": %zu, \"gx_stats_errors\": %llu, "
                 "\"flagged_slots\": [%zu, %zu], \"flagged_real_slots\": [%zu, %zu], \"unflagged_diff\": [%zu, %zu], \"min_nonzero_gate_up\": %.9g}\n",
             n_cases, missing_arm, tot_down[0], tot_down_diff[0], tot_h[0], tot_h_diff[0], tot_down[1], tot_down_diff[1], tot_h[1],
-            tot_h_diff[1], gx_errors, st_err, flagged_slots[0], flagged_slots[1], flagged_real[0], flagged_real[1],
+            tot_h_diff[1], tot_down[2], tot_down_diff[2], tot_h[2], tot_h_diff[2], gx_errors, st_err, flagged_slots[0], flagged_slots[1], flagged_real[0], flagged_real[1],
             unflagged_diff[0], unflagged_diff[1], min_gu);
     fclose(js);
     const bool exact = missing_arm == 0 && n_cases > 0 && tot_down_diff[0] == 0 && tot_h_diff[0] == 0 && tot_down_diff[1] == 0 &&
-                       tot_h_diff[1] == 0 && tot_down[1] == tot_down[0] && div_bad == 0 && gx_errors == 0 &&
+                       tot_h_diff[1] == 0 && tot_down[1] == tot_down[0] && tot_down_diff[2] == 0 && tot_h_diff[2] == 0 &&
+                       tot_down[2] == tot_down[0] && div_bad == 0 && gx_errors == 0 &&
                        q8_blocks > 0 && q8_0_bad == 0 && q8_1_bad == 0 && host_q8_0_bad == 0 && sw_n > 0 && sw_bad == 0;
     // Rule for devices that flush fp32 denormals (pre-registered 2026-09-18, after M6 run gx_m6_224521):
     // PASS_WITH_DETECTOR = zero differences in every slot / sweep value the detector did not flag, zero
     // flags on the real Qwen3 cases, quantizer and division exact. BIT-EXACT additionally needs zero raw diffs.
     const bool detector_pass = missing_arm == 0 && n_cases > 0 && unflagged_diff[0] == 0 && unflagged_diff[1] == 0 &&
+                               unflagged_diff[2] == 0 && flagged_real[2] == 0 && tot_down[2] == tot_down[0] &&
                                flagged_real[0] == 0 && flagged_real[1] == 0 && sw_n > 0 && sw_bad_unflagged == 0 && min_gu >= 0x1p-126f &&
                                div_bad == 0 && gx_errors == 0 && q8_blocks > 0 && q8_0_bad == 0 && q8_1_bad == 0 && host_q8_0_bad == 0;
     printf("PREMISE min_nonzero_gate_up=%a (%s 2^-126)\n", min_gu, min_gu >= 0x1p-126f ? ">=" : "< !!");
-    printf("DETECTOR flagged_slots(v0/v1)=%zu/%zu flagged_real_slots=%zu/%zu unflagged_diff=%zu/%zu swiglu_flagged=%ld "
-           "swiglu_unflagged_mismatches=%ld -> %s\n", flagged_slots[0], flagged_slots[1], flagged_real[0], flagged_real[1],
-           unflagged_diff[0], unflagged_diff[1], sw_flagged, sw_bad_unflagged, detector_pass ? "PASS_WITH_DETECTOR" : "DETECTOR_FAIL");
-    printf("SUMMARY cases=%zu missing_arm_ref=%zu down_diff_bits(v0/v1)=%zu/%zu of %zu h_diff_bits(v0/v1)=%zu/%zu of %zu "
+    printf("DETECTOR flagged_slots(v0/v1/v2)=%zu/%zu/%zu flagged_real_slots=%zu/%zu/%zu unflagged_diff=%zu/%zu/%zu swiglu_flagged=%ld "
+           "swiglu_unflagged_mismatches=%ld -> %s\n", flagged_slots[0], flagged_slots[1], flagged_slots[2], flagged_real[0],
+           flagged_real[1], flagged_real[2], unflagged_diff[0], unflagged_diff[1], unflagged_diff[2], sw_flagged, sw_bad_unflagged, detector_pass ? "PASS_WITH_DETECTOR" : "DETECTOR_FAIL");
+    printf("SUMMARY cases=%zu missing_arm_ref=%zu down_diff_bits(v0/v1/v2)=%zu/%zu/%zu of %zu h_diff_bits(v0/v1/v2)=%zu/%zu/%zu of %zu "
            "div_mismatches=%zu quant_blocks=%ld q8_mismatch(gpu0/gpu1/host0)=%ld/%ld/%ld swiglu=%ld/%ld gx_errors=%zu -> %s\n",
-           n_cases, missing_arm, tot_down_diff[0], tot_down_diff[1], tot_down[0], tot_h_diff[0], tot_h_diff[1], tot_h[0], div_bad,
+           n_cases, missing_arm, tot_down_diff[0], tot_down_diff[1], tot_down_diff[2], tot_down[0], tot_h_diff[0], tot_h_diff[1],
+           tot_h_diff[2], tot_h[0], div_bad,
            q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad, sw_bad, sw_n, gx_errors, exact ? "BIT-EXACT vs ggml-cpu ARM" : "NOT bit-exact");
     for (gx_ctx * g : gv) if (g) gx_free(g);
     return exact ? 0 : (detector_pass ? 4 : 3);

@@ -77,6 +77,21 @@ uint16_t f32_to_f16_rne(float f) {
     return (uint16_t) (sign | r);
 }
 
+// Repack one Q4 matrix (rows x nb blocks, GGUF block layout) into variant 2's planes: qs [ib][row] 16 B,
+// d [ib][row], and for Q4_1 m [ib][row]. A pure byte permutation (same size).
+static void repack_matrix(const uint8_t * src, uint8_t * dst, size_t rows, size_t nb, int q41) {
+    const size_t bs = q41 ? 20 : 18, qo = q41 ? 4 : 2;
+    uint8_t * qs = dst, * dp = dst + nb * rows * 16, * mp = dst + nb * rows * 18;
+    for (size_t r = 0; r < rows; r++)
+        for (size_t ib = 0; ib < nb; ib++) {
+            const uint8_t * b = src + (r * nb + ib) * bs;
+            const size_t j = ib * rows + r;
+            memcpy(qs + j * 16, b + qo, 16);
+            memcpy(dp + j * 2, b, 2);
+            if (q41) memcpy(mp + j * 2, b + 2, 2);
+        }
+}
+
 extern "C" void gx_quantize_q8_0(const float * x, void * vy, int n) {
     // quantize_row_q8_0, ggml-cpu/arch/arm/quants.c (the __ARM_NEON branch): amax over |x|; d = amax/127
     // and id = 1/d as IEEE fp32 divisions; y.d = fp16(d); q = round-half-even(x * id).
@@ -181,10 +196,11 @@ extern "C" gx_ctx * gx_init(cl_context ctx, cl_device_id dev, gx_params p, char 
         gx_free(g);
         return nullptr;
     }
-    if (p.variant != 0 && p.variant != 1) { seterr(err, errlen, "variant must be 0 or 1"); gx_free(g); return nullptr; }
+    if (p.variant < 0 || p.variant > 2) { seterr(err, errlen, "variant must be 0, 1 or 2"); gx_free(g); return nullptr; }
     const size_t wg_need = p.variant ? 64 : 256;
-    g->k1 = p_clCreateKernel(g->prog, p.variant ? "gx_gate_up_row" : "gx_gate_up", &e);
-    if (e == CL_SUCCESS) g->k2 = p_clCreateKernel(g->prog, p.variant ? "gx_down_row" : "gx_down", &e);
+    static const char * kn1[3] = {"gx_gate_up", "gx_gate_up_row", "gx_gate_up_soa"}, * kn2[3] = {"gx_down", "gx_down_row", "gx_down_soa"};
+    g->k1 = p_clCreateKernel(g->prog, kn1[p.variant], &e);
+    if (e == CL_SUCCESS) g->k2 = p_clCreateKernel(g->prog, kn2[p.variant], &e);
     for (cl_kernel k : {g->k1, g->k2}) {
         size_t wg = 0;
         if (e == CL_SUCCESS) e = p_clGetKernelWorkGroupInfo(k, dev, CL_KERNEL_WORK_GROUP_SIZE, sizeof wg, &wg, nullptr);
@@ -495,3 +511,15 @@ extern "C" int gx_debug_h(gx_ctx * g, int k, float * h) {
     if (!g->p.debug_h || k < 1 || k > g->last_k) return CL_INVALID_OPERATION;
     return p_clEnqueueReadBuffer(g->q, g->hdbg, CL_TRUE, 0, sizeof(float) * k * g->p.n_ff, h, 0, nullptr, nullptr);
 }
+
+extern "C" int gx_repack_expert(const gx_ctx * g, const gx_slot * s, void * mapped, const void * src_gate, const void * src_up,
+                                const void * src_down, int down_type) {
+    if (!g || !s || !mapped || (down_type != GX_DOWN_Q4_0 && down_type != GX_DOWN_Q4_1)) return -1;
+    const size_t ne = (size_t) g->p.n_embd, nf = (size_t) g->p.n_ff;
+    uint8_t * base = (uint8_t *) mapped;
+    repack_matrix((const uint8_t *) src_gate, base, nf, ne / 32, 0);
+    repack_matrix((const uint8_t *) src_up, base + (s->off_up - s->off_gate), nf, ne / 32, 0);
+    repack_matrix((const uint8_t *) src_down, base + (s->off_down - s->off_gate), ne, nf / 32, down_type == GX_DOWN_Q4_1);
+    return 0;
+}
+

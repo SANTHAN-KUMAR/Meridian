@@ -20,6 +20,12 @@ R="$MP/results/$(date +%F)/gx_m6_$(date +%H%M%S)"
 [ -e "$R" ] && { echo "exists: $R"; exit 1; }
 busy=$(adb shell "ps -A -o NAME 2>/dev/null | grep -E 'bmoe-cli|llama-|zcbench|gx_' | head -3" | tr -d '\r')
 if [ -n "$busy" ]; then echo "phone busy: $busy"; exit 1; fi
+# shared phone lock (agreed between sessions 2026-09-19): one job at a time
+LOCK=/data/local/tmp/moe-stream/.phone_busy
+holder=$(adb shell "cat $LOCK 2>/dev/null" | tr -d '\r')
+if [ -n "$holder" ]; then echo "phone locked by: $holder"; exit 1; fi
+adb shell "echo 'gx run_phone_m6 $(date +%H:%M:%S)' > $LOCK"
+trap 'adb shell "rm -f $LOCK" >/dev/null 2>&1' EXIT
 mkdir -p "$R"
 adb shell "mkdir -p $D/cases"
 # GX_ANDROID_DIR: which Android build to push (default out/android; out/android_next = the host-overhead levers)

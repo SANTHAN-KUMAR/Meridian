@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GGUF = sys.argv[1] if len(sys.argv) > 1 else str(ROOT.parents[1] / "moe-work/models/Qwen3-30B-A3B-Q4_0.gguf")
-sys.path.insert(0, os.environ.get("GGUF_PY", "/tmp/claude-1000/bmoe-prefetch/third_party/llama.cpp/gguf-py"))
+sys.path.insert(0, os.environ.get("GGUF_PY", str(ROOT.parents[1] / "moe-work/BigMoeOnEdge/third_party/llama.cpp/gguf-py")))
 from gguf import GGUFReader  # noqa: E402
 
 r = GGUFReader(GGUF)
