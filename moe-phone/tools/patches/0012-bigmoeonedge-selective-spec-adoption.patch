@@ -1,0 +1,272 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f, applied AFTER 0001-0011 (engine files only; no llama.cpp change).
+# --spec-adopt-selective (default off): at layer L's load, keep speculative reads the router confirmed (adopt, integrate hot),
+# cancel unstarted refuted ones, leave the rest; settle_spec becomes integrate-only. Lossless. See 0012-NOTE.md.
+diff --git a/cli/main.cpp b/cli/main.cpp
+index 2bc7002..65e9a3e 100644
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -530,6 +530,8 @@ static void print_usage(const char * argv0) {
+         "                          predicted below the drop threshold are not speculated.\n"
+         "      --predict-spec-max N  speculated predicted misses per layer [0..8] (default 2;\n"
+         "                          0 = retention only, the prediction spends no flash at all)\n"
++        "      --spec-adopt-selective  keep speculative reads the router confirms instead of\n"
++        "                          cancelling and re-reading them (moe-phone; lossless)\n"
+         "      --list-archs        print supported MoE architectures and exit\n"
+         "\n"
+         "  Env overrides (flag wins): BMOE_CACHE_MB, BMOE_IO_THREADS, BMOE_PROGRESS, BMOE_OVERLAP, BMOE_PREFETCH, "
+@@ -798,6 +800,8 @@ extern "C" int bmoe_main(int argc, char ** argv) {
+             cfg.moe.predict_prefetch = true;
+         else if (a == "--predict-spec-max")
+             cfg.moe.predict_spec_max = std::atoi(next("--predict-spec-max"));
++        else if (a == "--spec-adopt-selective")
++            cfg.moe.spec_adopt_selective = true;
+         else if (a == "--list-archs") {
+             std::printf("supported MoE architectures:\n");
+             for (int k = 0; k < n_moe_recipes(); ++k)
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+index 20d4357..acd8aad 100644
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -268,6 +268,18 @@ struct MoeStreamConfig {
+     // speculation, if any, is small (the stall a prefetch can remove is head-of-line only).
+     int predict_spec_max = 2;
+ 
++    // moe-phone (patch 0012): SELECTIVE adoption of speculative reads by a guessing predictor
++    // (--predict-prefetch or --prefetch). Without it, the load of layer L cancels every speculative
++    // read not yet finished and releases its pages, so a correct guess that the lanes had not
++    // completed within one layer of compute is read AGAIN on demand (the bytes are paid twice). With
++    // it, the load of L knows L's true ids before touching the queue: speculative entries of L that
++    // the router chose are adopted (finished first, then integrated as hits, exactly as the
++    // route-ahead adoption does); entries of L the router did NOT choose are cancelled if none of
++    // their reads has started, and otherwise allowed to finish and enter the cold end; other layers'
++    // queued reads are left alone. Lossless: it changes only when bytes arrive, never which experts
++    // run. Off by default so it is an A/B lever; excludes route_ahead (which adopts everything).
++    bool spec_adopt_selective = false;
++
+     // ── route-ahead: commit to the prediction (lossy; opt-in; experimental) ───────────
+     // With N > 0, decode routing at MoE layer L is REPLACED by the ranking layer L's own gate
+     // matrix produced on the hidden state N layers earlier in the same forward pass — the
+diff --git a/core/src/config.cpp b/core/src/config.cpp
+index 53f355b..e9998ae 100644
+--- a/core/src/config.cpp
++++ b/core/src/config.cpp
+@@ -192,6 +192,14 @@ ValidationResult validate(const RunConfig & cfg) {
+                         "are two predictors for the same speculative read lanes, and running both "
+                         "doubles the speculated bytes for the same future.");
+         }
++        if (m.spec_adopt_selective && !(m.predict_prefetch || m.prefetch_layers > 0)) {
++            return fail("moe.spec_adopt_selective needs a guessing predictor to adopt from "
++                        "(predict_prefetch or prefetch_layers > 0)");
++        }
++        if (m.spec_adopt_selective && m.route_ahead > 0) {
++            return fail("moe.spec_adopt_selective and moe.route_ahead are exclusive: route-ahead "
++                        "already adopts every speculative read, because its routing is committed");
++        }
+         if (m.route_ahead < 0 || m.route_ahead > MoeStreamConfig::route_ahead_max) {
+             return fail("moe.route_ahead must be in [0, " + std::to_string(MoeStreamConfig::route_ahead_max) +
+                         "] (0 = off)");
+diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
+index 916c2c7..4eb8e91 100644
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -66,6 +66,8 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+     // it. Off for every guessing predictor: adopting a wrong guess would make the load wait on
+     // reads it does not need.
+     spec_adopt_ = cfg.route_ahead > 0;
++    spec_adopt_sel_ = cfg.spec_adopt_selective && !spec_adopt_; // moe-phone 0012
++    if (spec_adopt_sel_) std::fprintf(stderr, "bmoe: spec-adopt-selective: on\n");
+     cache_max_ = (size_t) std::max(0, cfg.cache_mb) * 1024ull * 1024ull;
+     io_threads_ = std::max(1, std::min(MoeStreamConfig::io_threads_max, cfg.io_threads));
+     io_cpu_mask_ = cfg.io_cpu_mask;
+@@ -603,7 +605,7 @@ void ExpertStreamSource::drain_spec(int lane, uint64_t worker_seen) {
+                     // The adoption wait watches per-entry counters, not just the in-flight count.
+                     io_cv_done_.notify_all();
+                 }
+-            } else if (!ok && spec_adopt_) {
++            } else if (!ok && (spec_adopt_ || spec_adopt_sel_)) {
+                 // Forget-on-failure: zeroing the counter keeps the adoption wait from parking
+                 // forever, and !cvalid means a later demand read re-buys the entry.
+                 spec_remaining_[j.flag] = 0;
+@@ -617,7 +619,11 @@ void ExpertStreamSource::drain_spec(int lane, uint64_t worker_seen) {
+ // Quiesce speculation before real staging: cancel queued reads, wait out in-flight ones, then on
+ // this (eval) thread integrate every fully-read entry into the cache and release the rest. All LRU
+ // mutation happens here, single-threaded, so it never races the real staging that follows.
+-void ExpertStreamSource::quiesce_spec(int adopt_il) {
++void ExpertStreamSource::quiesce_spec(int adopt_il, const int32_t * ids, int n_ids) {
++    if (spec_adopt_sel_ && adopt_il >= 0 && ids && n_ids > 0) {
++        quiesce_selective(adopt_il, ids, n_ids);
++        return;
++    }
+     // Adoption (route-ahead only): the layer about to stage COMMITTED to the ids its speculation
+     // was issued for, so its queued spec reads are not bets to discard — they are the layer's own
+     // demand reads, already staged and possibly partly done. Keep exactly those, drop the rest of
+@@ -993,7 +999,7 @@ void ExpertStreamSource::settle_spec() {
+     // settles right before every issue, so the full quiesce here cancelled the future layers'
+     // committed reads one callback before their load could adopt them. Integrate-only instead.
+     if (!active_ || cache_max_ == 0) return;
+-    if (spec_adopt_) {
++    if (spec_adopt_ || spec_adopt_sel_) { // moe-phone 0012: a destructive settle would cancel confirmed guesses
+         // Cheap exit without touching the lanes' mutex: this runs before every route-ahead issue
+         // (40 times a token) and usually has nothing to integrate. spec_done_pending_ is the
+         // publisher's own count, so a relaxed read either sees work — and we take the lock — or
+@@ -1004,6 +1010,87 @@ void ExpertStreamSource::settle_spec() {
+     }
+ }
+ 
++// moe-phone 0012 --spec-adopt-selective. Called at layer il's load with il's TRUE routed ids, in
++// place of the destructive quiesce. Eval thread only (LRU mutation), like every quiesce.
++//   confirmed (spec entry of il that the router chose): adopt — move its unstarted jobs to the front,
++//     wait for the entry to finish, integrate it HOT; the staging that follows sees a hit.
++//   refuted (spec entry of il the router did not choose): if NONE of its reads has started, remove
++//     its jobs and release its pages (no lane can be writing them: every job is still in the queue,
++//     and lanes take jobs under io_mtx_, which is held here). Otherwise leave it to finish; it then
++//     integrates at the cold end like any guess.
++//   other layers: untouched (still queued, or completed and integrated cold).
++// Safety argument for the release: an entry's spec_remaining_ counts its unfinished jobs; if that
++// equals the number of its jobs still queued, none is in flight.
++void ExpertStreamSource::quiesce_selective(int il, const int32_t * ids, int n_ids) {
++    ++sel_quiesces_;
++    sel_need_.assign((size_t) n_expert_, (uint8_t) 0);
++    for (int i = 0; i < n_ids; ++i)
++        if (ids[i] >= 0 && ids[i] < n_expert_) sel_need_[(size_t) ids[i]] = 1;
++    sel_qcnt_.assign((size_t) n_expert_, 0);
++    std::vector<int32_t> & adopt = spec_adopt_ids_;
++    std::vector<int32_t> & cancel = sel_cancel_ids_;
++    adopt.clear();
++    cancel.clear();
++    {
++        std::lock_guard<std::mutex> lk(io_mtx_);
++        for (size_t q = spec_next_; q < spec_jobs_.size(); ++q)
++            if (spec_jobs_[q].layer == (int16_t) il) ++sel_qcnt_[(size_t) spec_jobs_[q].expert];
++        for (int32_t id : spec_touched_) {
++            if (id / n_expert_ != il || spec_remaining_[id] == 0) continue;
++            const int e = id % n_expert_;
++            if (sel_need_[(size_t) e]) {
++                adopt.push_back(id);
++            } else if (sel_qcnt_[(size_t) e] == spec_remaining_[id]) {
++                cancel.push_back(id);
++                spec_remaining_[id] = 0;
++            } else {
++                ++sel_left_;
++            }
++        }
++        if (!cancel.empty()) {
++            auto first = spec_jobs_.begin() + (ptrdiff_t) spec_next_;
++            auto last = std::remove_if(first, spec_jobs_.end(), [&](const IoJob & j) {
++                if (j.layer != (int16_t) il || sel_need_[(size_t) j.expert]) return false;
++                const int32_t id = (int32_t) il * n_expert_ + j.expert;
++                if (spec_remaining_[id] != 0) return false; // partly started: keep, it finishes
++                sel_cancel_bytes_ += (long long) j.nbytes;
++                return true;
++            });
++            spec_jobs_.erase(last, spec_jobs_.end());
++        }
++        // Confirmed jobs first, so idle lanes finish exactly what this load is about to wait on.
++        std::stable_partition(spec_jobs_.begin() + (ptrdiff_t) spec_next_, spec_jobs_.end(),
++                              [&](const IoJob & j) { return j.layer == (int16_t) il && sel_need_[(size_t) j.expert]; });
++        spec_touched_.erase(std::remove_if(spec_touched_.begin(), spec_touched_.end(),
++                                           [&](int32_t id) { return spec_remaining_[id] == 0; }),
++                            spec_touched_.end());
++    }
++    for (int32_t id : cancel) {
++        release_entry_pages(id);
++        ++sel_cancelled_;
++    }
++    sel_adopted_ += (long long) adopt.size();
++    if (!adopt.empty()) {
++        io_cv_.notify_all();
++        if (!overlap_) drain_adopted(il);
++        const auto tw0 = clock_t_::now();
++        {
++            std::unique_lock<std::mutex> lk(io_mtx_);
++            io_cv_done_.wait(lk, [&] {
++                if (io_stop_) return true;
++                for (int32_t id : adopt)
++                    if (spec_remaining_[id] != 0) return false;
++                return true;
++            });
++        }
++        adopt_wait_ns_ +=
++            (long long) std::chrono::duration_cast<std::chrono::nanoseconds>(clock_t_::now() - tw0).count();
++    }
++    sel_layer_ = il;
++    spec_integrate_done();
++    sel_layer_ = -1;
++}
++
+ // Integrate every completed speculative entry into the LRU cache, cancelling nothing — the
+ // route-ahead settle. Eval-thread only (LRU mutation), like the quiesce that subsumes it.
+ void ExpertStreamSource::spec_integrate_done() {
+@@ -1037,7 +1124,11 @@ void ExpertStreamSource::spec_integrate_done() {
+         // perfect prefetch paying its bytes twice (measured: +34% read/token, drop off). A
+         // committed read enters HOT; its own routing arrives to promote it within N layers
+         // anyway.
+-        if (spec_adopt_)
++        // moe-phone 0012: under selective adoption only the loading layer's CONFIRMED entries are
++        // commitments (hot); every other completed entry is still a guess (cold end).
++        const bool confirmed = spec_adopt_sel_ && sel_layer_ >= 0 && id / n_expert_ == sel_layer_ &&
++                               sel_need_[(size_t) (id % n_expert_)];
++        if (spec_adopt_ || confirmed)
+             lru_push_front(id);
+         else
+             lru_push_back(id);
+@@ -1215,7 +1306,7 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
+     // Integrate / discard any speculative prefetch before this layer's real staging touches the
+     // cache. After this returns no spec read is in flight and completed ones are resident hits. The
+     // budget is fixed for the run (auto sizes it once at init), so there is nothing to resize here.
+-    if (cache_max_) quiesce_spec(spec_adopt_ ? il : -1);
++    if (cache_max_) quiesce_spec((spec_adopt_ || spec_adopt_sel_) ? il : -1, ids, n_ids);
+ 
+     auto stage = [&](int e) -> bool {
+         if (cache_max_ == 0) {
+@@ -1346,7 +1437,7 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
+     // Integrate / discard speculative prefetch before this layer's real staging (the previous
+     // batch is already drained above, so this only waits on in-flight spec reads). The budget is
+     // fixed for the run, so there is nothing to resize here.
+-    if (cache_max_) quiesce_spec(spec_adopt_ ? il : -1);
++    if (cache_max_) quiesce_spec((spec_adopt_ || spec_adopt_sel_) ? il : -1, ids, n_ids);
+ 
+     // 2. New generation for this layer. A flag counts as ready only once its gen matches.
+     const uint32_t gen = async_gen_.fetch_add(1, std::memory_order_relaxed) + 1;
+@@ -1702,6 +1793,10 @@ IExpertSource::Stats ExpertStreamSource::stats() const {
+ void ExpertStreamSource::shutdown() {
+     if (arena_)
+         std::fprintf(stderr, "bmoe: slot-arena: slots %lld reused %lld blocks %zu\n", arena_slots_, arena_reuse_, arena_blocks_.size());
++    if (spec_adopt_sel_)
++        std::fprintf(stderr, "bmoe: spec-adopt-selective: quiesces %lld adopted %lld cancelled %lld (%.1f MiB unread) "
++                             "left-to-finish %lld\n", sel_quiesces_, sel_adopted_, sel_cancelled_,
++                     sel_cancel_bytes_ / 1048576.0, sel_left_);
+     if (defer_evict_)
+         std::fprintf(stderr, "bmoe: defer-evict: flushed %lld cancelled %lld\n", deferred_flushed_, deferred_cancelled_);
+     if (recycle_pages_)
+diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
+index 48300e3..b7c5961 100644
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -172,7 +172,10 @@ private:
+     // adopt_il >= 0 (route-ahead only): the layer being staged COMMITTED to its speculated ids, so
+     // its queued spec reads are the demand reads — finish them instead of cancelling them, and
+     // leave every other layer's committed reads queued rather than destroying them.
+-    void quiesce_spec(int adopt_il = -1);
++    // ids/n_ids (moe-phone 0012, selective mode only): the loading layer's TRUE routed ids, so its
++    // speculative entries can be split into confirmed (adopted) and refuted (cancelled if unstarted).
++    void quiesce_spec(int adopt_il = -1, const int32_t * ids = nullptr, int n_ids = 0);
++    void quiesce_selective(int il, const int32_t * ids, int n_ids); // moe-phone 0012
+     void spec_integrate_done();       // integrate completed spec entries; cancel nothing (route-ahead)
+     void drain_adopted(int adopt_il); // serial: lane 0 reads the loading layer's adopted jobs inline
+     void release_entry_pages(int32_t id);
+@@ -243,6 +246,14 @@ private:
+     bool prefetch_sync_ = false;             // test only: drain prefetch reads synchronously (serial mode)
+     bool spec_adopt_ = false;                // route-ahead: staged layers adopt committed spec reads (see quiesce_spec)
+     std::vector<int32_t> spec_adopt_ids_;    // scratch: the loading layer's pending spec entries
++    // moe-phone 0012 --spec-adopt-selective
++    bool spec_adopt_sel_ = false;
++    int  sel_layer_ = -1;                    // layer whose confirmed entries integrate HOT (during its quiesce)
++    std::vector<uint8_t> sel_need_;          // scratch: true ids of sel_layer_, indexed by expert
++    std::vector<int> sel_qcnt_;              // scratch: unstarted queued jobs per expert of sel_layer_
++    std::vector<int32_t> sel_cancel_ids_;    // scratch: entries cancelled whole
++    long long sel_adopted_ = 0, sel_cancelled_ = 0, sel_left_ = 0, sel_quiesces_ = 0;
++    long long sel_cancel_bytes_ = 0;         // bytes of queued reads cancelled before they started
+     std::vector<int32_t> spec_done_scratch_; // scratch: completed entries being integrated
+     std::vector<int32_t> spec_cand_;         // scratch: prefetch candidates surviving the residency filter
+     // How many completed entries are waiting to be integrated. Mirrors spec_done_.size(), but
