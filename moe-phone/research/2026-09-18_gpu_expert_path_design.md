@@ -136,3 +136,19 @@ Each one ships with a test whose expected value is fixed by construction, not by
 | Pool memory is pinned and counts against LMK differently | M6 logs MemAvailable and swap; the budget auto-sizer must see the pool |
 | Driver limits (max single allocation, total mappable) | Queried at init, logged; the pool sizes its blocks from them |
 | Numerics exceed §6 | M3/M4 acceptance fails loudly; no speed number is reported from a failing build |
+
+## 10. Failures reopened, not dismissed (user direction, 2026-09-18 ~22:00)
+
+Each of these was recorded as "no gain" or left unexplained. None is closed until its cause is understood.
+Each gets a hypothesis, a check that does not need the phone (where one exists), and a fix attempt.
+
+| # | failure as recorded | why it is suspicious | hypothesis | next check |
+|---|---|---|---|---|
+| R1 | Slot arena: cache mgmt −18 ms, compute **+14 ms** (`arena2_compute_delta_ms`) | the arena removes work; compute should not rise | anon slots are compressed into zram and faulted back (the OLMoE engine shows 48–76 major faults/token vs 0.4 plain); the pool in §5 is pinned GPU memory and may remove it | count faults per token for arena vs LRU from existing CSVs (`majflt` column); M6 phone check |
+| R2 | Dense weights: mmap **saves 13.6 ms** on OLMoE (`ovhmech_dense_copy_ms`) but **costs 22.5 ms** on Qwen3 (`densemap_sensitivity_compute`) | the same change with opposite signs means something model-specific decides it | the mmap'd Qwen3 rows had FEWER major faults (18 vs 61/token), so faults are not it. Candidates: file-page eviction plus readahead re-reads the fault counter misses, or TLB reach on 0.82 GB of dense weights | per-token minor faults and read bytes from `/proc/pid/io` for both arms (a counter to add to the engine); page-cache residency of the dense ranges (the engine's existing `dense_resident_frac`) |
+| R3 | Engine 1.9× slower than plain on OLMoE (`overhead_ratio`), mostly spin at barriers plus kernel time | on Qwen3 the gap is only 12–25% | the gap tracks faults (kernel time while the other threads spin) | M-work: pinned pool (§5) plus fault counters per layer |
+| R4 | Repacked i8mm kernels on streamed experts were **slower** (compute 0.170 vs 0.146 s/token, n=2, 2026-09-17) | i8mm GEMV is designed to be faster than the generic q4_0 dot; the CPU is the compute wall | the in-place repack runs in `read_slice` on the I/O path and was charged to compute, OR the repacked path skipped the fork's ready/probe hooks and serialized; 2 rows at mismatched budgets (3448 vs 3748 MiB) decide nothing | laptop: per-op GEMV rate of the repacked vs generic kernel on a Qwen3 expert shape (ggml_matmul_bench, CPU); read repack.cpp's hook coverage. **Also: the new split hooks (§3 B) exist only in the generic path; the repacked MUL_MAT_ID needs them too before both can be combined** |
+| R5 | 6 threads: compute −8 ms, not resolved (`cores_6thread_compute`) | 0.84× in the teammate's pin2 data | the second clock domain paces barriers | bound it by the GPU split's effect on the CPU share first; revisit after M4 |
+| R6 | SLRU cut flash bytes 11.1% and decode did not resolve (`slru_decode_clean`) | bytes are the stall's input | the stall is set by per-layer read latency, not bytes | per-layer stall histogram from the node trace (existing tool); in the stack, SLRU+prefetch DID resolve −10.7 ms |
+| R7 | GPU per-op sweep measured the generic OpenCL path (weights misnamed) | the Adreno MoE kernels were never run | — | rebuild the app's matmul bench with `--wname` (committed 91e877f) when the phone returns |
+| R8 | The OEM performance-mode setting did not lift the caps | the UI toggle may engage a service that `settings put` does not | the Settings UI calls horae/oplus-perf over binder | read which binder call the toggle makes (dumpsys during a manual toggle), when the phone returns |
