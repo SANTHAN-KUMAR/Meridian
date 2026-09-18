@@ -58,7 +58,11 @@ A 'dumpsys deviceidle disable' >/dev/null 2>&1
 for f in thermal_gate.sh bmoe_hitrate.sh bmoe_slru.sh bmoe_arena2.sh; do
   adb push "$DEV/$f" /data/local/tmp/moe-stream/ >/dev/null 2>&1 </dev/null
 done
-log "scripts pushed"
+for d in bmoe-i8mm-slru bmoe-i8mm-order2; do
+  n=$(A "ls /data/local/tmp/moe-stream/$d/bmoe-cli 2>/dev/null | wc -l" | tr -d '\r')
+  [ "${n:-0}" = 1 ] || { log "FATAL: /data/local/tmp/moe-stream/$d/bmoe-cli missing on the phone"; exit 1; }
+done
+log "scripts pushed; engine binaries present"
 
 quiesce() {
   A 'for p in $(pm list packages -3 | sed "s/^package://"); do am force-stop $p; done; am kill-all' >/dev/null 2>&1
@@ -118,7 +122,8 @@ restore_phone() {
 trap restore_phone EXIT
 
 # --- PHASE A: clock-independent
-if mem_gate 4000; then device_campaign bmoe_hitrate.sh 2 bmoe_hitrate 'bmoe_hitrate_*/'
+if [ -d "$R/bmoe_hitrate" ]; then log "bmoe_hitrate already pulled; not re-running"
+elif mem_gate 4000; then device_campaign bmoe_hitrate.sh 2 bmoe_hitrate 'bmoe_hitrate_*/'
 else log "SKIPPED bmoe_hitrate: not enough free memory for a 7000 MiB cell"; fi
 if mem_gate 5000; then device_campaign bmoe_slru.sh 3 bmoe_slru 'bmoe_slru_*/'
 else log "SKIPPED bmoe_slru: not enough free memory"; fi

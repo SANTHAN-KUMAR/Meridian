@@ -37,7 +37,8 @@ BASE="--chatml -n 256 --ubatch 512 --moe-stream --cache-mb auto --cache-floor-mb
 run() {
   tag=$1_rep$3
   g=$(thermal_wait 30)
-  echo "=== $tag $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
+  mr=$(mem_ready 6500 120)
+  echo "=== $tag $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) $mr BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
   # sample memory while the run happens; the engine's own budget figure does not include arena slots
   ( while :; do awk '/MemAvailable|SwapFree/{printf "%s ", $2}' /proc/meminfo; echo; sleep 2; done > "$O/$tag.mem" ) &
   sampler=$!

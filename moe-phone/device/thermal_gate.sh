@@ -49,3 +49,24 @@ thermal_wait() {
   done
   echo "$(thermal_state) gate=ok waited=$w"
 }
+
+
+# mem_ready MIN_MIB MAX_S — before a row, make sure the phone has the memory the row needs. The engine's
+# cache is sized by --cache-mb auto from what is free at start, so a row that starts with less free memory
+# silently gets a smaller cache and is not the same cell as its neighbours (2026-09-18 14:3x: free memory
+# crept down between rows as services restarted, and one row got a 1595 MiB cache and read 821 MiB/token).
+# Force-stops every running app except the phone's own UI/connectivity and our apps, then waits up to
+# MAX_S for MemAvailable to reach MIN_MIB. Prints what it reached; the row logs it either way.
+mem_ready() {
+  _min=${1:-6500}; _max=${2:-120}; _t=0
+  for _p in $(ps -A -o NAME | grep "\." | sed "s/:.*//" | sort -u); do
+    case "$_p" in
+      com.moephone.*|com.android.systemui|com.android.launcher*|android|system|com.android.shell|com.android.networkstack*|com.android.wifi*|com.google.android.networkstack*|com.android.phone|com.android.bluetooth|com.android.se|com.android.nfc|com.qualcomm.*|vendor.*|com.android.providers.*) continue ;;
+    esac
+    am force-stop "$_p" 2>/dev/null
+  done
+  am kill-all 2>/dev/null
+  _m=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
+  while [ "$_m" -lt "$_min" ] && [ $_t -lt "$_max" ]; do sleep 10; _t=$((_t + 10)); _m=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo); done
+  echo "mem_ready=${_m}MiB waited=${_t}s"
+}
