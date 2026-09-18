@@ -1,0 +1,12 @@
+--- a/core/src/moe/arch_registry.cpp	2026-09-18 18:56:27.167260392 +0530
++++ b/core/src/moe/arch_registry.cpp	2026-09-18 18:56:27.194117449 +0530
+@@ -13,6 +13,9 @@
+ static const MoeRecipe k_recipes[] = {
+     {"qwen3moe", {"ffn_gate_exps", "ffn_up_exps", "ffn_down_exps"}},
+     {"qwen2moe", {"ffn_gate_exps", "ffn_up_exps", "ffn_down_exps"}},
++    // moe-phone 0016 (MEASUREMENT ONLY): OLMoE names its experts with the standard split suffixes; this row
++    // lets the engine run OLMoE so its overhead can be compared with stock llama.cpp on the same model.
++    {"olmoe", {"ffn_gate_exps", "ffn_up_exps", "ffn_down_exps"}},
+     // qwen35moe (Qwen3.5 MoE, e.g. 35B-A3B) is a hybrid attention/SSM stack: some layers run
+     // full attention, others a Mamba-style SSM block, but every MoE layer names its experts
+     // with the standard split suffixes, so streaming is one row. There is also an always-on
