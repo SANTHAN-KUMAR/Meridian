@@ -31,6 +31,9 @@ def main():
     # SENSITIVITY ONLY: the pre-registered keep rule is budget == 5000 MiB (the default here). --min-budget relaxes it,
     # and any output produced with it is a labelled sensitivity analysis, never the pre-registered verdict.
     ap.add_argument("--min-budget", type=int, default=None)
+    # PRE-REGISTERED ALTERNATIVE for campaigns whose arms differ in budget BY DESIGN (device/bmoe_gtier.sh: the GPU tier
+    # takes its MiB out of the CPU cache): keep = exit 0 and foreign=[], whatever the granted budget.
+    ap.add_argument("--any-budget-prereg", action="store_true")
     a = ap.parse_args()
     log = open(os.path.join(a.root, "log.txt")).read()
     foreign = dict(re.findall(r"=== (\w+) \S+ .*?foreign=\[([^\]]*)\]", log))
@@ -54,8 +57,13 @@ def main():
             r["stall_ms"] = 0.0  # a run without the overlap line reports no stall term; counted, not hidden
             r["stall_missing"] = True
         r["stall_plus_mgmt_ms"] = (r["stall_ms"] or 0.0) + (r["mgmt_ms"] or 0.0) if r["mgmt_ms"] is not None else None
-        r["kept"] = (r["decode_tok_s"] is not None and r["foreign"] == "" and
-                     (r["budget_MiB"] == 5000 if a.min_budget is None else (r["budget_MiB"] or 0) >= a.min_budget))
+        if a.any_budget_prereg:
+            budget_ok = r["budget_MiB"] is not None
+        elif a.min_budget is None:
+            budget_ok = r["budget_MiB"] == 5000
+        else:
+            budget_ok = (r["budget_MiB"] or 0) >= a.min_budget
+        r["kept"] = r["decode_tok_s"] is not None and r["foreign"] == "" and budget_ok
         rows.append(r)
     kept = [r for r in rows if r["kept"]]
     reps = sorted({r["rep"] for r in rows})
@@ -82,7 +90,8 @@ def main():
     res = {k: paired(k) for k in ("stall_plus_mgmt_ms", "compute_ms", "decode_tok_s", "read_MiB_per_token",
                                   "hit_pct", "stall_ms", "mgmt_ms")}
     dec = res["decode_tok_s"]
-    out = dict(source=os.path.abspath(a.root), keep_rule=("budget == 5000 (pre-registered)" if a.min_budget is None else f"SENSITIVITY: budget >= {a.min_budget}"), stack_flags=re.search(r"stack_flags=\[([^\]]*)\]", log).group(1),
+    out = dict(source=os.path.abspath(a.root), keep_rule=("exit 0 + foreign=[], any budget (pre-registered: budgets differ by design)" if a.any_budget_prereg else
+                          "budget == 5000 (pre-registered)" if a.min_budget is None else f"SENSITIVITY: budget >= {a.min_budget}"), stack_flags=re.search(r"stack_flags=\[([^\]]*)\]", log).group(1),
                rows=rows, n_rows=len(rows), n_kept=len(kept),
                n_stall_missing=sum(1 for r in rows if r.get("stall_missing")), results=res,
                decode_ratio=(dec["stack_mean"] / dec["base_mean"]) if "stack_mean" in dec else None,
