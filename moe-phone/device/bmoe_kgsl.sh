@@ -18,7 +18,7 @@
 #   sh bmoe_kgsl.sh MODE   (MODE = smoke | ab)
 set -u
 MODE=${1:-smoke}
-BIN=bmoe-i8mm-0020kgsl
+BIN=bmoe-i8mm-0021
 H=/data/local/tmp/moe-stream
 . $H/thermal_gate.sh
 M=$H/Qwen3-30B-A3B-Q4_0.gguf

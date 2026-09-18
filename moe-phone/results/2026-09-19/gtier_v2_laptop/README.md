@@ -22,15 +22,10 @@ Reading:
 - Counters for all rows: 0 failures, 0 risk recomputes, 0 map errors.
 - test_prior_synthetic.txt is a test list (every 6th expert of layers 0-15), not a popularity prior.
 
-## Variant 3 (gx 2783e0c, tiled SoA), same check, 00:50
-| row | experts on device | risk-flagged, recomputed on the CPU |
-|---|---|---|
-| v1 / v2 | 1336 / 1336 | 0 / 0 |
-| v3 | 1347 | **1347** |
-| v1w / v2w | 2437 / 2437 | 0 / 0 |
-| v3w | 2469 | **2469** |
-
-**Defect: under v3, gx's risk mask flags every slot.** The engine therefore recomputes every v3 expert on the CPU. So v3's
-text match (v3 == v1) says nothing about v3's arithmetic, and v3 cannot be used in the engine until this is fixed.
-Reported to the gx session. v3w's first attempt (exit 1, "unknown arg") was a quoting error in the command, not the
-engine; the row was rerun.
+## Variant 3 (gx 2783e0c, tiled SoA)
+With the engine fixed (repacked layouts = variant >= 2), v3 matches v1 byte for byte, with and without warm start:
+0 risk flags, 0 failures, and 973 / 644 copy-outs through gx_unpack_expert.
+The first v3 rows (00:50) were void: an engine bug (`variant_ != 2`) wrote v3 slots as plain GGUF bytes, and they were
+never repacked. The gx session found it. libgx's detector flagged every such slot, so no wrong value reached the
+output. The engine now repacks for every variant >= 2, and libgx HEAD refuses to dispatch an unrepacked slot under
+v2/v3.

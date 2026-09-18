@@ -13,3 +13,5 @@ snapshot and kept only as history.
 Update 2026-09-19 00:45: the snapshot also carries `--arena-kgsl` (slot arena in OpenCL ALLOC_HOST_PTR memory, CPU-only,
 `gpu_pinned_alloc` in gpu_tier.cpp). The Android build is bmoe-i8mm-0020kgsl, bmoe-cli md5 0596bb92787f70a2e441dedec1c91717.
 It is a superset of 0019v2.
+
+Update 2026-09-19 01:00: repacked layouts for every gx variant >= 2 (the v2-only check wrote v3 slots unrepacked). Android bmoe-i8mm-0021, bmoe-cli md5 49e304df484689b27307d00a33926e44, supersedes 0020kgsl and 0019v2.

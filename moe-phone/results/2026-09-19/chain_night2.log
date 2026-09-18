@@ -1,0 +1,4 @@
+2026-09-19T00:34:01+05:30 start; waiting for the phone lock
+2026-09-19T00:38:02+05:30 pinprobe: 
+2026-09-19T00:40:40+05:30 stopped: adb lost at ~00:38 (device offline during the pinprobe push; 5555 refused afterwards); pinprobe did not run
+2026-09-19T00:41:16+05:30 start; waiting for adb (lost at ~00:38)

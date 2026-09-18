@@ -2226,10 +2226,10 @@ index 7d20cf6..65e31b0 100644
      void predict_at_topk(ggml_tensor * t, int il, int nu, int nt); // watchdog + job submission
 diff --git a/core/src/moe/gpu_tier.cpp b/core/src/moe/gpu_tier.cpp
 new file mode 100755
-index 0000000..61541af
+index 0000000..1c5bcb7
 --- /dev/null
 +++ b/core/src/moe/gpu_tier.cpp
-@@ -0,0 +1,375 @@
+@@ -0,0 +1,377 @@
 +// gpu_tier.cpp — moe-phone (patch 0019): backends for the GPU expert tier. See gpu_tier.h.
 +//
 +// Bit-identity argument for CpuExpertFfn (checked end to end by the engine's text-identity acceptance, design §12):
@@ -2489,11 +2489,13 @@ index 0000000..61541af
 +    void unmap_read(int slot, const void * base) override {
 +        if (gx_slot_unmap_read(g_, &slots_[(size_t) slot], base) != 0) ++map_errors_;
 +    }
-+    // Variant 2 keeps its slots in gx's repacked layout (same bytes permuted, same offsets): writes go through
-+    // gx_repack_expert and the CPU paths read through gx_unpack_expert, its exact inverse.
-+    bool native_layout() const override { return variant_ != 2; }
++    // Variants >= 2 keep their slots in gx's repacked layouts (2: [ib][row] planes, 3: tiled by 64-row groups; same
++    // bytes permuted, same offsets): writes go through gx_repack_expert and the CPU paths read through
++    // gx_unpack_expert, its exact inverse; gx picks the layout from the context's variant.
++    bool repacked() const { return variant_ >= 2; }
++    bool native_layout() const override { return !repacked(); }
 +    bool write_expert(int slot, const void * const src[3], const size_t bytes[3], ggml_type t_down) override {
-+        if (variant_ != 2) return GpuExpertsBackend::write_expert(slot, src, bytes, t_down);
++        if (!repacked()) return GpuExpertsBackend::write_expert(slot, src, bytes, t_down);
 +        const gx_slot & s = slots_[(size_t) slot];
 +        void * base = gx_slot_map_write(g_, &s);
 +        if (!base) return false;
@@ -2503,7 +2505,7 @@ index 0000000..61541af
 +        return rc == 0 && map_errors_ == me;
 +    }
 +    bool read_expert(int slot, void * const dst[3], ggml_type t_down) override {
-+        if (variant_ != 2) return false;
++        if (!repacked()) return false;
 +        const gx_slot & s = slots_[(size_t) slot];
 +        const void * base = gx_slot_map_read(g_, &s);
 +        if (!base) return false;

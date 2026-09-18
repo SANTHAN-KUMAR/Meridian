@@ -664,7 +664,7 @@ graph_reserve: reserving a graph for ubatch with n_tokens = 2048, n_seqs =  1, n
 sched_reserve:        CPU compute buffer size =   425.01 MiB
 sched_reserve: graph nodes  = 934
 sched_reserve: graph splits = 1
-sched_reserve: reserve took 2.76 ms, sched copies = 1
+sched_reserve: reserve took 2.80 ms, sched copies = 1
 set_n_threads: n_threads = 4, n_threads_batch = 4
 set_abort_callback: call
 bmoe: expert cache eviction = segmented LRU (protected share 0.80 of the budget)
@@ -674,6 +674,6 @@ bmoe: gpu-tier gx: pool 148/148 blocks of 3456 KiB (max_mem_alloc=2053734400 glo
 bmoe: gpu-tier: warm start filled 0 slots from (none)
 bmoe: gpu-tier: backend gx, 148 slots x 3456 KiB (n_embd 2048, n_ff 1024), promote after 2 hits, at most 3 device experts per layer, CPU cache budget now 1500 MiB
 bmoe: expert streaming ON  n_expert=64 o_direct=1 io_threads=4 cache=1500 MiB shards=1
-bmoe: slru: 1188 promotions, 657 demotions, 0 evictions from the protected list
-bmoe: gpu-tier: backend gx slots 148, promotions 190, evictions 42, flushes 0, gpu-hits 2115, dispatches 529, experts on device 1347 (2.55/dispatch), wait 5.3 ms, failures 0, cpu budget reduced by 499 MiB, admissions rejected 166, overflow experts CPU-computed from the tier 958, promotions denied by the per-token budget 6467, risk-flagged experts recomputed on the CPU 1347, device time 46.5 ms, layout copy-outs 0 (peak 0 KiB held), map errors 0
+bmoe: slru: 1192 promotions, 661 demotions, 0 evictions from the protected list
+bmoe: gpu-tier: backend gx slots 148, promotions 190, evictions 42, flushes 0, gpu-hits 2119, dispatches 527, experts on device 1336 (2.54/dispatch), wait 5.1 ms, failures 0, cpu budget reduced by 499 MiB, admissions rejected 168, overflow experts CPU-computed from the tier 973, promotions denied by the per-token budget 6445, risk-flagged experts recomputed on the CPU 0, device time 46.3 ms, layout copy-outs 973 (peak 17280 KiB held), map errors 0
 ~llama_context:        CPU compute buffer size is 425.0078 MiB, matches expectation of 425.0078 MiB

@@ -21,7 +21,7 @@ restore() { A 'svc power stayon false; settings put system screen_off_timeout 60
 finish() { restore; touch "$R/CHAIN_NIGHT2_DONE"; exit "${1:-0}"; }
 campaign() {  # script mode
   local d
-  A "cd $H && (setsid nohup sh $1 $2 > ${1%.sh}_$2_nohup.log 2>&1 < /dev/null &)" >/dev/null 2>&1
+  A "cd $H && (${GTENV:-} setsid nohup sh $1 $2 > ${1%.sh}_$2_nohup.log 2>&1 < /dev/null &)" >/dev/null 2>&1
   sleep 45
   while :; do
     reconnect
@@ -34,13 +34,16 @@ campaign() {  # script mode
   adb pull "$d" "$R/${1%.sh}" >/dev/null 2>&1 </dev/null; log "pulled $d"
   LAST="$R/${1%.sh}/$(basename "$d")"
 }
-log "start; waiting for the phone lock"
+log "start; waiting for adb (lost at ~00:38)"
+while ! adb shell 'echo up' </dev/null 2>/dev/null | grep -q up; do adb connect "$ANDROID_SERIAL" >/dev/null 2>&1; sleep 120; done
+log "adb back: uptime=[$(A 'cat /proc/uptime' | tr -d '\r')] boot=[$(A 'getprop sys.boot_completed; getprop ro.boottime.init 2>/dev/null' | tr '\r\n' '  ')]"
+log "waiting for the phone lock"
 while :; do reconnect; [ -z "$(lock)" ] && break; sleep 60; done
 orph=$(A 'ps -A -o ARGS' | grep -E 'bmoe-cli|llama-|zcbench|gx_|sh bmoe_|run_phone|pinprobe' | grep -v grep)
 [ -n "$orph" ] && { log "FATAL: foreign phone processes: $orph"; finish 1; }
 # 2. pinprobe
 A "echo 'pinprobe $(date +%H:%M:%S)' > $H/.phone_busy; mkdir -p /data/local/tmp/pinprobe" >/dev/null
-adb push "$MP/host/pinned_arena/out/pinprobe" /data/local/tmp/pinprobe/ >/dev/null 2>&1 </dev/null
+adb push "$MP/host/pinned_arena/out/pinprobe" /data/local/tmp/pinprobe/ >/dev/null 2>&1 </dev/null || { log "FATAL: pinprobe push failed"; A "rm -f $H/.phone_busy"; finish 1; }
 A "cd /data/local/tmp/pinprobe && chmod 755 pinprobe && ./pinprobe 768" > "$R/pinprobe/pinprobe.out" 2>&1
 A "rm -f $H/.phone_busy" >/dev/null
 log "pinprobe: $(grep -E '^(BW|REREAD|VERDICT)' "$R/pinprobe/pinprobe.out" | tr '\n' ' ')"
@@ -54,20 +57,38 @@ if [ -n "$(lock)" ]; then
 else
   log "gx window: no gx run started within 10 min"
 fi
-# 4. kgsl arena
-if ! grep -q "^VERDICT BUILD" "$R/pinprobe/pinprobe.out"; then log "pinprobe verdict not BUILD: kgsl campaign not run"; finish 0; fi
-A "mkdir -p $H/bmoe-i8mm-0020kgsl" >/dev/null
-for f in "$SP/bmoe-i8mm-0020kgsl"/*; do adb push "$f" "$H/bmoe-i8mm-0020kgsl/" >/dev/null 2>&1 </dev/null; done
-adb push "$MP/device/bmoe_kgsl.sh" "$H/" >/dev/null 2>&1 </dev/null
-want=$(grep bmoe-cli "$SP/bmoe-i8mm-0020kgsl/MD5" | cut -d' ' -f1); got=$(A "md5sum $H/bmoe-i8mm-0020kgsl/bmoe-cli" | cut -d' ' -f1)
-[ "$want" = "$got" ] || { log "FATAL: pushed md5 $got != $want"; finish 1; }
-A "chmod 755 $H/bmoe-i8mm-0020kgsl/bmoe-cli; svc power stayon true; settings put system screen_off_timeout 1800000; dumpsys deviceidle disable" >/dev/null 2>&1
-campaign bmoe_kgsl.sh smoke
+# 4. kgsl arena (only on pinprobe VERDICT BUILD)
+push_bin() {
+  A "mkdir -p $H/bmoe-i8mm-0021" >/dev/null
+  for f in "$SP/bmoe-i8mm-0021"/*; do adb push "$f" "$H/bmoe-i8mm-0021/" >/dev/null 2>&1 </dev/null; done
+  adb push "$MP/device/bmoe_kgsl.sh" "$H/" >/dev/null 2>&1 </dev/null
+  adb push "$MP/device/bmoe_gtier.sh" "$H/" >/dev/null 2>&1 </dev/null
+  want=$(grep bmoe-cli "$SP/bmoe-i8mm-0021/MD5" | cut -d' ' -f1); got=$(A "md5sum $H/bmoe-i8mm-0021/bmoe-cli" | cut -d' ' -f1)
+  [ "$want" = "$got" ] || { log "FATAL: pushed md5 $got != $want"; finish 1; }
+  A "chmod 755 $H/bmoe-i8mm-0021/bmoe-cli; svc power stayon true; settings put system screen_off_timeout 1800000; dumpsys deviceidle disable" >/dev/null 2>&1
+}
+push_bin
+if grep -q "^VERDICT BUILD" "$R/pinprobe/pinprobe.out"; then
+  campaign bmoe_kgsl.sh smoke
+  S="$LAST"; ok=1
+  [ "$(grep -c 'text_match .* OK' "$S/log.txt")" = 2 ] || ok=0
+  grep -q FATAL "$S"/*.err && ok=0
+  grep -q "(kgsl)" "$S/stack_reps1.err" || ok=0
+  log "kgsl smoke ok=$ok :: $(grep -hE 'generation:|slot-arena:' "$S"/*.out "$S"/*.err | tr '\n' ' ')"
+  if [ $ok = 1 ]; then log "kgsl A/B start"; campaign bmoe_kgsl.sh ab; log "kgsl A/B pulled: $LAST"; fi
+else
+  log "pinprobe verdict not BUILD: kgsl campaign not run"
+fi
+# 5. GPU tier: gx v0 + spin-wait (M6 run 3 best: k=3 1.06 host / 0.72 device ms); see bmoe_gtier.sh DEVIATION
+export GTENV="GT_BIN=bmoe-i8mm-0021 GT_VARIANT=0 GT_SPIN=1"
+campaign bmoe_gtier.sh smoke
 S="$LAST"; ok=1
 [ "$(grep -c 'text_match .* OK' "$S/log.txt")" = 2 ] || ok=0
 grep -q FATAL "$S"/*.err && ok=0
-grep -q "(kgsl)" "$S/stack_reps1.err" || ok=0
-log "kgsl smoke ok=$ok :: $(grep -hE 'generation:|slot-arena:' "$S"/*.out "$S"/*.err | tr '\n' ' ')"
-[ $ok = 1 ] || finish 1
-log "kgsl A/B start"; campaign bmoe_kgsl.sh ab; log "kgsl A/B pulled: $LAST"
+grep -q "dispatches [1-9]" "$S/stack_reps1.err" || ok=0
+grep -q "warm start filled [1-9]" "$S/stack_reps1.err" || ok=0
+dev=$(grep -ho "experts on device [0-9]*" "$S/stack_reps1.err" | grep -o "[0-9]*$"); rk=$(grep -ho "recomputed on the CPU [0-9]*" "$S/stack_reps1.err" | grep -o "[0-9]*$")
+[ -n "$dev" ] && [ -n "$rk" ] && [ $((rk * 100)) -le "$dev" ] || ok=0
+log "gtier smoke ok=$ok dev=$dev risk=$rk :: $(grep -h 'generation:' "$S"/*.out | tr '\n' ' ')"
+if [ $ok = 1 ]; then log "gtier A/B start"; campaign bmoe_gtier.sh ab; log "gtier A/B pulled: $LAST"; fi
 finish 0

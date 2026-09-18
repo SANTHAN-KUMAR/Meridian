@@ -35,6 +35,10 @@
 # 0.24 ms per dispatch (422 ms / 1764). So the proxy cannot settle the question, and the A/B's own pre-registered rule
 # above decides it, unchanged. Perfect-device ceiling for this tier (2.19 device experts/layer of 8; expert arithmetic
 # ~half of compute): about -14 ms/token.
+# CHOICE 2026-09-19 00:45 (before any v0 row): GT_VARIANT=0 with GT_SPIN=1, per M6 run 3 (gx_m6_001107): v0+spin k=3
+# 1.06 host / 0.72 device ms, k=1 0.58 / 0.27 ms; spin removes ~0.3 ms of host time per dispatch. Binary bmoe-i8mm-0021
+# (engine fix: repacked layouts for every variant >= 2; libgx HEAD refuses unrepacked slots). Smoke gate adds:
+# risk-recomputed experts <= 1% of device experts (checked by host/chain_night2.sh).
 #   GT_BIN=... GT_VARIANT=... sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
 set -u
 MODE=${1:-smoke}

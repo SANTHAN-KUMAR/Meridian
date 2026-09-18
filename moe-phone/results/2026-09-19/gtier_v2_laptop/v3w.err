@@ -664,7 +664,7 @@ graph_reserve: reserving a graph for ubatch with n_tokens = 2048, n_seqs =  1, n
 sched_reserve:        CPU compute buffer size =   425.01 MiB
 sched_reserve: graph nodes  = 934
 sched_reserve: graph splits = 1
-sched_reserve: reserve took 3.31 ms, sched copies = 1
+sched_reserve: reserve took 2.77 ms, sched copies = 1
 set_n_threads: n_threads = 4, n_threads_batch = 4
 set_abort_callback: call
 bmoe: expert cache eviction = segmented LRU (protected share 0.80 of the budget)
@@ -674,6 +674,6 @@ bmoe: gpu-tier gx: pool 148/148 blocks of 3456 KiB (max_mem_alloc=2053734400 glo
 bmoe: gpu-tier: warm start filled 148 slots from /run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/gtier_v2_laptop/test_prior_synthetic.txt
 bmoe: gpu-tier: backend gx, 148 slots x 3456 KiB (n_embd 2048, n_ff 1024), promote after 2 hits, at most 3 device experts per layer, CPU cache budget now 1500 MiB
 bmoe: expert streaming ON  n_expert=64 o_direct=1 io_threads=4 cache=1500 MiB shards=1
-bmoe: slru: 1123 promotions, 590 demotions, 0 evictions from the protected list
-bmoe: gpu-tier: backend gx slots 148, promotions 190, evictions 190, flushes 0, gpu-hits 3204, dispatches 1158, experts on device 2469 (2.13/dispatch), wait 9.5 ms, failures 0, cpu budget reduced by 499 MiB, admissions rejected 535, overflow experts CPU-computed from the tier 925, promotions denied by the per-token budget 5840, risk-flagged experts recomputed on the CPU 2469, device time 100.9 ms, layout copy-outs 0 (peak 0 KiB held), map errors 0
+bmoe: slru: 1232 promotions, 699 demotions, 0 evictions from the protected list
+bmoe: gpu-tier: backend gx slots 148, promotions 189, evictions 189, flushes 0, gpu-hits 2892, dispatches 1146, experts on device 2437 (2.13/dispatch), wait 10.5 ms, failures 0, cpu budget reduced by 499 MiB, admissions rejected 428, overflow experts CPU-computed from the tier 644, promotions denied by the per-token budget 5771, risk-flagged experts recomputed on the CPU 0, device time 99.2 ms, layout copy-outs 644 (peak 34560 KiB held), map errors 0
 ~llama_context:        CPU compute buffer size is 425.0078 MiB, matches expectation of 425.0078 MiB
