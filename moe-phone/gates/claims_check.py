@@ -854,6 +854,15 @@ CLAIMS = [
          text="net decode median 6.29 vs 6.10 (base) vs 5.89 (today's prefetch), best in 2 of 3 repeats: no rate effect resolved at n=3 (rows at thermal status 2); all 9 rows produced identical text",
          artifact="specadopt_summary.json", expected=2, tol=0,
          value=lambda A: A["sadopt"]["predsel_best_in_repeats"]),
+    # ------------------------- PATCH 0013 CONFIDENCE GATES (device/bmoe_specgate.sh -> gates/specgate_summary.py, 2026-09-18 16:30)
+    dict(id="specgate_verdict_none",
+         text="no confidence gate meets the pre-registered rule: every gate removes sel's 11.9 MiB/token excess reads (all four at 120.1-120.4 vs base 119.8) but keeps at most half of sel's 8 ms stall cut (stall 45-47 ms against a 42.6 ms threshold); 18/18 rows identical text",
+         artifact="specgate_summary.json", expected=0, tol=0,
+         value=lambda A: sum(d["preferred"] for d in A["sgate"]["decisions"].values())),
+    dict(id="specgate_precision_r2",
+         text="the gates are imprecise: only 22.5% of the speculative reads issued at rank<2 are ever used (406 of 1808), 22-25% across all four gates",
+         artifact="specgate_summary.json", expected=0.2246, tol=0.001,
+         value=lambda A: A["sgate"]["cells"]["r2"]["precision_useful_over_issued"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1094,6 +1103,7 @@ def load_all():
         "capt": load("cap_vs_temp.json"),
         "sdec": load("slru_decode.json"),
         "sadopt": load("specadopt_summary.json"),
+        "sgate": load("specgate_summary.json"),
     }
 
 

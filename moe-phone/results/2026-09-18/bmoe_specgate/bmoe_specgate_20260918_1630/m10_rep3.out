@@ -1,0 +1,16 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field<think>
+Okay, I need to write a long detailed essay about the history of computing, including its origins, key milestones, the people involved, and future directions. Let me start by breaking down the question. The user wants a comprehensive overview, so I should make sure each section is thorough.
+
+First, the origins. I remember that early computing concepts date back to ancient times. Maybe start with the abacus? That's one of the earliest calculating tools. Then move to mechanical devices like the Antikythera mechanism. But I need to verify if that's considered a computing device. Also, mention the work of figures like Al-Jazari or Blaise Pascal with his adding machine. Then the 19th century with Charles Babbage and Ada Lovelace. They were pioneers in the concept of a programmable computer.
+
+Next, key milestones. The transition from mechanical to electronic computers. The invention of the transistor in the 1940s, then integrated circuits. The development of programming languages, like Fortran or COBOL. The rise of personal computers in the 1970s and 80s with companies like Apple and IBM. The internet and World Wide Web in the 90s. Then the 2
+
+generation: 256 tokens, 0.171 s/token (5.840 tok/s)
+compute: 89.2% CPU occupancy (0.6111 cpu-s/token over 4 threads), 77.53 major faults/token
+prefill: 34 tokens, 6.969 s (4.9 tok/s) | model load 25.553 s | TTFT 32.521 s
+mode: expert streaming, cache auto, dense anon, overlap
+moe-stream: read 30848.5 MiB (120.50 MiB/token), decode 0.171 s/token (compute 0.106 + cache mgmt 0.020 + flash I/O 0.163 s/token, 739 MiB/s)
+moe-cache: 85.4% hit, resident 4997.9 MiB, budget 5000 MiB (auto)
+moe-cache: 13011 evictions, 10598 re-reads (41.4/token) — bytes the cache had already paid for once
+moe-overlap: stall 0.046 s/token (flash reads overlapped with FFN compute)
+moe-prefetch: 439.8 MiB speculative, 172/173 experts useful (99%) [stale-gate]
