@@ -792,7 +792,7 @@ CLAIMS = [
     # ------------------------- PER-OP MATMUL SWEEP (host/matmul_sweep.sh -> gates/matmul_sweep_analyze.py, 2026-09-18 14:42)
     # Qwen3-30B-A3B shapes, q4_0, weights already on the device, 60 iterations x 2 repeats, each checked against the CPU backend.
     dict(id="msweep_htp_expert_down_speedup",
-         text="even with the weights already resident, Hexagon runs Qwen3's expert down-projection (MUL_MAT_ID, 128 experts) at 0.39x the CPU's speed, and gate/up at 0.68x",
+         text="even with the weights already resident, Hexagon runs a Qwen3 expert down-projection shape (MUL_MAT_ID, 128 experts, Q4_1 -- the down type of layers 0-5 only; 42 of 48 layers are Q4_0) at 0.39x the CPU's speed, and gate/up (Q4_0, all layers) at 0.68x",
          artifact="matmul_sweep.json", expected=0.39, tol=0.01,
          value=lambda A: round(next(c for c in A["msweep"]["cells"] if c["shape"] == "ffn_down" and c["device"] == "HTP0")["speedup_vs_cpu"], 2)),
     dict(id="msweep_gpu_expert_gate_up_speedup",

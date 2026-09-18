@@ -13,7 +13,8 @@
 #   attn_k/v     k=2048 n=512    Q4_0     per layer, per token (GQA: 4 kv heads x 128)
 #   attn_output  k=4096 n=2048   Q4_0     per layer, per token
 #   ffn_gate/up  k=2048 n=768    Q4_0     MUL_MAT_ID over 8 of 128 experts, per layer, per token
-#   ffn_down     k=768  n=2048   Q4_1     MUL_MAT_ID over 8 of 128 experts, per layer, per token
+#   ffn_down     k=768  n=2048   Q4_1     MUL_MAT_ID over 8 of 128 experts, per layer, per token -- Q4_1 is the down type
+#                                          of layers 0-5 ONLY; layers 6-47 (42 of 48) are Q4_0 (GGUF tensor table, 2026-09-18)
 #   output head  k=2048 n=151936 Q6_K     once per token -- NOT swept: ggml-hexagon refuses ne[1] > 32768
 #                                         and does not implement Q6_K, so it cannot move at all
 # The expert rows are the ones that decide anything: MUL_MAT_ID is the majority of decode node time

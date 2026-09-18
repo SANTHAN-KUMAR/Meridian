@@ -8,7 +8,8 @@
 // mapping, a skipped expert computed anyway, a row left unfilled, a race).
 //
 // Shapes are Qwen3-30B-A3B's: gate/up Q4_0 [2048 -> 768] with one activation row broadcast to the 8 selected
-// experts, and down Q4_1 [768 -> 2048] with one activation row per slot. 128 experts. Random weights.
+// experts, and down [768 -> 2048] with one activation row per slot in BOTH of the file's down types: Q4_1 (layers
+// 0-5) and Q4_0 (layers 6-47). 128 experts. Random weights.
 //
 // Caveat recorded, not hidden: on an ARM build with i8mm, q4_0's vec_dot takes TWO rows per call (nrows = 2),
 // so the stand-in must mirror that there; this x86 test covers the 1-row path. The real GPU kernel is NOT
@@ -125,20 +126,23 @@ int main(int argc, char ** argv) {
     ggml_context * ctx = ggml_init(ip);
     std::mt19937 rng(12345);
     ggml_tensor * wg = ggml_new_tensor_3d(ctx, GGML_TYPE_Q4_0, n_embd, n_ff, n_as);   // gate/up shape
-    ggml_tensor * wd = ggml_new_tensor_3d(ctx, GGML_TYPE_Q4_1, n_ff, n_embd, n_as);   // down shape
-    fill_quant(wg, rng); fill_quant(wd, rng);
+    ggml_tensor * wd = ggml_new_tensor_3d(ctx, GGML_TYPE_Q4_1, n_ff, n_embd, n_as);   // down shape, Q4_1 (layers 0-5)
+    ggml_tensor * wd0 = ggml_new_tensor_3d(ctx, GGML_TYPE_Q4_0, n_ff, n_embd, n_as);  // down shape, Q4_0 (layers 6-47)
+    fill_quant(wg, rng); fill_quant(wd, rng); fill_quant(wd0, rng);
     ggml_tensor * x  = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, n_embd, 1, 1);
     ggml_tensor * xd = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, n_ff, n_used, 1);
     ggml_tensor * ids = ggml_new_tensor_2d(ctx, GGML_TYPE_I32, n_used, 1);
     ggml_tensor * og = ggml_mul_mat_id(ctx, wg, x, ids);
     ggml_tensor * od = ggml_mul_mat_id(ctx, wd, xd, ids);
+    ggml_tensor * od0 = ggml_mul_mat_id(ctx, wd0, xd, ids);
     ggml_cgraph * gf = ggml_new_graph(ctx);
     ggml_build_forward_expand(gf, og);
     ggml_build_forward_expand(gf, od);
+    ggml_build_forward_expand(gf, od0);
 
     Standin S; S.rng = &rng;
     std::normal_distribution<float> nx(0.f, 1.f);
-    std::vector<float> ref_g(ggml_nelements(og)), ref_d(ggml_nelements(od));
+    std::vector<float> ref_g(ggml_nelements(og)), ref_d(ggml_nelements(od)), ref_d0(ggml_nelements(od0));
     int failures = 0;
     long long compared = 0;
     for (int t = 0; t < trials; ++t) {
@@ -153,8 +157,10 @@ int main(int argc, char ** argv) {
         ggml_graph_compute_with_ctx(ctx, gf, nthreads);
         std::memcpy(ref_g.data(), og->data, ref_g.size() * sizeof(float));
         std::memcpy(ref_d.data(), od->data, ref_d.size() * sizeof(float));
+        std::memcpy(ref_d0.data(), od0->data, ref_d0.size() * sizeof(float));
         // poison dst so an unfilled row cannot pass by coincidence
         std::memset(og->data, 0x7f, ggml_nbytes(og)); std::memset(od->data, 0x7f, ggml_nbytes(od));
+        std::memset(od0->data, 0x7f, ggml_nbytes(od0));
         // hooked: k cycles through 0..8
         S.k = t % (n_used + 1);
         const long long skipped_before = S.skipped_total;
@@ -165,11 +171,12 @@ int main(int argc, char ** argv) {
         ggml_cpu_set_mmid_split_hooks(nullptr, nullptr, nullptr);
         ggml_cpu_set_expert_ready_hook(nullptr, nullptr);
         // two ops (gate, down), each over n_used distinct experts, minus what each op skipped
-        const long long expect_ready = (long long) nthreads * (2LL * n_used - (S.skipped_total - skipped_before));
+        const long long expect_ready = (long long) nthreads * (3LL * n_used - (S.skipped_total - skipped_before));
         const bool okw = g_ready_calls.load() == expect_ready;
         const bool okg = std::memcmp(ref_g.data(), og->data, ref_g.size() * sizeof(float)) == 0;
-        const bool okd = std::memcmp(ref_d.data(), od->data, ref_d.size() * sizeof(float)) == 0;
-        compared += 2;
+        const bool okd = std::memcmp(ref_d.data(), od->data, ref_d.size() * sizeof(float)) == 0 &&
+                         std::memcmp(ref_d0.data(), od0->data, ref_d0.size() * sizeof(float)) == 0;
+        compared += 3;
         if (!okg || !okd || !okw) {
             if (failures < 5) std::fprintf(stderr, "trial %d k=%d: gate %s down %s work %s (ready %lld expected %lld)\n", t, S.k,
                                            okg ? "ok" : "DIFF", okd ? "ok" : "DIFF", okw ? "ok" : "WRONG", g_ready_calls.load(), expect_ready);
