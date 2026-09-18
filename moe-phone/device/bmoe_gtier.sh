@@ -22,23 +22,36 @@
 # linker then resolved a dependency from /vendor and failed to map android.hardware.power-V6-ndk.so ("CANNOT LINK
 # EXECUTABLE", both rows exit=1, no model ran). gx's cl_shim dlopens /vendor/lib64/libOpenCL.so by absolute path, so
 # the vendor directory is not needed on the search path; removed.
-#   sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
+# REVISION 2026-09-19 00:25 (before any v2 row): the binary directory, gx variant and spin_wait are environment
+# parameters, GT_BIN (default bmoe-i8mm-0019gx), GT_VARIANT (default 1) and GT_SPIN (default 0), all logged. Variant 2
+# (gx 44a0cbf/7fc8367: SoA-repacked slots, bit-exact) needs bmoe-i8mm-0019v2, which writes slots through
+# gx_repack_expert and reads CPU copies through gx_unpack_expert. The smoke and A/B rules above are unchanged. Other
+# additions: the shared phone lock ($H/.phone_busy) and a battery guard (no row below 25%, so the phone never dies
+# mid-campaign).
+#   GT_BIN=... GT_VARIANT=... sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
 set -u
 MODE=${1:-smoke}
+GT_BIN=${GT_BIN:-bmoe-i8mm-0019gx}; GT_VARIANT=${GT_VARIANT:-1}; GT_SPIN=${GT_SPIN:-0}
 H=/data/local/tmp/moe-stream
 . $H/thermal_gate.sh
 M=$H/Qwen3-30B-A3B-Q4_0.gguf
 O=$H/bmoe_gtier_${MODE}_$(date +%Y%m%d_%H%M); mkdir -p "$O"
 P="Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field"
 BASE="--chatml --ubatch 512 --moe-stream --cache-mb auto --cache-floor-mb 1024 --cache-ceil-mb 5000 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-threads 4 --io-cpu-mask 0f --expert-slru --predict-prefetch --spec-adopt-selective"
-TIER="--gpu-tier-mb 1000 --gpu-backend gx --gpu-variant 1 --gpu-tier-prior $H/qwen3_gtier_prior.txt --gpu-max-per-layer 3 --gpu-promotions-per-token 1"
-echo "stack_flags=[$TIER] binary=bmoe-i8mm-0019gx" >> "$O/log.txt"
+SPINF=""; [ "$GT_SPIN" = 1 ] && SPINF="--gpu-spin-wait"
+TIER="--gpu-tier-mb 1000 --gpu-backend gx --gpu-variant $GT_VARIANT $SPINF --gpu-tier-prior $H/qwen3_gtier_prior.txt --gpu-max-per-layer 3 --gpu-promotions-per-token 1"
+if [ -e $H/.phone_busy ]; then echo "phone busy: $(cat $H/.phone_busy)" | tee "$O/REFUSED"; exit 3; fi
+echo "gtier $MODE $(date +%H:%M:%S)" > $H/.phone_busy
+trap 'rm -f $H/.phone_busy' EXIT
+echo "stack_flags=[$TIER] binary=$GT_BIN md5=$(md5sum $H/$GT_BIN/bmoe-cli | cut -d' ' -f1)" >> "$O/log.txt"
+batt() { dumpsys battery | grep -m1 ' level:' | tr -dc 0-9; }
 run() {  # arm extra tag n
   tag=$1_rep$3
+  b=$(batt); if [ "${b:-0}" -lt 25 ]; then echo "STOP battery ${b}% before $tag" | tee -a "$O/log.txt"; return 1; fi
   g=$(thermal_wait 30); mr=$(mem_ready 6500 120)
   foreign=$(ps -A -o ARGS | grep -E "llama-bench|bmoe-cli|zcbench|gx_|com\.moephone" | grep -v grep | tr " " "_" | tr "\n" "," )
-  echo "=== $tag $(date +%H:%M:%S) $mr foreign=[${foreign}] BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
-  ( cd $H/bmoe-i8mm-0019gx && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE -n $4 $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" )
+  echo "=== $tag $(date +%H:%M:%S) batt=${b}% $mr foreign=[${foreign}] BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
+  ( cd $H/$GT_BIN && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE -n $4 $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" )
   echo "exit=$? AFTER $(thermal_state) $(grep -hE 'generation:|moe-stream:|moe-cache:|moe-overlap|gpu-tier:|FATAL' "$O/$tag.out" "$O/$tag.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
 }
 if [ "$MODE" = smoke ]; then

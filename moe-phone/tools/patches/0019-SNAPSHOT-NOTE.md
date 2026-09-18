@@ -1,6 +1,6 @@
 # 0019-SNAPSHOT — the exact engine tree the gx builds were made from
 
-`0019-SNAPSHOT-bigmoeonedge-engine-tree-vs-74ba18f.patch` is **cumulative**: `git apply` on a clean BigMoeOnEdge at
+`0019-SNAPSHOT-bigmoeonedge-engine-tree-vs-74ba18f.patch` is **cumulative** (updated 2026-09-19 00:30 for gx variant 2: write_expert/read_expert, repack/unpack; Android bmoe-cli md5 752d281d4ad9f82e0ffafb177b91ad31 = bmoe-i8mm-0019v2): `git apply` on a clean BigMoeOnEdge at
 74ba18f reproduces cli/ and core/ byte for byte, as they were when the gx engine (bmoe-i8mm-0019gx) was built. This was verified on
 2026-09-19 with `git archive 74ba18f | tar x; git apply; diff -r`, and it showed no differences. The ggml-cpu split hooks
 live in the llama.cpp submodule and are applied separately by 0017.
