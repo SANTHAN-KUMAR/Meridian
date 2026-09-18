@@ -258,6 +258,13 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
         const int e = gx_wait(g);
         if (e) return e;
     }
+    if (g->p.variant >= 2) {   // repacked layouts: refuse a slot not written through gx_repack_expert (or with another down type)
+        std::lock_guard<std::mutex> lk(g->mu);
+        for (int s = 0; s < k; s++) {
+            auto it = g->slot_dtype.find({slots[s].block, slots[s].off_gate});
+            if (it == g->slot_dtype.end() || it->second != down_type) { g->st.errors++; g->st.layout_refused++; return CL_INVALID_MEM_OBJECT; }
+        }
+    }
     const int ne = g->p.n_embd, nf = g->p.n_ff;
     g->t_dispatch = now_ns();
     gx_quantize_q8_0(x, g->in_host.data(), ne);   // x is not read after this

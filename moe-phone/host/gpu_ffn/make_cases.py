@@ -17,9 +17,16 @@ import sys
 
 import numpy as np
 
-NE, NF = 2048, 768
+NE, NF = 2048, 768   # Qwen3-30B-A3B; --shape NE,NF overrides (e.g. 2048,1024 for OLMoE)
 GU = NF * (NE // 32) * 18
 DN = {0: NE * (NF // 32) * 18, 1: NE * (NF // 32) * 20}
+
+
+def set_shape(ne, nf):
+    global NE, NF, GU, DN
+    NE, NF = ne, nf
+    GU = NF * (NE // 32) * 18
+    DN = {0: NE * (NF // 32) * 18, 1: NE * (NF // 32) * 20}
 
 
 def f16(a):
@@ -151,7 +158,10 @@ def main():
     ap.add_argument("--gguf", default=None)
     ap.add_argument("--random", type=int, default=20)
     ap.add_argument("--layers", default="0,5,6,12,24,36,47")
+    ap.add_argument("--shape", default=None, help="NE,NF for synthetic-only cases of another model shape")
     a = ap.parse_args()
+    if a.shape:
+        set_shape(*(int(v) for v in a.shape.split(",")))
     os.makedirs(a.out, exist_ok=True)
     rng = np.random.default_rng(20260918)
     man = []

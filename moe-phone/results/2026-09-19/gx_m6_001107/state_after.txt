@@ -1,0 +1,1 @@
+wake=Dozing status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=31597

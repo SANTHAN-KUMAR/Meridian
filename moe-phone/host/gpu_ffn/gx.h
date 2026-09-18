@@ -111,6 +111,8 @@ int  gx_slot_unmap(gx_ctx * g, const gx_slot * s, void * p);
 const void * gx_slot_map_read(gx_ctx * g, const gx_slot * s);
 int  gx_slot_unmap_read(gx_ctx * g, const gx_slot * s, const void * p);
 
+/* Under variants 2 and 3, gx_dispatch refuses (CL_INVALID_MEM_OBJECT, counted in layout_refused) any slot that
+ * was not written through gx_repack_expert in this context with the dispatch's down type. */
 /* Variants 2 and 3 only: write one expert into a slot in the repacked layout, instead of copying its three GGUF
  * slices. Call between gx_slot_map_write (mapped = the pointer it returned) and gx_slot_unmap. src_* are the
  * expert's slices in GGUF block layout (gate, up: Q4_0; down: down_type). A byte permutation of the same
@@ -149,6 +151,7 @@ typedef struct gx_stats {
     uint64_t read_maps, read_map_ns;           /* gx_slot_map_read / unmap_read pairs */
     uint64_t timed_dispatches, device_ns, host_ns;   /* sums over completed dispatches (device_ns: profile only) */
     uint64_t risk_dispatches, risk_slots;      /* dispatches / slots with a denormal-risk flag (gx_last_risk_mask) */
+    uint64_t layout_refused;                   /* variants 2/3: dispatches refused, a slot not repacked (or other down type) */
 } gx_stats;
 gx_stats gx_get_stats(const gx_ctx * g);
 

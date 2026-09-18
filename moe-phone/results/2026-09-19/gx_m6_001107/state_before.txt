@@ -1,0 +1,3 @@
+quiesce: stopped=76 cpu_busy_of_800=107 top3=midasd:36.0,android.system.suspend-service:27.0,system_server:5.0,
+mem_ready=6999MiB waited=0s
+wake=Dozing status=0 cap0=2016000 cap6=2476800 hw0=3321600 hw6=3801600 shell_front_mC=33010

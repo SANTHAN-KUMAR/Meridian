@@ -1,0 +1,50 @@
+00:34:46 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:34:57 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:35:07 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:35:18 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:35:28 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:35:38 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:35:48 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:35:59 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:36:09 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:36:19 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:36:30 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:36:40 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:36:50 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:37:01 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:37:11 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:37:21 waiting: gx run_phone_m6 00:11:07
+gx_bench
+00:37:32 waiting: run3 still running
+00:37:42 waiting: run3 still running
+adb: device offline
+00:37:52 waiting: run3 still running
+adb: device offline
+00:38:02 waiting: run3 still running
+adb: device offline
+00:38:12 waiting: run3 still running
+adb: device '192.168.0.65:5555' not found
+00:38:22 waiting: run3 still running
+adb: device '192.168.0.65:5555' not found
+00:38:32 waiting: run3 still running
+adb: device '192.168.0.65:5555' not found
+00:38:42 waiting: run3 still running
+adb: device '192.168.0.65:5555' not found
+00:38:52 waiting: run3 still running
+adb: device '192.168.0.65:5555' not found
+00:39:02 waiting: run3 still running

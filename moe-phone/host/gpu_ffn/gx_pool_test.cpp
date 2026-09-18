@@ -278,6 +278,34 @@ int main(int argc, char ** argv) {
         if (st.errors || st.map_errors || st.slots_live) fails++;
         gx_free(g);
     }
+    // layout guard: a variant-2/3 context must refuse to dispatch a slot written without gx_repack_expert
+    for (int v : {2, 3}) {
+        char err[1024];
+        gx_ctx * g = gx_init(ctx, dev, gx_params{2048, 768, 0, v, 0, 0}, err, sizeof err);
+        const size_t span = 2 * a4k(GU) + a4k(DN1);
+        if (!g || gx_pool_create(g, span, 2, err, sizeof err) != 2) { fails++; if (g) gx_free(g); continue; }
+        const Case & c = cases[0];
+        gx_slot a1, b1;
+        gx_slot_alloc(g, GU, GU, c.dt ? DN1 : DN0, &a1);
+        gx_slot_alloc(g, GU, GU, c.dt ? DN1 : DN0, &b1);
+        write_slot(g, a1, c, c.ids[0]);   // plain memcpy: NOT repacked
+        uint8_t * p = (uint8_t *) gx_slot_map_write(g, &b1);
+        gx_repack_expert(g, &b1, p, expert_bytes(c, c.ids[0], 0), expert_bytes(c, c.ids[0], 1), expert_bytes(c, c.ids[0], 2), c.dt);
+        gx_slot_unmap(g, &b1, p);
+        std::vector<float> out(2048);
+        const int r_plain = gx_dispatch(g, 0, c.dt, 1, &a1, c.x.data(), out.data());
+        if (!r_plain) gx_wait(g);
+        const int r_wrongdt = gx_dispatch(g, 0, c.dt ? GX_DOWN_Q4_0 : GX_DOWN_Q4_1, 1, &b1, c.x.data(), out.data());
+        if (!r_wrongdt) gx_wait(g);
+        const int r_ok = gx_dispatch(g, 0, c.dt, 1, &b1, c.x.data(), out.data());
+        const int w_ok = r_ok ? r_ok : gx_wait(g);
+        const bool ok_bits = !w_ok && diff_bits(out.data(), c.ref.data(), 2048) == 0;
+        printf("LAYOUTGUARD variant=%d plain_slot_refused=%d wrong_down_type_refused=%d repacked_slot_ok=%d refused=%llu\n", v,
+               r_plain != 0, r_wrongdt != 0, ok_bits, (unsigned long long) gx_get_stats(g).layout_refused);
+        if (!r_plain || !r_wrongdt || !ok_bits) fails++;
+        gx_slot_free(g, &a1); gx_slot_free(g, &b1);
+        gx_free(g);
+    }
     printf("POOL_TEST %s (%d failures)\n", fails ? "FAIL" : "PASS", fails);
     return fails ? 3 : 0;
 }

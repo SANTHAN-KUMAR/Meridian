@@ -216,8 +216,9 @@ int main(int argc, char ** argv) {
         }
         fflush(stdout);
         const gx_stats st = gx_get_stats(g);
-        printf("STATS variant=%d dispatches=%llu errors=%llu map_errors=%llu\n", variant, (unsigned long long) st.dispatches,
-               (unsigned long long) st.errors, (unsigned long long) st.map_errors);
+        printf("STATS variant=%d dispatches=%llu errors=%llu map_errors=%llu risk_dispatches=%llu risk_slots=%llu experts=%llu\n", variant,
+               (unsigned long long) st.dispatches, (unsigned long long) st.errors, (unsigned long long) st.map_errors,
+               (unsigned long long) st.risk_dispatches, (unsigned long long) st.risk_slots, (unsigned long long) st.experts);
         for (auto & v : sl) for (auto & s : v) gx_slot_free(g, &s);
         gx_free(g);
     }
