@@ -20,3 +20,10 @@
 2026-09-19T02:28:09+05:30 [night3] gtier smoke ok=0 dev= risk= :: generation: 64 tokens, 0.220 s/token (4.546 tok/s) 
 2026-09-19T02:28:14+05:30 [night3] phone restored
 2026-09-19T02:29:25+05:30 [night3] [tier] start (script fixed: --gpu-spin-wait 1)
+2026-09-19T02:35:30+05:30 [night3] pulled /data/local/tmp/moe-stream/bmoe_gtier_smoke_20260919_0229/
+2026-09-19T02:35:30+05:30 [night3] [tier] smoke ok=1 variant=1 dev=2845 risk=0 :: generation: 64 tokens, 0.279 s/token (3.580 tok/s) generation: 64 tokens, 0.155 s/token (6.434 tok/s) 
+2026-09-19T02:35:30+05:30 [night3] [tier] A/B start
+2026-09-19T03:00:09+05:30 [night3] [cap8] waiting for the cap-3 tier chain (CHAIN_TIER_DONE)
+2026-09-19T04:37:19+05:30 [night3] pulled /data/local/tmp/moe-stream/bmoe_gtier_ab_20260919_0235/
+2026-09-19T04:37:19+05:30 [night3] [tier] A/B pulled: /run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/bmoe_gtier/bmoe_gtier_ab_20260919_0235
+2026-09-19T04:37:23+05:30 [night3] phone restored
