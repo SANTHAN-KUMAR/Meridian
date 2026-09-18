@@ -46,3 +46,8 @@
 2026-09-18T14:34:30+05:30 cool_gate: waited 0s, thermal status now 0
 2026-09-18T14:42:24+05:30 agg_bandwidth done
 2026-09-18T14:42:25+05:30 cool_gate: waited 0s, thermal status now 0
+2026-09-18T14:50:22+05:30 matmul_sweep done
+2026-09-18T14:50:22+05:30 cool_gate: waited 0s, thermal status now 0
+2026-09-18T15:08:04+05:30 thread_sweep done
+2026-09-18T15:08:04+05:30 QUEUE DONE
+2026-09-18T15:08:05+05:30 phone restored to normal settings

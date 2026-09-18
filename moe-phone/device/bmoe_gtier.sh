@@ -18,6 +18,10 @@
 #   SECONDARY decode tok/s. COUNTERS: device experts/dispatch, risk recomputes, wait ms, device ms.
 #   LOSSLESS text identical in EVERY row (both paths are ARM-exact); any DIFFERS voids the run's correctness claim.
 #   verdict  gates/stack_summary.py rule with a keep rule of "exit 0 and foreign=[]" (budget differs by design).
+# FIX 2026-09-19 00:0x: the first smoke (bmoe_gtier_smoke_20260918_2344) set LD_LIBRARY_PATH=.:/vendor/lib64, and the
+# linker then resolved a dependency from /vendor and failed to map android.hardware.power-V6-ndk.so ("CANNOT LINK
+# EXECUTABLE", both rows exit=1, no model ran). gx's cl_shim dlopens /vendor/lib64/libOpenCL.so by absolute path, so
+# the vendor directory is not needed on the search path; removed.
 #   sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
 set -u
 MODE=${1:-smoke}
@@ -34,7 +38,7 @@ run() {  # arm extra tag n
   g=$(thermal_wait 30); mr=$(mem_ready 6500 120)
   foreign=$(ps -A -o ARGS | grep -E "llama-bench|bmoe-cli|zcbench|gx_|com\.moephone" | grep -v grep | tr " " "_" | tr "\n" "," )
   echo "=== $tag $(date +%H:%M:%S) $mr foreign=[${foreign}] BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
-  ( cd $H/bmoe-i8mm-0019gx && LD_LIBRARY_PATH=.:/vendor/lib64 ./bmoe-cli -m $M $BASE -n $4 $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" )
+  ( cd $H/bmoe-i8mm-0019gx && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE -n $4 $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" )
   echo "exit=$? AFTER $(thermal_state) $(grep -hE 'generation:|moe-stream:|moe-cache:|moe-overlap|gpu-tier:|FATAL' "$O/$tag.out" "$O/$tag.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
 }
 if [ "$MODE" = smoke ]; then

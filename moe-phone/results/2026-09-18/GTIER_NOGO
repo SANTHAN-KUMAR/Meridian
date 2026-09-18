@@ -1,0 +1,7 @@
+latency gate NOGO (criterion set 23:15 before the bench: device k=3 dispatch->wait host time <= ~0.6 ms, the CPU's
+time for the other 5 experts). M6 run 2 (gx_m6_234323, verdict PASS_WITH_DETECTOR), bench medians, Q4_0 down (42/48 layers):
+  variant 0 k=3: host 2.35 ms, device 1.39 ms; k=1: host 1.57, device 0.53
+  variant 1 k=3: host 3.00 ms, device 2.11 ms; k=1: host 1.85, device 0.88
+Device time alone exceeds the budget 2-4x (the native-layout kernel runs ~3-8 GB/s on Adreno vs the CPU's ~23), and the
+host adds ~0.9 ms per dispatch. The A/B would measure a known slowdown; not run. Next: kernel throughput (layout, loads)
+and dispatch overhead (libgx e9cf1cc levers), then re-bench.

@@ -1,0 +1,4 @@
+INVALID RUN — no model ran. Both rows: CANNOT LINK EXECUTABLE "./bmoe-cli": "/vendor/lib64/android.hardware.power-V6-ndk.so"
+phdr mmap failed: Permission denied (exit=1). Cause: device/bmoe_gtier.sh set LD_LIBRARY_PATH=.:/vendor/lib64, so the
+linker resolved a dependency from /vendor under the shell's SELinux domain. libgx's cl_shim dlopens libOpenCL by absolute
+path, so /vendor is not needed on the search path. Fixed to LD_LIBRARY_PATH=. ; valid rerun: bmoe_gtier_smoke_20260919_0004.

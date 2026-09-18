@@ -1,0 +1,1 @@
+CANNOT LINK EXECUTABLE "./bmoe-cli": "/vendor/lib64/android.hardware.power-V6-ndk.so" phdr mmap failed: Permission denied

@@ -1,0 +1,9 @@
+stack_flags=[--gpu-tier-mb 1000 --gpu-backend gx --gpu-variant 1 --gpu-tier-prior /data/local/tmp/moe-stream/qwen3_gtier_prior.txt --gpu-max-per-layer 3 --gpu-promotions-per-token 1] binary=bmoe-i8mm-0019gx
+=== base_reps1 23:45:25 mem_ready=6854MiB waited=0s foreign=[] BEFORE quiesce: stopped=76 cpu_busy_of_800=44 top3=android.system.suspend-service:11.0,top:8.0,system_server:6.0, wake=Awake status=1 cap0=2188800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=39450 gate=timeout waited=30 
+exit=1 AFTER wake=Dozing status=1 cap0=2476800 cap6=2688000 hw0=3321600 hw6=3801600 shell_front_mC=39297 
+=== stack_reps1 23:46:11 mem_ready=6743MiB waited=0s foreign=[] BEFORE quiesce: stopped=76 cpu_busy_of_800=60 top3=com.android.systemui:12.0,top:7.0,system_server:7.0, wake=Awake status=1 cap0=2188800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=39170 gate=timeout waited=30 
+exit=1 AFTER wake=Dozing status=1 cap0=2016000 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=39078 
+text_reference=base_reps1.out
+text_match base_reps1.out OK
+text_reference=stack_reps1.out
+text_match stack_reps1.out OK
