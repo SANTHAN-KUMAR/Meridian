@@ -38,7 +38,10 @@ run() {  # name reps_of_unit rep
   mkprompt "$2" "$O/$tag.prompt"
   g=$(thermal_wait 30)
   echo "=== $tag $(date +%H:%M:%S) prompt_bytes=$(wc -c < "$O/$tag.prompt") memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
-  ( cd $H/bmoe-i8mm-order2 && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE -c 16384 --csv "$O/$tag.csv" -f "$O/$tag.prompt" > "$O/$tag.out" 2> "$O/$tag.err" )
+  # bmoe-cli has no prompt-file flag, so the prompt goes on the command line; 8192 tokens is ~40 KB,
+  # well inside the ~2 MB argv limit, and the file is kept next to the row so the exact input is recorded.
+  PROMPT_TEXT=$(cat "$O/$tag.prompt")
+  ( cd $H/bmoe-i8mm-order2 && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE -c 16384 --csv "$O/$tag.csv" -p "$PROMPT_TEXT" > "$O/$tag.out" 2> "$O/$tag.err" )
   echo "exit=$? AFTER $(thermal_state) $(grep -hE 'generation:|prefill:|moe-stream:|moe-cache:' "$O/$tag.out" "$O/$tag.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
 }
 
