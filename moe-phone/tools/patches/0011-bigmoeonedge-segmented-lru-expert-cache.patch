@@ -1,0 +1,241 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f, applied AFTER 0002-0010.
+# --expert-slru: segmented-LRU eviction for the expert cache (probation + protected, O(1)).
+#
+# WHY. gates/evict_sim.py, on the committed Qwen3 routing trace and in the GLOBAL scope the engine
+# actually uses, finds segmented LRU the only deployable policy that beats LRU: +1.42 points of hit rate
+# at the phone's cache fraction, 10.8% less miss traffic, and 8-11% across 25-54% cache. Exact frequency
+# scoring does better in principle and is NOT used: it needs a scan over candidates at every eviction,
+# which would land on the 20 ms/token this engine already spends managing the cache. Plain frequency was
+# also measured WORSE than LRU on a long trace (stale popularity pollutes), matching what
+# gates/expert_policy.py found per-layer on a different model.
+#
+# WHAT IT DOES. Entries seen once sit in probation and are what eviction takes. A second sighting
+# promotes to a protected list whose cold tail DEMOTES back to probation rather than being dropped, so
+# a one-off expert cannot displace a recurring one. Both lists reuse the existing cprev_/cnext_ arrays
+# (an entry is in exactly one list), so every operation stays O(1) -- the same cost as the LRU it
+# replaces.
+#
+# THE SUBTLETY THAT COST TWO BUILDS. On the --overlap path touch_entry runs with promote=false and the
+# promotion happens later, in the token-major loop that re-orders every touched id. Hooking the policy
+# into touch_entry alone changed nothing. Hooking it into that loop still changed nothing, because the
+# loop touches entries that MISSED this token too: everything was promoted on first sight, 9176
+# promotions produced 8673 immediate demotions, and the hit rate did not move by a thousandth. Promotion
+# is now conditioned on seen_[e], the layer's own miss marker, so only a genuine hit promotes.
+#
+# MEASURED, host, Qwen3-30B-A3B, 1600 MiB cache, 48 tokens: hit 40.6% -> 46.4%, evictions 11037 -> 9890,
+# re-read bytes 188.4 -> 164.5 MiB/token. Lossless: the completion text is identical, which is what an
+# eviction policy must be -- it changes only which bytes have to be read again.
+# ===== engine (BigMoeOnEdge root) =====
+diff --git a/cli/main.cpp b/cli/main.cpp
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -451,6 +451,8 @@
+         "      --attn-device N     run the attention matmuls on ggml device N (HTP0 / GPUOpenCL), experts stay streamed on CPU (moe-phone)\n"
+         "      --slot-arena        expert slices in never-released pool slots read via a MUL_MAT_ID pointer hook (moe-phone)\n"
+         "      --expert-resident-first  compute a layer's resident experts before the ones still being read (moe-phone)\n"
++        "      --expert-slru       segmented-LRU eviction: probation + protected, O(1) (moe-phone)\n"
++        "      --slru-protected-frac F  protected share of the budget with --expert-slru (default 0.80)\n"
+         "      --defer-evict       batch evicted pages' release after each decode (moe-phone)\n"
+         "      --recycle-pages     move evicted experts' pages into the next miss (mremap) instead of re-faulting (moe-phone)\n"
+         "      --no-odirect        do not bypass the page cache for expert reads\n"
+@@ -708,6 +710,10 @@
+             cfg.moe.slot_arena = true;
+         else if (a == "--expert-resident-first")
+             cfg.moe.expert_resident_first = true;
++        else if (a == "--expert-slru")
++            cfg.moe.expert_slru = true;
++        else if (a == "--slru-protected-frac")
++            cfg.moe.slru_protected_frac = std::atof(next("--slru-protected-frac"));
+         else if (a == "--defer-evict")
+             cfg.moe.defer_evict = true;
+         else if (a == "--recycle-pages")
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -89,6 +89,18 @@
+     // hook still blocks before any expert's bytes are read. Off by default.
+     bool expert_resident_first = false;
+ 
++    // moe-phone: segmented-LRU eviction for the expert cache. Entries seen once sit in probation and
++    // are what eviction takes; a second hit promotes to a protected list whose cold tail demotes back
++    // to probation instead of being dropped. On the committed Qwen3 routing trace this removes 10.8% of
++    // the miss traffic at the phone's cache fraction and 8-11% across 25-54% cache
++    // (gates/evict_sim.py); exact frequency scoring does better in principle but needs a scan per
++    // eviction, which would land on the cache-management term this is meant to help. Lossless: eviction
++    // order cannot change an output, only which bytes have to be read again.
++    bool expert_slru = false;
++    // Structural, from the SLRU literature (Karedla et al. 1994 use 60-80%), not fitted here: the
++    // sweep that produced the 8-11% figures reports every value it tried rather than choosing one.
++    double slru_protected_frac = 0.8;
++
+ 
+     bool o_direct = true;     // bypass the page cache (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+     bool load_all = false;    // debug/A-B: load ALL experts each token (full-sweep baseline)
+diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -216,6 +216,10 @@
+     void lru_unlink(int32_t id);
+     void lru_push_front(int32_t id);
+     void lru_push_back(int32_t id);
++    // moe-phone --expert-slru
++    void prot_push_front(int32_t id);
++    void slru_promote(int32_t id);
++    void slru_demote_to_budget();
+     size_t entry_bytes(int il) const;
+     void evict_tail();
+ 
+@@ -316,6 +320,17 @@
+     std::vector<size_t> lbuf_sz_[MoeRecipe::max_exps];
+     std::vector<uint8_t> cvalid_;
+     std::vector<int32_t> cprev_, cnext_;
++    // moe-phone --expert-slru: segmented LRU. Entries seen once live in PROBATION and are what eviction
++    // takes; an entry hit a second time is PROMOTED to the protected list, whose cold tail demotes back
++    // to probation rather than being dropped. One entry is in exactly one list, so both lists reuse
++    // cprev_/cnext_ above and the whole thing stays O(1) -- which matters because exact frequency
++    // scoring would land on the 20 ms/token this engine already spends managing the cache.
++    std::vector<uint8_t> cprot_;
++    int32_t phead_ = -1, ptail_ = -1;
++    size_t cprot_bytes_ = 0;
++    bool   slru_ = false;
++    double slru_prot_frac_ = 0.8;
++    long long slru_promotions_ = 0, slru_demotions_ = 0, slru_prot_evictions_ = 0;
+     std::vector<uint32_t> cstamp_;
+     std::vector<uint8_t> cspec_; // 1 if this resident entry was filled speculatively, until first hit
+     int32_t chead_ = -1, ctail_ = -1;
+diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -52,6 +52,13 @@
+     load_all_ = cfg.load_all;
+     overlap_ = cfg.overlap;
+     resident_first_ = cfg.expert_resident_first; // moe-phone
++    slru_ = cfg.expert_slru;                     // moe-phone
++    slru_prot_frac_ = cfg.slru_protected_frac;
++    if (slru_) {
++        cprot_.assign((size_t) n_layer_ * (size_t) n_expert_, 0);
++        std::fprintf(stderr, "bmoe: expert cache eviction = segmented LRU (protected share %.2f of the "
++                             "budget)\n", slru_prot_frac_);
++    }
+     two_wave_ = cfg.io_two_wave;
+     prefetch_sync_ = cfg.prefetch_sync && !cfg.overlap; // serial only: overlap lane 0 is a worker
+     // Under route-ahead the speculated ids of a layer ARE the ids its topk will commit, so the
+@@ -773,16 +780,56 @@
+ 
+ // ── LRU plumbing ────────────────────────────────────────────────────────────────────
+ void ExpertStreamSource::lru_unlink(int32_t id) {
++    // moe-phone --expert-slru: an entry belongs to exactly one of the two lists, and which one is
++    // recorded in cprot_, so unlink stays a single O(1) splice either way.
++    const bool prot = slru_ && !cprot_.empty() && cprot_[id];
++    int32_t & head = prot ? phead_ : chead_;
++    int32_t & tail = prot ? ptail_ : ctail_;
++    int32_t pv = cprev_[id], nx = cnext_[id];
+     if (pv != -1)
+         cnext_[pv] = nx;
+     else
+-        chead_ = nx;
++        head = nx;
+     if (nx != -1)
+         cprev_[nx] = pv;
+     else
+-        ctail_ = pv;
++        tail = pv;
+     cprev_[id] = cnext_[id] = -1;
+ }
++
++// moe-phone: MRU end of the protected list.
++void ExpertStreamSource::prot_push_front(int32_t id) {
++    cprev_[id] = -1;
++    cnext_[id] = phead_;
++    if (phead_ != -1)
++        cprev_[phead_] = id;
++    else
++        ptail_ = id;
++    phead_ = id;
++}
++
++// moe-phone: second sighting -> protected. Called with the entry already unlinked from probation.
++void ExpertStreamSource::slru_promote(int32_t id) {
++    cprot_[id] = 1;
++    cprot_bytes_ += entry_bytes(id / n_expert_);
++    prot_push_front(id);
++    ++slru_promotions_;
++    slru_demote_to_budget();
++}
++
++// moe-phone: keep the protected list within its share of the budget by demoting its cold tail back to
++// probation (NOT by dropping it: a demoted entry is still resident and still a hit if it is used).
++void ExpertStreamSource::slru_demote_to_budget() {
++    const size_t prot_max = (size_t) (slru_prot_frac_ * (double) cache_max_);
++    while (cprot_bytes_ > prot_max && ptail_ != -1) {
++        const int32_t victim = ptail_;
++        lru_unlink(victim);
++        cprot_[victim] = 0;
++        cprot_bytes_ -= entry_bytes(victim / n_expert_);
++        lru_push_front(victim);   // demote to the WARM end of probation
++        ++slru_demotions_;
++    }
++}
+ void ExpertStreamSource::lru_push_front(int32_t id) {
+     cprev_[id] = -1;
+     cnext_[id] = chead_;
+@@ -901,6 +948,15 @@
+     mgmt_ns_.fetch_add((long long) std::chrono::duration_cast<std::chrono::nanoseconds>(clock_t_::now() - t0).count());
+ }
+ void ExpertStreamSource::evict_tail() {
++    // moe-phone --expert-slru: evict from probation; fall back to the protected tail only when
++    // probation is empty, which is what makes a one-off expert unable to displace a recurring one.
++    const int32_t id = (slru_ && ctail_ == -1 && ptail_ != -1) ? ptail_ : ctail_;
++    if (id == -1) return;
++    if (slru_ && !cprot_.empty() && cprot_[id]) {
++        cprot_bytes_ -= entry_bytes(id / n_expert_);
++        cprot_[id] = 0;
++        ++slru_prot_evictions_;
++    }
+     ++evictions_;
+     ever_evicted_[id] = 1; // the next read of this entry is the cache paying twice
+     release_entry_pages(id);
+@@ -1114,7 +1170,13 @@
+         }
+         if (promote) {
+             lru_unlink(id);
+-            lru_push_front(id);
++            if (slru_ && !cprot_[id]) {
++                slru_promote(id);           // second sighting: probation -> protected
++            } else if (slru_) {
++                prot_push_front(id);        // already protected: refresh inside that list
++            } else {
++                lru_push_front(id);
++            }
+         }
+         hit = true;
+         return true;
+@@ -1442,7 +1504,16 @@
+                 // touch above runs with promote=false), so the segmented policy has to branch here or
+                 // it changes nothing at all -- which is exactly what the first build did: identical
+                 // hit rate, identical eviction count, because every touched entry went back to the
+-                // probation list regardless of how often it had been seen. else if (slru_ && cprot_[id]) {
++                // probation list regardless of how often it had been seen.
++                // Promote on a HIT only. seen_[e] is this layer's miss marker, set a few lines above
++                // when the expert had to be read, so an entry that was inserted by THIS token is a
++                // first sighting and belongs in probation. Promoting it as well is what made the first
++                // two builds no-ops: every touched entry became protected, 9176 promotions produced
++                // 8673 immediate demotions, and the hit rate did not move by a thousandth.
++                const bool was_hit = slru_ && !seen_[e];
++                if (slru_ && was_hit && !cprot_[id]) {
++                    slru_promote(id);            // second sighting: probation -> protected
++                } else if (slru_ && cprot_[id]) {
+                     prot_push_front(id);         // already protected: refresh within that list
+                 } else {
+                     lru_push_front(id);          // first sighting, or plain LRU
+@@ -1644,6 +1715,10 @@
+         ggml_cpu_set_expert_ready_hook(nullptr, nullptr);
+ #ifdef BMOE_HAVE_EXPERT_PROBE_HOOK
+         ggml_cpu_set_expert_probe_hook(nullptr, nullptr);
++        if (slru_) {
++            std::fprintf(stderr, "bmoe: slru: %lld promotions, %lld demotions, %lld evictions from the "
++                                 "protected list\n", slru_promotions_, slru_demotions_, slru_prot_evictions_);
++        }
+         if (resident_first_) {
+             const uint64_t r = probe_resident_.load(std::memory_order_relaxed);
+             const uint64_t f = probe_inflight_.load(std::memory_order_relaxed);
