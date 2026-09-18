@@ -28,6 +28,13 @@
 # gx_repack_expert and reads CPU copies through gx_unpack_expert. The smoke and A/B rules above are unchanged. Other
 # additions: the shared phone lock ($H/.phone_busy) and a battery guard (no row below 25%, so the phone never dies
 # mid-campaign).
+# DEVIATION 2026-09-19 00:40 (recorded before any v0 engine row): the latency gate (k=3 host <= ~0.6 ms) FAILS again in
+# M6 run 3: best is v0, host 1.39 / device 0.72 ms; v2 regressed to 9.7 / 8.5 ms. Nevertheless the A/B is run with
+# GT_VARIANT=0. Reason: the gate was a proxy that assumed full-clock CPU time per expert (0.125 ms) and no overlap of the
+# dispatch's host time with the CPU's own experts. The engine smoke (v1) measured an average CPU-side wait of only
+# 0.24 ms per dispatch (422 ms / 1764). So the proxy cannot settle the question, and the A/B's own pre-registered rule
+# above decides it, unchanged. Perfect-device ceiling for this tier (2.19 device experts/layer of 8; expert arithmetic
+# ~half of compute): about -14 ms/token.
 #   GT_BIN=... GT_VARIANT=... sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
 set -u
 MODE=${1:-smoke}
