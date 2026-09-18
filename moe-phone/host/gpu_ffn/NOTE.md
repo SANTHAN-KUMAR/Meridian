@@ -127,6 +127,15 @@ Two findings came from controls that were initially missed:
 - `gx_stats` adds: pool blocks and bytes, live slots, allocation failures, maps, unmaps, map errors,
   bytes mapped, and map/unmap time.
 
+Added for M4 (engine wiring):
+- **`gx_slot_map_read` / `gx_slot_unmap_read`:** CPU read access to a slot, for an overflow expert
+  computed by the CPU. The map is `CL_MAP_READ` on the I/O queue, and the unmap waits for completion.
+  It is allowed while a dispatch that does not read this slot is in flight.
+- **Timing, `gx_params.profile = 1`:** the dispatch queue gets `CL_QUEUE_PROFILING_ENABLE`.
+  `gx_last_timing` and `gx_stats` report the device time (first kernel start to last kernel end) and
+  the host time (`gx_dispatch` entry to `gx_wait` return).
+- **x lifetime:** `gx_dispatch` quantizes x on the host before returning and never reads it again.
+
 `gx_pool_test` (laptop, NVIDIA; `pool_test.out`) runs every check for two pool shapes, one slot per
 block and four slots per block:
 - **Allocator:** 20,000 random alloc/free operations over the two slot sizes (Q4_0-down and
@@ -138,6 +147,14 @@ block and four slots per block:
 - **Negative control:** a dispatch issued while the slot is still mapped with new bytes saw the
   **old** bytes. So on a copying driver, a protocol violation is detectable. After the unmap, the new
   bytes are seen.
+- **READMAP:** 100 rounds. In each, a dispatch on the resident slots is enqueued and not waited. A
+  different slot C is read-mapped, bit-checked and unmapped, and then the dispatch is waited and
+  bit-checked. All C bytes were correct and all dispatches were bit-exact.
+  - The read map returned in about 0.22 ms, against about 0.6 ms from dispatch to wait. That suggests
+    the map does not wait for the kernel, but it is not a proof of overlap.
+- **x lifetime:** x was overwritten with 1e30 right after `gx_dispatch` returned. The output stayed
+  bit-exact.
+- **Timing:** every dispatch reported 0 < device time ≤ host time.
 - **What the laptop cannot show:** on Adreno's zero-copy memory, the same violation might show the
   new bytes, or a mix, and go unnoticed.
 - **The region question stays open for Adreno:** can a kernel read one region of a buffer while

@@ -29,7 +29,7 @@ const char * k_src =
     X(clGetProgramBuildInfo) X(clCreateKernel) X(clGetKernelWorkGroupInfo) X(clCreateBuffer) X(clSetKernelArg) \
     X(clEnqueueNDRangeKernel) X(clEnqueueWriteBuffer) X(clEnqueueReadBuffer) X(clFlush) X(clFinish)          \
     X(clReleaseMemObject) X(clReleaseKernel) X(clReleaseProgram) X(clReleaseCommandQueue)                    \
-    X(clEnqueueMapBuffer) X(clEnqueueUnmapMemObject) X(clWaitForEvents) X(clReleaseEvent)
+    X(clEnqueueMapBuffer) X(clEnqueueUnmapMemObject) X(clWaitForEvents) X(clReleaseEvent) X(clGetEventProfilingInfo)
 
 #define X(f) decltype(&::f) p_##f = nullptr;
 GX_CL_FUNCS(X)
@@ -127,6 +127,10 @@ struct gx_ctx {
     size_t block_bytes = 0;
     std::vector<PoolBlock> blocks;
     std::map<std::pair<cl_mem, size_t>, size_t> slot_span;   // (block, off_gate) -> bytes
+    // timing of the pending / last dispatch
+    cl_event ev_first = nullptr, ev_last = nullptr;
+    uint64_t t_dispatch = 0, last_device_ns = 0, last_host_ns = 0;
+    bool have_last = false;
 };
 
 static void seterr(char * err, size_t n, const std::string & s) {
@@ -157,7 +161,7 @@ extern "C" gx_ctx * gx_init(cl_context ctx, cl_device_id dev, gx_params p, char 
     gx_ctx * g = new gx_ctx;
     g->ctx = ctx; g->dev = dev; g->p = p;
     cl_int e;
-    g->q = p_clCreateCommandQueue(ctx, dev, 0, &e);
+    g->q = p_clCreateCommandQueue(ctx, dev, p.profile ? CL_QUEUE_PROFILING_ENABLE : 0, &e);
     if (e != CL_SUCCESS) { seterr(err, errlen, "clCreateCommandQueue " + std::to_string(e)); gx_free(g); return nullptr; }
     g->prog = p_clCreateProgramWithSource(ctx, 1, &k_src, nullptr, &e);
     const std::string opts = "-cl-std=CL1.2 -DN_EMBD=" + std::to_string(p.n_embd) + " -DN_FF=" + std::to_string(p.n_ff);
@@ -207,7 +211,8 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
         if (e) return e;
     }
     const int ne = g->p.n_embd, nf = g->p.n_ff;
-    gx_quantize_q8_0(x, g->xq_host, ne);
+    g->t_dispatch = now_ns();
+    gx_quantize_q8_0(x, g->xq_host, ne);   // x is not read after this
     for (int s = 0; s < k; s++) {
         g->offs_host[3 * s + 0] = slots[s].off_gate;
         g->offs_host[3 * s + 1] = slots[s].off_up;
@@ -236,15 +241,21 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
     const size_t l[2] = {(size_t) (g->p.variant ? 64 : 256), 1};
     const size_t g1[2] = {g->p.variant ? (size_t) nf : (size_t) 256 * (nf / 32), (size_t) k};
     const size_t g2[2] = {g->p.variant ? (size_t) ne : (size_t) 256 * (ne / 32), (size_t) k};
-    if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k1, 2, nullptr, g1, l, 0, nullptr, nullptr);
-    if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k2, 2, nullptr, g2, l, 0, nullptr, nullptr);
+    cl_event * e1 = g->p.profile ? &g->ev_first : nullptr, * e2 = g->p.profile ? &g->ev_last : nullptr;
+    if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k1, 2, nullptr, g1, l, 0, nullptr, e1);
+    if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k2, 2, nullptr, g2, l, 0, nullptr, e2);
     if (e == CL_SUCCESS)
         e = p_clEnqueueReadBuffer(g->q, g->out, CL_FALSE, 0, sizeof(float) * k * ne, out, 0, nullptr, nullptr);
     if (e == CL_SUCCESS) e = p_clFlush(g->q);
     {
         std::lock_guard<std::mutex> lk(g->mu);
         g->st.dispatches++;
-        if (e != CL_SUCCESS) { g->st.errors++; return e; }
+        if (e != CL_SUCCESS) {
+            g->st.errors++;
+            for (cl_event * ev : {&g->ev_first, &g->ev_last})
+                if (*ev) { p_clReleaseEvent(*ev); *ev = nullptr; }
+            return e;
+        }
         g->st.experts += k;
     }
     g->last_k = k;
@@ -255,12 +266,34 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
 extern "C" int gx_wait(gx_ctx * g) {
     if (!g->pending) return 0;
     const cl_int e = p_clFinish(g->q);
+    const uint64_t t1 = now_ns();
     g->pending = false;
-    if (e != CL_SUCCESS) {
-        std::lock_guard<std::mutex> lk(g->mu);
-        g->st.errors++;
+    uint64_t dev_ns = 0;
+    if (g->ev_first && g->ev_last && e == CL_SUCCESS) {
+        cl_ulong a = 0, b = 0;
+        if (p_clGetEventProfilingInfo(g->ev_first, CL_PROFILING_COMMAND_START, sizeof a, &a, nullptr) == CL_SUCCESS &&
+            p_clGetEventProfilingInfo(g->ev_last, CL_PROFILING_COMMAND_END, sizeof b, &b, nullptr) == CL_SUCCESS && b >= a)
+            dev_ns = b - a;
     }
+    for (cl_event * ev : {&g->ev_first, &g->ev_last})
+        if (*ev) { p_clReleaseEvent(*ev); *ev = nullptr; }
+    std::lock_guard<std::mutex> lk(g->mu);
+    if (e != CL_SUCCESS) { g->st.errors++; return e; }
+    g->last_device_ns = dev_ns;
+    g->last_host_ns = t1 - g->t_dispatch;
+    g->have_last = true;
+    g->st.timed_dispatches++;
+    g->st.device_ns += dev_ns;
+    g->st.host_ns += g->last_host_ns;
     return e;
+}
+
+extern "C" int gx_last_timing(const gx_ctx * g, uint64_t * device_ns, uint64_t * host_ns) {
+    std::lock_guard<std::mutex> lk(const_cast<gx_ctx *>(g)->mu);
+    if (!g->have_last) return -1;
+    if (device_ns) *device_ns = g->last_device_ns;
+    if (host_ns) *host_ns = g->last_host_ns;
+    return 0;
 }
 
 extern "C" gx_stats gx_get_stats(const gx_ctx * g) {
@@ -368,6 +401,38 @@ extern "C" void * gx_slot_map_write(gx_ctx * g, const gx_slot * s) {
     g->st.bytes_mapped += span;
     g->st.map_ns += t1 - t0;
     return p;
+}
+
+extern "C" const void * gx_slot_map_read(gx_ctx * g, const gx_slot * s) {
+    size_t span;
+    {
+        std::lock_guard<std::mutex> lk(g->mu);
+        auto sp = g->slot_span.find({s->block, s->off_gate});
+        if (sp == g->slot_span.end()) { g->st.map_errors++; return nullptr; }
+        span = sp->second;
+    }
+    const uint64_t t0 = now_ns();
+    cl_int e;
+    void * p = p_clEnqueueMapBuffer(g->q_io, s->block, CL_TRUE, CL_MAP_READ, s->off_gate, span, 0, nullptr, nullptr, &e);
+    const uint64_t t1 = now_ns();
+    std::lock_guard<std::mutex> lk(g->mu);
+    if (e != CL_SUCCESS) { g->st.map_errors++; return nullptr; }
+    g->st.read_maps++;
+    g->st.read_map_ns += t1 - t0;
+    return p;
+}
+
+extern "C" int gx_slot_unmap_read(gx_ctx * g, const gx_slot * s, const void * p) {
+    const uint64_t t0 = now_ns();
+    cl_event ev = nullptr;
+    cl_int e = p_clEnqueueUnmapMemObject(g->q_io, s->block, const_cast<void *>(p), 0, nullptr, &ev);
+    if (e == CL_SUCCESS) e = p_clWaitForEvents(1, &ev);
+    if (ev) p_clReleaseEvent(ev);
+    const uint64_t t1 = now_ns();
+    std::lock_guard<std::mutex> lk(g->mu);
+    if (e != CL_SUCCESS) { g->st.map_errors++; return e; }
+    g->st.read_map_ns += t1 - t0;
+    return 0;
 }
 
 extern "C" int gx_slot_unmap(gx_ctx * g, const gx_slot * s, void * p) {

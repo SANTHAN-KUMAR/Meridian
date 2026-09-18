@@ -8,6 +8,10 @@
 //      thread dispatches from resident slots; every dispatch must stay bit-exact
 //   4. negative control: overwrite a resident slot with another expert's bytes and dispatch BEFORE unmapping;
 //      report whether the kernel saw the old or the new bytes; then unmap and require the new bytes
+//   5. READMAP: while a dispatch on the resident slots is in flight (enqueued, not waited), read-map a
+//      different slot C, bit-check its bytes, unmap; then wait and bit-check the dispatch (100 rounds)
+//   6. x lifetime: x overwritten right after gx_dispatch returns; the output must stay bit-exact
+//   7. timing: with profile = 1, every dispatch reports 0 < device_ns <= host_ns
 // Two pool shapes: one slot per block, and four slots per block.
 //   gx_pool_test <case_dir>
 #include "gx.h"
@@ -16,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <algorithm>
 #include <atomic>
@@ -26,6 +31,7 @@
 
 static const size_t GU = 768 * (2048 / 32) * 18, DN0 = 2048 * (768 / 32) * 18, DN1 = 2048 * (768 / 32) * 20;
 static size_t a4k(size_t n) { return (n + 4095) & ~(size_t) 4095; }
+static double now_ms() { timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1e3 + t.tv_nsec / 1e6; }
 
 struct Case { std::string name; int k = 0, dt = 0; std::vector<int32_t> ids; std::vector<float> x; std::vector<uint8_t> w; std::vector<float> ref; };
 
@@ -102,7 +108,7 @@ int main(int argc, char ** argv) {
 
     for (int per_block : {1, 4}) {
         char err[1024];
-        gx_ctx * g = gx_init(ctx, dev, gx_params{2048, 768, 0}, err, sizeof err);
+        gx_ctx * g = gx_init(ctx, dev, gx_params{2048, 768, 0, 0, 1}, err, sizeof err);
         if (!g) { fprintf(stderr, "gx_init: %s\n", err); return 1; }
         const int nblk = 48 / per_block;
         const int got = gx_pool_create(g, span1 * per_block, nblk, err, sizeof err);
@@ -153,21 +159,26 @@ int main(int argc, char ** argv) {
             if (bad || cap0 != cap1 || cap0 != (size_t) nblk * per_block) fails++;
         }
 
-        // 2. correctness from pool slots
-        size_t tot = 0, dif = 0;
+        // 2. correctness from pool slots (+ 6. x lifetime, 7. timing)
+        size_t tot = 0, dif = 0, timing_bad = 0;
         for (auto & c : cases) {
             std::vector<gx_slot> sl(c.k);
             for (int s = 0; s < c.k; s++) {
                 if (!gx_slot_alloc(g, GU, GU, c.dt ? DN1 : DN0, &sl[s]) || !write_slot(g, sl[s], c, c.ids[s])) { fails++; }
             }
-            std::vector<float> out((size_t) c.k * 2048);
-            if (gx_dispatch(g, 0, c.dt, c.k, sl.data(), c.x.data(), out.data()) || gx_wait(g)) fails++;
+            std::vector<float> out((size_t) c.k * 2048), xs = c.x;
+            if (gx_dispatch(g, 0, c.dt, c.k, sl.data(), xs.data(), out.data())) fails++;
+            for (auto & v : xs) v = 1e30f;   // 6. x lifetime: gx must not read x after gx_dispatch returns
+            if (gx_wait(g)) fails++;
+            uint64_t dns = 0, hns = 0;
+            if (gx_last_timing(g, &dns, &hns) || dns == 0 || dns > hns) { timing_bad++; }
             tot += out.size();
             dif += diff_bits(out.data(), c.ref.data(), out.size());
             for (auto & s : sl) gx_slot_free(g, &s);
         }
-        printf("POOLCASES per_block=%d cases=%zu down_values=%zu diff_bits=%zu\n", per_block, cases.size(), tot, dif);
-        if (dif || !tot) fails++;
+        printf("POOLCASES per_block=%d cases=%zu down_values=%zu diff_bits=%zu (x overwritten after dispatch) timing_bad=%zu\n",
+               per_block, cases.size(), tot, dif, timing_bad);
+        if (dif || !tot || timing_bad) fails++;
 
         // 3. concurrency: resident slots for the largest case; an I/O thread churns other slots in the same blocks
         const Case & c = *std::max_element(cases.begin(), cases.end(), [](const Case & a, const Case & b) { return a.k < b.k; });
@@ -223,14 +234,47 @@ int main(int argc, char ** argv) {
                    per_block, saw_old, saw_new, !saw_old && !saw_new, after_new);
             if (!after_new) fails++;
         }
+        // 5. READMAP: slot C (another copy of expert ids[1]) read-mapped while a dispatch on sl is in flight
+        {
+            gx_slot C;
+            size_t rbad = 0, dbad = 0, rounds = 0;
+            double map_ms = 0, disp_ms = 0;
+            if (!gx_slot_alloc(g, GU, GU, c.dt ? DN1 : DN0, &C) || !write_slot(g, C, c, c.ids[1])) fails++;
+            else {
+                // restore slot 0 (the negative control left expert ids[1] in it)
+                if (!write_slot(g, sl[0], c, c.ids[0])) fails++;
+                for (; rounds < 100; rounds++) {
+                    const double t0 = now_ms();
+                    if (gx_dispatch(g, 0, c.dt, c.k, sl.data(), c.x.data(), out.data())) fails++;
+                    const double t1 = now_ms();
+                    const uint8_t * p = (const uint8_t *) gx_slot_map_read(g, &C);
+                    const double t2 = now_ms();
+                    if (!p) { rbad++; continue; }
+                    if (memcmp(p, expert_bytes(c, c.ids[1], 0), GU) || memcmp(p + (C.off_up - C.off_gate), expert_bytes(c, c.ids[1], 1), GU) ||
+                        memcmp(p + (C.off_down - C.off_gate), expert_bytes(c, c.ids[1], 2), c.dt ? DN1 : DN0)) rbad++;
+                    if (gx_slot_unmap_read(g, &C, p)) rbad++;
+                    if (gx_wait(g)) fails++;
+                    const double t3 = now_ms();
+                    dbad += diff_bits(out.data(), c.ref.data(), out.size());
+                    map_ms += t2 - t1;
+                    disp_ms += t3 - t0;
+                }
+                gx_slot_free(g, &C);
+            }
+            printf("READMAP per_block=%d rounds=%zu read_bytes_bad=%zu dispatch_diff_bits=%zu mean_read_map_ms=%.4f mean_dispatch_to_wait_ms=%.4f\n",
+                   per_block, rounds, rbad, dbad, rounds ? map_ms / rounds : 0.0, rounds ? disp_ms / rounds : 0.0);
+            if (rbad || dbad || rounds != 100) fails++;
+        }
         for (auto & s : sl) gx_slot_free(g, &s);
         const gx_stats st = gx_get_stats(g);
         printf("STATS per_block=%d dispatches=%llu errors=%llu maps=%llu unmaps=%llu map_errors=%llu bytes_mapped=%llu "
-               "map_ms_mean=%.4f unmap_ms_mean=%.4f slots_live=%llu alloc_fail=%llu\n",
+               "map_ms_mean=%.4f unmap_ms_mean=%.4f read_maps=%llu slots_live=%llu alloc_fail=%llu timed=%llu device_ms_mean=%.4f host_ms_mean=%.4f\n",
                per_block, (unsigned long long) st.dispatches, (unsigned long long) st.errors, (unsigned long long) st.maps,
                (unsigned long long) st.unmaps, (unsigned long long) st.map_errors, (unsigned long long) st.bytes_mapped,
                st.maps ? st.map_ns / 1e6 / st.maps : 0.0, st.unmaps ? st.unmap_ns / 1e6 / st.unmaps : 0.0,
-               (unsigned long long) st.slots_live, (unsigned long long) st.slot_alloc_fail);
+               (unsigned long long) st.read_maps, (unsigned long long) st.slots_live, (unsigned long long) st.slot_alloc_fail,
+               (unsigned long long) st.timed_dispatches, st.timed_dispatches ? st.device_ns / 1e6 / st.timed_dispatches : 0.0,
+               st.timed_dispatches ? st.host_ns / 1e6 / st.timed_dispatches : 0.0);
         if (st.errors || st.map_errors || st.slots_live) fails++;
         gx_free(g);
     }

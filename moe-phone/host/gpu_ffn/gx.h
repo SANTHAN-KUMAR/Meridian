@@ -45,6 +45,8 @@ typedef struct gx_params {
     int debug_h;    /* 1: keep the fp32 SwiGLU output for gx_debug_h (tests only) */
     int variant;    /* work mapping, identical arithmetic: 0 = 8 work-items per row (lane-mapped),
                        1 = one work-item per row (whole-block loads). Both are held to the same bit-exact test. */
+    int profile;    /* 1: create the dispatch queue with CL_QUEUE_PROFILING_ENABLE and record each dispatch's
+                       device time (first kernel start to last kernel end) in gx_stats / gx_last_timing */
 } gx_params;
 
 typedef struct gx_slot {
@@ -61,8 +63,10 @@ gx_ctx * gx_init(cl_context ctx, cl_device_id dev, gx_params p, char * err, size
 void     gx_free(gx_ctx * g);
 
 /* Enqueue the FFN of k (1..GX_MAX_K) experts of one layer. down_type: that layer's down tensor type.
- * x: n_embd fp32 (the MoE input, i.e. the normed hidden state ggml passes as src1). out: k * n_embd
- * fp32, row s for slots[s]. Returns 0 or a CL error. */
+ * x: n_embd fp32 (the MoE input, i.e. the normed hidden state ggml passes as src1). gx quantizes x on the
+ * host before returning and never reads it again: x may be modified or freed as soon as gx_dispatch returns.
+ * out: k * n_embd fp32, row s for slots[s]; written by gx_wait's return, must stay valid until then.
+ * Returns 0 or a CL error. */
 int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx_slot * slots, const float * x, float * out);
 
 /* Block until the last dispatch has written out. Returns 0 or a CL error. */
@@ -95,12 +99,26 @@ void gx_slot_free(gx_ctx * g, const gx_slot * s);
 void * gx_slot_map_write(gx_ctx * g, const gx_slot * s);
 /* Unmap and wait for completion. Returns 0 or a CL error. Thread-safe. */
 int  gx_slot_unmap(gx_ctx * g, const gx_slot * s, void * p);
+/* CPU read access to a slot's bytes (the engine computing an overflow expert on the CPU): map the slot's
+ * range with CL_MAP_READ, blocking; returns the gate-slice pointer (layout as for gx_slot_map_write) or NULL.
+ * Allowed while a gx_dispatch that does NOT read this slot is in flight. With one slot per block the mapped
+ * buffer is then disjoint from every buffer the dispatch reads (tested: gx_pool_test READMAP). Do not
+ * dispatch a slot while it is read-mapped. gx_slot_unmap_read waits for completion. Thread-safe. */
+const void * gx_slot_map_read(gx_ctx * g, const gx_slot * s);
+int  gx_slot_unmap_read(gx_ctx * g, const gx_slot * s, const void * p);
+
+/* Timing of the last completed dispatch (valid after gx_wait): device_ns = first kernel start to last kernel
+ * end from OpenCL profiling events (0 unless gx_params.profile), host_ns = gx_dispatch entry to gx_wait
+ * return. Returns 0, or -1 if no dispatch has completed. */
+int  gx_last_timing(const gx_ctx * g, uint64_t * device_ns, uint64_t * host_ns);
 
 /* Counters for telemetry (CLAUDE.md §6.3). */
 typedef struct gx_stats {
     uint64_t dispatches, experts, errors;
     uint64_t pool_blocks, pool_bytes, slots_live, slot_alloc_fail;
     uint64_t maps, unmaps, map_errors, bytes_mapped, map_ns, unmap_ns;
+    uint64_t read_maps, read_map_ns;           /* gx_slot_map_read / unmap_read pairs */
+    uint64_t timed_dispatches, device_ns, host_ns;   /* sums over completed dispatches (device_ns: profile only) */
 } gx_stats;
 gx_stats gx_get_stats(const gx_ctx * g);
 
