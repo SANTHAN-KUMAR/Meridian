@@ -772,6 +772,15 @@ CLAIMS = [
          artifact="cache_projection.json", expected=7.333, tol=0.01,
          value=lambda A: next(r["projected_decode_tok_s"] for r in A["cproj"]["rows"]
                               if r["budget_MiB"] == 7000)),
+    # ------------------------- SLRU ON THE PHONE (device/bmoe_slru.sh, patch 0011, 2026-09-18)
+    dict(id="slru_phone_read_mib",
+         text="on the phone, segmented LRU reads 106.53 MiB/token of experts from flash against LRU's 119.80 at the same 5000 MiB budget -- 11.1% less, on every row, matching the simulator's 10.8%",
+         artifact="bmoe_slru.json", expected=106.53, tol=0.01,
+         value=lambda A: next(c["read_MiB_per_token_median"] for c in A["bslru"]["cells"] if c["cell"] == "slru")),
+    dict(id="slru_phone_hit",
+         text="hit rate 86.6% against 85.3%",
+         artifact="bmoe_slru.json", expected=86.6, tol=0.05,
+         value=lambda A: next(c["cache_hit_pct_median"] for c in A["bslru"]["cells"] if c["cell"] == "slru")),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1005,6 +1014,7 @@ def load_all():
         "evict": load("evict_policies_qwen3.json"),
         "ezram": load("evict_zram_budgets.json"),
         "cproj": load("cache_projection.json"),
+        "bslru": load("bmoe_slru.json"),
     }
 
 

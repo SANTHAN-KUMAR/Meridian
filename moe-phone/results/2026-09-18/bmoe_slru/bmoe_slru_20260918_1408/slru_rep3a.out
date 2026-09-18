@@ -1,0 +1,15 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field<think>
+Okay, I need to write a long detailed essay about the history of computing, including its origins, key milestones, the people involved, and future directions. Let me start by breaking down the question. The user wants a comprehensive overview, so I should make sure each section is thorough.
+
+First, the origins. I remember that early computing concepts date back to ancient times. Maybe start with the abacus? That's one of the earliest calculating tools. Then move to mechanical devices like the Antikythera mechanism. But I need to verify if that's considered a computing device. Also, mention the work of figures like Al-Jazari or Blaise Pascal with his adding machine. Then the 19th century with Charles Babbage and Ada Lovelace. They were pioneers in the concept of a programmable computer.
+
+Next, key milestones. The transition from mechanical to electronic computers. The invention of the transistor in the 1940s, then integrated circuits. The development of programming languages, like Fortran or COBOL. The rise of personal computers in the 1970s and 80s with companies like Apple and IBM. The internet and World Wide Web in the 90s. Then the 2
+
+generation: 256 tokens, 0.144 s/token (6.937 tok/s)
+compute: 85.5% CPU occupancy (0.4930 cpu-s/token over 4 threads), 189.50 major faults/token
+prefill: 34 tokens, 5.025 s (6.8 tok/s) | model load 17.756 s | TTFT 22.781 s
+mode: expert streaming, cache auto, dense anon, overlap
+moe-stream: read 27272.2 MiB (106.53 MiB/token), decode 0.144 s/token (compute 0.086 + cache mgmt 0.018 + flash I/O 0.144 s/token, 738 MiB/s)
+moe-cache: 86.6% hit, resident 4997.5 MiB, budget 5000 MiB (auto)
+moe-cache: 11613 evictions, 9200 re-reads (35.9/token) — bytes the cache had already paid for once
+moe-overlap: stall 0.040 s/token (flash reads overlapped with FFN compute)
