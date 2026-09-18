@@ -30,7 +30,7 @@ adb push "$DEV/bmoe_stack.sh" "$DEV/thermal_gate.sh" /data/local/tmp/moe-stream/
 s=$(A 'dumpsys thermalservice' | awk -F': ' '/^Thermal Status/{print $2; exit}' | tr -d '\r'); t=0
 while [ "${s:-9}" -gt 1 ] && [ $t -lt 900 ]; do sleep 30; t=$((t+30)); s=$(A 'dumpsys thermalservice' | awk -F': ' '/^Thermal Status/{print $2; exit}' | tr -d '\r'); done
 log "cool_gate waited ${t}s, status ${s:-?}; bmoe_stack.sh start"
-A "cd /data/local/tmp/moe-stream && (setsid nohup sh bmoe_stack.sh 4 '$G' > bmoe_stack_nohup.log 2>&1 < /dev/null &)" >/dev/null 2>&1
+A "cd /data/local/tmp/moe-stream && (setsid nohup sh bmoe_stack.sh 6 '$G' > bmoe_stack_nohup.log 2>&1 < /dev/null &)" >/dev/null 2>&1
 sleep 60
 wait_pull bmoe_stack.sh 'bmoe_stack_*/' bmoe_stack
 A 'am force-stop com.moephone.npu2; am force-stop com.moephone.bmoe3; svc power stayon false; settings put system screen_off_timeout 60000; dumpsys deviceidle enable' >/dev/null 2>&1

@@ -5,15 +5,20 @@
 #   base   the current default (LRU, no prefetch)
 #   stack  --expert-slru + --predict-prefetch --spec-adopt-selective [+ gate from STACK_GATE, chosen by the
 #          0013 sweep's pre-registered rule before this runs]
-# Binary bmoe-i8mm-0013 (patches 0001-0013) for both arms. ABBA x4 = 16 rows.
-# PRE-REGISTERED (2026-09-18 ~16:50, before any row):
+# Binary bmoe-i8mm-0013 (patches 0001-0013) for both arms. ABBA x6 = 24 rows.
+# PRE-REGISTERED (2026-09-18 ~17:00, before any row; revised from the ~16:50 draft BEFORE any row existed,
+# because its power was too low -- noise measured on 24 existing rows, see gates/stack_summary.py header):
 #   keep row  exit=0, granted budget 5000 MiB, foreign=[]
-#   estimate  median(stack)/median(base) - 1 over kept rows, every row listed
-#   verdict   "stack faster" iff stack's within-repeat mean beats base's in all 4 repeats; else not resolved
-#   also      text identical in every row; hit rate, MiB/token, stall, compute, mgmt per arm
+#   PRIMARY   stall+mgmt ms/token (the terms the levers act on; row sd ~3.6 ms vs an expected ~10 ms effect)
+#   GUARD     compute ms/token: if it rises by more than the stall+mgmt saving, the stack loses on net
+#   SECONDARY decode tok/s (row cv ~5%; with 12 rows/arm SE/|effect| ~0.45 at the expected +4.5%)
+#   COUNTERS  MiB read/token and hit rate (clock-independent)
+#   estimate  mean of within-repeat paired differences (stack - base), SE over the 6 repeats, SE/|diff|
+#   verdict   a difference is DECISIVE only if SE/|diff| < 0.5 AND its sign holds in >= 5 of 6 repeats;
+#             otherwise "not resolved", with the n that would resolve it. Text identical in every row.
 #   sh bmoe_stack.sh REPS "GATE_FLAGS"
 set -u
-REPS=${1:-4}
+REPS=${1:-6}
 GATE=${2:-}
 H=/data/local/tmp/moe-stream
 . $H/thermal_gate.sh
