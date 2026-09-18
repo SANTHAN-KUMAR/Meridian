@@ -36,12 +36,14 @@ mkdir -p "$R"
 log() { echo "$(date -Iseconds) $*" >> "$R/driver.log"; }
 
 # name              args
+# 2026-09-18 19:40: expert shapes carry engine-style weight names (--wname), because ggml-opencl only runs its
+# Adreno MoE kernels for weights named *ffn*exps*; the 14:42 sweep (weight<j>) measured the GENERIC GPU fallback.
 SHAPES="
 attn_q|--k 2048 --n 4096 --type q4_0 --copies 24
 attn_kv|--k 2048 --n 512 --type q4_0 --copies 96
 attn_output|--k 4096 --n 2048 --type q4_0 --copies 24
-ffn_gate_up|--k 2048 --n 768 --experts 128 --ids 8 --type q4_0 --copies 2
-ffn_down|--k 768 --n 2048 --experts 128 --ids 8 --type q4_1 --copies 2
+ffn_gate_up|--k 2048 --n 768 --experts 128 --ids 8 --type q4_0 --copies 2 --wname ffn_up_exps
+ffn_down|--k 768 --n 2048 --experts 128 --ids 8 --type q4_1 --copies 2 --wname ffn_down_exps
 "
 
 run_one() {  # tag  args

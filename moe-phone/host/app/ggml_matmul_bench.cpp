@@ -48,6 +48,10 @@ static double ms_since(clk::time_point t0) {
 }
 
 struct Cfg {
+    // --wname NAME: name each weight blk.<j>.NAME.weight, like the engine's tensors. ggml-opencl only takes its
+    // Adreno MoE kernels for weights whose names contain "ffn" and "exps" (use_adreno_moe_kernels); the
+    // default weight<j> names silently measured the GENERIC fallback in the 2026-09-18 sweep.
+    std::string wname;
     std::string device = "CPU";
     std::string type   = "q4_0";
     int64_t k = 2048, n = 4096, experts = 0, ids = 0;
@@ -111,7 +115,8 @@ static Run run_one(ggml_backend_t be, const Cfg & c, ggml_type wt,
     for (int j = 0; j < copies; j++) {
         ggml_tensor * w = c.experts ? ggml_new_tensor_3d(ctx, wt, c.k, c.n, c.experts)
                                     : ggml_new_tensor_2d(ctx, wt, c.k, c.n);
-        ggml_set_name(w, ("weight" + std::to_string(j)).c_str());
+        ggml_set_name(w, (c.wname.empty() ? "weight" + std::to_string(j)
+                                          : "blk." + std::to_string(j) + "." + c.wname + ".weight").c_str());
         ggml_tensor * dst = c.ids ? ggml_mul_mat_id(ctx, w, a, ids) : ggml_mul_mat(ctx, w, a);
         ggml_set_name(dst, ("dst" + std::to_string(j)).c_str());
         ggml_cgraph * gf = ggml_new_graph(ctx);
@@ -184,6 +189,7 @@ extern "C" int matmul_bench_main(int argc, char ** argv) {
         if      (s == "--device")  c.device  = next("--device");
         else if (s == "--type")    c.type    = next("--type");
         else if (s == "--k")       c.k       = atoll(next("--k"));
+        else if (s == "--wname")   c.wname   = next("--wname");
         else if (s == "--n")       c.n       = atoll(next("--n"));
         else if (s == "--experts") c.experts = atoll(next("--experts"));
         else if (s == "--ids")     c.ids     = atoll(next("--ids"));
