@@ -16,10 +16,15 @@
 #   estimate  mean of within-repeat paired differences (stack - base), SE over the 6 repeats, SE/|diff|
 #   verdict   a difference is DECISIVE only if SE/|diff| < 0.5 AND its sign holds in >= 5 of 6 repeats;
 #             otherwise "not resolved", with the n that would resolve it. Text identical in every row.
-#   sh bmoe_stack.sh REPS "GATE_FLAGS"
+# RE-RUN NOTE (2026-09-18 17:30): the first run (bmoe_stack_20260918_1712, binary 0013) was stopped after
+# repeat 1 because the stack read 2.0-2.1x the base's flash MiB/token -- a list-corruption bug in patch 0011
+# (retain() re-linked PROTECTED entries into the probation list; only reachable with the predictor on). Fixed
+# by patch 0015; this re-run uses binary bmoe-i8mm-0015 with the pre-registration above unchanged.
+#   sh bmoe_stack.sh REPS "GATE_FLAGS" [BINARY_DIR]
 set -u
 REPS=${1:-6}
 GATE=${2:-}
+BIN=${3:-bmoe-i8mm-0013}
 H=/data/local/tmp/moe-stream
 . $H/thermal_gate.sh
 M=$H/Qwen3-30B-A3B-Q4_0.gguf
@@ -27,13 +32,13 @@ O=$H/bmoe_stack_$(date +%Y%m%d_%H%M); mkdir -p "$O"
 P="Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field"
 BASE="--chatml -n 256 --ubatch 512 --moe-stream --cache-mb auto --cache-floor-mb 1024 --cache-ceil-mb 5000 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-threads 4 --io-cpu-mask 0f"
 STACK="--expert-slru --predict-prefetch --spec-adopt-selective $GATE"
-echo "stack_flags=[$STACK]" >> "$O/log.txt"
+echo "stack_flags=[$STACK] binary=$BIN" >> "$O/log.txt"
 run() {
   tag=$1_rep$3
   g=$(thermal_wait 30); mr=$(mem_ready 6500 120)
   foreign=$(ps -A -o ARGS | grep -E "llama-bench|bmoe-cli|com\.moephone" | grep -v grep | tr " " "_" | tr "\n" "," )
   echo "=== $tag $(date +%H:%M:%S) $mr foreign=[${foreign}] BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
-  ( cd $H/bmoe-i8mm-0013 && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" )
+  ( cd $H/$BIN && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" )
   echo "exit=$? AFTER $(thermal_state) $(grep -hE 'generation:|moe-stream:|moe-cache:|moe-prefetch|moe-overlap|spec-adopt-selective:|predict-gate:' "$O/$tag.out" "$O/$tag.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
 }
 for r in $(seq 1 "$REPS"); do

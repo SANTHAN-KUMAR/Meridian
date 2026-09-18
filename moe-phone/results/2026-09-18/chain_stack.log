@@ -1,0 +1,8 @@
+2026-09-18T16:52:51+05:30 waiting for bmoe_specgate on the phone
+2026-09-18T16:57:41+05:30 waiting for bmoe_specgate on the phone
+2026-09-18T17:07:45+05:30 bmoe_specgate.sh pulled /data/local/tmp/moe-stream/bmoe_specgate_20260918_1630/
+2026-09-18T17:07:45+05:30 waiting for STACK_GATE (written after scoring the sweep)
+2026-09-18T17:08:25+05:30 gate flags: []
+2026-09-18T17:12:28+05:30 cool_gate waited 240s, status 1; bmoe_stack.sh start
+2026-09-18T17:24:31+05:30 bmoe_stack.sh pulled /data/local/tmp/moe-stream/bmoe_stack_20260918_1712/
+2026-09-18T17:24:32+05:30 phone restored

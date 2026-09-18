@@ -1,0 +1,26 @@
+--- a/core/src/moe/expert_stream_source.cpp	2026-09-18 17:24:44.582743575 +0530
++++ b/core/src/moe/expert_stream_source.cpp	2026-09-18 17:24:44.565921879 +0530
+@@ -985,7 +985,12 @@
+         const int32_t id = il * n_expert_ + e;
+         if (!cvalid_[id]) continue; // absent: keeping it is prefetch's job, not retention's
+         lru_unlink(id);
+-        lru_push_front(id);
++        // moe-phone 0015: under --expert-slru a PROTECTED entry must go back to the protected list.
++        // lru_push_front always links into probation, which left the entry flagged protected (and counted
++        // in cprot_bytes_) while sitting in the probation list -- corrupting both lists as soon as the
++        // predictor retained a protected expert (measured: 2.0-2.1x flash bytes, 47 ms/token mgmt).
++        if (slru_ && !cprot_.empty() && cprot_[id]) prot_push_front(id);
++        else lru_push_front(id);
+     }
+ }
+ 
+@@ -1349,7 +1354,8 @@
+             if (cache_max_) {
+                 const int32_t id = il * n_expert_ + e;
+                 lru_unlink(id);
+-                lru_push_front(id);
++                if (slru_ && !cprot_.empty() && cprot_[id]) prot_push_front(id); // moe-phone 0015 (as in retain)
++                else lru_push_front(id);
+             }
+             continue;
+         }
