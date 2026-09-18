@@ -768,10 +768,14 @@ CLAIMS = [
          value=lambda A: next(r["lru_hit"] for r in A["ezram"]["rows"]
                               if abs(r["cache_fraction"] - 0.544) < 1e-9)),
     dict(id="budget_projected_7000_tok_s",
-         text="IF a 7000 MiB budget were granted, carrying the simulator's +2.7-point optimism across projects 58.3 MiB/token of flash traffic against today's 119.8 and 7.33 tok/s against 6.199 (+18.2%). Conditional twice over: it holds compute and cache management fixed (optimistic), and whether 7000 MiB is REACHABLE is unknown -- the process needs the dense weights and ~1.2 GB of compute buffers on top of the cache, so ~7.6 GB free does not mean a 7000 MiB cache fits; device/bmoe_hitrate.sh lets the engine's own auto logic decide and records what it actually grants",
+         text="IF a 7000 MiB budget were granted, carrying the simulator's +2.7-point optimism across projects 58.3 MiB/token of flash traffic against today's 119.8 and 7.33 tok/s against 6.199 (+18.2%). Conditional twice over: it holds compute and cache management fixed (optimistic), and 7000 MiB is NOT reachable on this phone: across all 238 logged runs the engine's own sizing never saw enough free memory to grant more than 5806 MiB (claim budget_reach_max), so this row describes a phone with more free RAM, not this one",
          artifact="cache_projection.json", expected=7.333, tol=0.01,
          value=lambda A: next(r["projected_decode_tok_s"] for r in A["cproj"]["rows"]
                               if r["budget_MiB"] == 7000)),
+    dict(id="budget_reach_max",
+         text="the largest expert-cache budget this phone's free memory allowed on ANY of 238 logged runs is 5806 MiB (engine sizing line: available after load minus the 1024 MiB floor; median 4744); neither 6000 nor 7000 MiB was reachable on any run",
+         artifact="budget_reach.json", expected=5806, tol=0,
+         value=lambda A: A["breach"]["max_grantable_budget_MiB"]),
     # ------------------------- SLRU ON THE PHONE (device/bmoe_slru.sh, patch 0011, 2026-09-18)
     dict(id="slru_phone_read_mib",
          text="on the phone, segmented LRU reads 106.53 MiB/token of experts from flash against LRU's 119.80 at the same 5000 MiB budget -- 11.1% less, on every row, matching the simulator's 10.8%",
@@ -1083,6 +1087,7 @@ def load_all():
         "evict": load("evict_policies_qwen3.json"),
         "ezram": load("evict_zram_budgets.json"),
         "cproj": load("cache_projection.json"),
+        "breach": load("budget_reach.json"),
         "bslru": load("bmoe_slru.json"),
         "msweep": load("matmul_sweep.json"),
         "arena2": load("arena2_summary.json"),
