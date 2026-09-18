@@ -820,6 +820,15 @@ CLAIMS = [
          text="all 12 rows generated identical text",
          artifact="arena2_summary.json", expected=12, tol=0,
          value=lambda A: A["arena2"]["text_match_ok"]),
+    # ------------------------- CLOCK CAP vs SHELL TEMPERATURE (gates/cap_vs_temp.py, all device logs to 2026-09-18 15:40)
+    dict(id="cap_full_below_31C",
+         text="below 31 C shell temperature every logged sample ran the prime cores at full clock (23 of 23)",
+         artifact="cap_vs_temp.json", expected=1.0, tol=0.0,
+         value=lambda A: A["capt"]["below31C_frac_full_clock"]),
+    dict(id="cap_throttled_from_33C",
+         text="from 33 C up, 97.3% of 482 samples had the prime cores capped at or below 2.48 of 3.80 GHz, and 84.7% of samples at framework thermal status 0 were capped: the governor acts on skin temperature long before the framework reports throttling",
+         artifact="cap_vs_temp.json", expected=0.973, tol=0.001,
+         value=lambda A: A["capt"]["from33C_frac_cap6_le_2_48GHz"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1056,6 +1065,7 @@ def load_all():
         "bslru": load("bmoe_slru.json"),
         "msweep": load("matmul_sweep.json"),
         "arena2": load("arena2_summary.json"),
+        "capt": load("cap_vs_temp.json"),
     }
 
 
