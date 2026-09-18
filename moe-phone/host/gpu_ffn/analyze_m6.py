@@ -71,12 +71,13 @@ def main():
     bpath = os.path.join(R, "bench.out")
     if os.path.exists(bpath):
         for line in open(bpath):
-            m = re.match(r"BENCH variant=(\d) down=(\S+) k=(\d+) n=(\d+) median_ms=([\d.]+) p10_ms=([\d.]+) p90_ms=([\d.]+) GBps_at_median=([\d.]+)(?: device_median_ms=([\d.]+) device_p90_ms=([\d.]+))?", line)
-            if m:
-                bench.append(dict(variant=int(m.group(1)), down=m.group(2), k=int(m.group(3)), n=int(m.group(4)),
-                                  median_ms=float(m.group(5)), p10_ms=float(m.group(6)), p90_ms=float(m.group(7)),
-                                  GBps=float(m.group(8)), device_median_ms=float(m.group(9)) if m.group(9) else None,
-                                  device_p90_ms=float(m.group(10)) if m.group(10) else None))
+            if line.startswith("BENCH ") and "median_ms=" in line:
+                kv = dict(t.split("=", 1) for t in line.split()[1:] if "=" in t)
+                num = lambda k: float(kv[k]) if k in kv else None
+                bench.append(dict(spin=int(kv.get("spin", 0)), variant=int(kv["variant"]), down=kv["down"], k=int(kv["k"]),
+                                  n=int(kv["n"]), median_ms=num("median_ms"), p10_ms=num("p10_ms"), p90_ms=num("p90_ms"),
+                                  GBps=num("GBps_at_median"), device_median_ms=num("device_median_ms"),
+                                  device_p90_ms=num("device_p90_ms")))
             m = re.match(r"SLOTWRITE variant=(\d) n=(\d+) median_ms=([\d.]+) p90_ms=([\d.]+)", line)
             if m:
                 out.setdefault("slotwrite", []).append(dict(variant=int(m.group(1)), median_ms=float(m.group(3)),
@@ -86,20 +87,20 @@ def main():
     for b in bench:
         key = f"{b['down']}_k{b['k']}"
         if key not in best or b["median_ms"] < best[key]["median_ms"]:
-            best[key] = {"variant": b["variant"], "median_ms": b["median_ms"], "GBps": b["GBps"]}
+            best[key] = {"variant": b["variant"], "spin": b["spin"], "median_ms": b["median_ms"], "GBps": b["GBps"]}
     out["fastest_variant"] = best
     # least-squares line median_ms = a + b*k per (variant, down, host|device): a = fixed per-dispatch overhead
     fits = {}
-    for v in sorted({b["variant"] for b in bench}):
+    for sp, v in sorted({(b["spin"], b["variant"]) for b in bench}):
         for dn in sorted({b["down"] for b in bench}):
-            rows = [b for b in bench if b["variant"] == v and b["down"] == dn]
+            rows = [b for b in bench if b["variant"] == v and b["down"] == dn and b["spin"] == sp]
             for kind, key in (("host", "median_ms"), ("device", "device_median_ms")):
                 pts = [(b["k"], b[key]) for b in rows if b[key] is not None]
                 if len(pts) >= 3:
                     n = len(pts); sx = sum(p[0] for p in pts); sy = sum(p[1] for p in pts)
                     sxx = sum(p[0] ** 2 for p in pts); sxy = sum(p[0] * p[1] for p in pts)
                     slope = (n * sxy - sx * sy) / (n * sxx - sx * sx); icpt = (sy - slope * sx) / n
-                    fits[f"v{v}_{dn}_{kind}"] = {"intercept_ms": icpt, "per_expert_ms": slope, "n_k": n}
+                    fits[f"spin{sp}_v{v}_{dn}_{kind}"] = {"intercept_ms": icpt, "per_expert_ms": slope, "n_k": n}
     out["latency_fit"] = fits
     p = os.path.join(R, "m6_summary.json")
     json.dump(out, open(p, "w"), indent=1)
@@ -108,7 +109,7 @@ def main():
         print(f"swiglu mismatch class {c:26s} n={d['n']:6d} flagged={d['flagged']}")
     for b in bench:
         dv = f", device {b['device_median_ms']:.3f} ms" if b.get("device_median_ms") is not None else ""
-        print(f"v{b['variant']} {b['down']} k={b['k']}: host median {b['median_ms']:.3f} ms, p90 {b['p90_ms']:.3f} ms, "
+        print(f"spin{b['spin']} v{b['variant']} {b['down']} k={b['k']}: host median {b['median_ms']:.3f} ms, p90 {b['p90_ms']:.3f} ms, "
               f"{b['GBps']:.2f} GB/s{dv}")
     for key, f in fits.items():
         print(f"fit {key}: intercept {f['intercept_ms']:.3f} ms + {f['per_expert_ms']:.3f} ms/expert")

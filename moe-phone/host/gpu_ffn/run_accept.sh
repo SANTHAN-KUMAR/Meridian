@@ -22,7 +22,7 @@ R="$MP/results/$(date +%F)/gx_m3_$(date +%H%M%S)"
 [ -e "$R" ] && { echo "exists: $R"; exit 1; }
 mkdir -p "$R"
 
-"$HERE/build.sh" host >/dev/null
+"$HERE/build.sh" host >/dev/null   # host only: out/android is whatever the next phone run was built with
 "$HERE/build.sh" arm-ref >/dev/null
 
 {

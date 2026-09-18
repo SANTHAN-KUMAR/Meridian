@@ -298,3 +298,28 @@ A detector that fails to cover a phone mismatch fails the gate.
 the host, mean across k (pool test, not a bench). Map took 0.55–0.67 ms and unmap 1.8–1.9 ms.
 Dispatch-while-mapped showed the NEW bytes on Adreno (zero-copy). So on Adreno a protocol violation
 is silent, and the rules in §3b are the only guard.
+
+## 8. Host-overhead levers (2026-09-18 23:20, laptop-verified; phone bench pending)
+
+Run 1's pool test showed about 2.1 ms of device time and 4.3–4.8 ms from dispatch to wait on the
+host, per dispatch. The engine's latency gate needs k = 3 in ≤ ~0.6 ms. Two levers, neither of which
+touches the arithmetic:
+- **Four commands per dispatch instead of seven:**
+  - one write: x as Q8_0 plus the slot offsets, packed in one input buffer;
+  - two kernels;
+  - one read: risk flags plus output rows, packed in one output buffer.
+
+  The risk flag is now one int per kernel-1 work-group, always written, so it needs no zeroing
+  command. Constant kernel arguments are set once, at init.
+- **`gx_params.spin_wait = 1`:** `gx_wait` polls the read's event status instead of blocking in
+  `clFinish`.
+
+Acceptance is unchanged: bit-exact, all negative controls detected, pool test PASS
+(`results/2026-09-18/gx_m3_232033/`). `gx_test` runs variant 1 with spin and variant 0 with
+`clFinish`.
+
+`gx_bench` times both wait modes, both variants and k = 1..8, with device (profiling) time.
+`analyze_m6.py` fits intercept + slope·k.
+
+The Android build of this version is `out/android_next`, built with
+`ANDROID_OUT=out/android_next build.sh android`. `out/android` stays the build that M6 run 2 uses.

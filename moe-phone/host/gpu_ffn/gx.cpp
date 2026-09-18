@@ -29,7 +29,8 @@ const char * k_src =
     X(clGetProgramBuildInfo) X(clCreateKernel) X(clGetKernelWorkGroupInfo) X(clCreateBuffer) X(clSetKernelArg) \
     X(clEnqueueNDRangeKernel) X(clEnqueueWriteBuffer) X(clEnqueueReadBuffer) X(clFlush) X(clFinish)          \
     X(clReleaseMemObject) X(clReleaseKernel) X(clReleaseProgram) X(clReleaseCommandQueue)                    \
-    X(clEnqueueMapBuffer) X(clEnqueueUnmapMemObject) X(clWaitForEvents) X(clReleaseEvent) X(clGetEventProfilingInfo)
+    X(clEnqueueMapBuffer) X(clEnqueueUnmapMemObject) X(clWaitForEvents) X(clReleaseEvent) X(clGetEventProfilingInfo)  \
+    X(clGetEventInfo)
 
 #define X(f) decltype(&::f) p_##f = nullptr;
 GX_CL_FUNCS(X)
@@ -114,13 +115,14 @@ struct gx_ctx {
     cl_command_queue q = nullptr;
     cl_program prog = nullptr;
     cl_kernel k1 = nullptr, k2 = nullptr;
-    cl_mem xq = nullptr, offs = nullptr, hq = nullptr, out = nullptr, hdbg = nullptr, risk = nullptr;
-    cl_int risk_host[GX_MAX_K] = {0};
-    cl_int risk_zero[GX_MAX_K] = {0};
+    // packed I/O, layout mirrored from gx_kernels.cl (IN_OFFS_OFF, RISK_WG, OUT_OFF): one write in, one read out
+    cl_mem inb = nullptr, outb = nullptr, hq = nullptr, hdbg = nullptr;
+    std::vector<uint8_t> in_host, out_host;
+    size_t in_offs_off = 0, risk_wg = 0, out_off = 0;
+    float * user_out = nullptr;
+    cl_event ev_read = nullptr;
     uint32_t last_risk = 0;
     gx_params p{};
-    uint8_t xq_host[(8192 / 32) * 34];
-    cl_ulong offs_host[3 * GX_MAX_K];
     int last_k = 0;
     bool pending = false;
     gx_stats st{};
@@ -143,7 +145,8 @@ static void seterr(char * err, size_t n, const std::string & s) {
 extern "C" void gx_free(gx_ctx * g) {
     if (!g) return;
     if (g->q) p_clFinish(g->q);
-    for (cl_mem m : {g->xq, g->offs, g->hq, g->out, g->hdbg, g->risk})
+    if (g->ev_read) p_clReleaseEvent(g->ev_read);
+    for (cl_mem m : {g->inb, g->outb, g->hq, g->hdbg})
         if (m) p_clReleaseMemObject(m);
     for (PoolBlock & b : g->blocks) p_clReleaseMemObject(b.m);
     if (g->q_io) p_clReleaseCommandQueue(g->q_io);
@@ -197,12 +200,27 @@ extern "C" gx_ctx * gx_init(cl_context ctx, cl_device_id dev, gx_params p, char 
         if (e == CL_SUCCESS) m = p_clCreateBuffer(ctx, f | hv, bytes, nullptr, &e);
         return m;
     };
-    g->xq = mk(CL_MEM_READ_ONLY, (size_t) p.n_embd / 32 * 34);
-    g->offs = mk(CL_MEM_READ_ONLY, sizeof g->offs_host);
+    g->in_offs_off = ((size_t) p.n_embd / 32 * 34 + 7) & ~(size_t) 7;
+    g->risk_wg = (size_t) p.n_ff / 32;
+    g->out_off = GX_MAX_K * g->risk_wg * sizeof(cl_int);
+    g->in_host.assign(g->in_offs_off + 3 * GX_MAX_K * sizeof(cl_ulong), 0);
+    g->out_host.assign(g->out_off + (size_t) GX_MAX_K * p.n_embd * sizeof(float), 0);
+    g->inb = mk(CL_MEM_READ_ONLY, g->in_host.size());
     g->hq = mk(CL_MEM_READ_WRITE, (size_t) GX_MAX_K * p.n_ff / 32 * 36);
-    g->out = mk(CL_MEM_WRITE_ONLY, (size_t) GX_MAX_K * p.n_embd * sizeof(float));
+    g->outb = mk(CL_MEM_READ_WRITE, g->out_host.size());
     g->hdbg = mk(CL_MEM_WRITE_ONLY, (size_t) GX_MAX_K * p.n_ff * sizeof(float));
-    g->risk = mk(CL_MEM_READ_WRITE, sizeof g->risk_host);
+    // risk flags are written per work-group; variant 1 writes half the entries, so start from zeros once
+    if (e == CL_SUCCESS) e = p_clEnqueueWriteBuffer(g->q, g->outb, CL_TRUE, 0, g->out_host.size(), g->out_host.data(), 0, nullptr, nullptr);
+    // arguments that never change are set once
+    const cl_int dbg = p.debug_h ? 1 : 0;
+    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 8, sizeof(cl_mem), &g->inb);
+    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 9, sizeof(cl_mem), &g->hq);
+    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 10, sizeof(cl_mem), &g->hdbg);
+    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 11, sizeof(cl_int), &dbg);
+    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 13, sizeof(cl_mem), &g->outb);
+    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 8, sizeof(cl_mem), &g->inb);
+    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 9, sizeof(cl_mem), &g->hq);
+    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 10, sizeof(cl_mem), &g->outb);
     if (e != CL_SUCCESS) { seterr(err, errlen, "setup " + std::to_string(e)); gx_free(g); return nullptr; }
     return g;
 }
@@ -216,34 +234,26 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
     }
     const int ne = g->p.n_embd, nf = g->p.n_ff;
     g->t_dispatch = now_ns();
-    gx_quantize_q8_0(x, g->xq_host, ne);   // x is not read after this
+    gx_quantize_q8_0(x, g->in_host.data(), ne);   // x is not read after this
+    cl_ulong * offs = (cl_ulong *) (g->in_host.data() + g->in_offs_off);
     for (int s = 0; s < k; s++) {
-        g->offs_host[3 * s + 0] = slots[s].off_gate;
-        g->offs_host[3 * s + 1] = slots[s].off_up;
-        g->offs_host[3 * s + 2] = slots[s].off_down;
+        offs[3 * s + 0] = slots[s].off_gate;
+        offs[3 * s + 1] = slots[s].off_up;
+        offs[3 * s + 2] = slots[s].off_down;
     }
-    cl_int e = p_clEnqueueWriteBuffer(g->q, g->xq, CL_FALSE, 0, (size_t) ne / 32 * 34, g->xq_host, 0, nullptr, nullptr);
-    if (e == CL_SUCCESS)
-        e = p_clEnqueueWriteBuffer(g->q, g->offs, CL_FALSE, 0, sizeof(cl_ulong) * 3 * k, g->offs_host, 0, nullptr, nullptr);
-    const cl_int dbg = g->p.debug_h ? 1 : 0, dt = down_type;
+    const cl_int dt = down_type;
+    cl_int e = CL_SUCCESS;
     for (int a = 0; a < 8 && e == CL_SUCCESS; a++) {
         const cl_mem b = slots[a < k ? a : 0].block;
         e = p_clSetKernelArg(g->k1, a, sizeof(cl_mem), &b);
         if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, a, sizeof(cl_mem), &b);
     }
-    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 8, sizeof(cl_mem), &g->offs);
-    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 9, sizeof(cl_mem), &g->xq);
-    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 10, sizeof(cl_mem), &g->hq);
-    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 11, sizeof(cl_mem), &g->hdbg);
-    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 12, sizeof(cl_int), &dbg);
-    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 13, sizeof(cl_int), &dt);
-    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 14, sizeof(cl_mem), &g->risk);
-    if (e == CL_SUCCESS)
-        e = p_clEnqueueWriteBuffer(g->q, g->risk, CL_FALSE, 0, sizeof g->risk_zero, g->risk_zero, 0, nullptr, nullptr);
-    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 8, sizeof(cl_mem), &g->offs);
-    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 9, sizeof(cl_mem), &g->hq);
-    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 10, sizeof(cl_mem), &g->out);
+    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 12, sizeof(cl_int), &dt);
     if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 11, sizeof(cl_int), &dt);
+    // 1 write (x as Q8_0 + slot offsets), 2 kernels, 1 read (risk flags + out rows): 4 commands per dispatch
+    if (e == CL_SUCCESS)
+        e = p_clEnqueueWriteBuffer(g->q, g->inb, CL_FALSE, 0, g->in_offs_off + 3 * (size_t) k * sizeof(cl_ulong), g->in_host.data(),
+                                   0, nullptr, nullptr);
     // variant 0: 256 work-items = 32 rows x 8 lanes per group; variant 1: 64 work-items = 64 rows per group
     const size_t l[2] = {(size_t) (g->p.variant ? 64 : 256), 1};
     const size_t g1[2] = {g->p.variant ? (size_t) nf : (size_t) 256 * (nf / 32), (size_t) k};
@@ -252,16 +262,16 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
     if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k1, 2, nullptr, g1, l, 0, nullptr, e1);
     if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k2, 2, nullptr, g2, l, 0, nullptr, e2);
     if (e == CL_SUCCESS)
-        e = p_clEnqueueReadBuffer(g->q, g->out, CL_FALSE, 0, sizeof(float) * k * ne, out, 0, nullptr, nullptr);
-    if (e == CL_SUCCESS)
-        e = p_clEnqueueReadBuffer(g->q, g->risk, CL_FALSE, 0, sizeof g->risk_host, g->risk_host, 0, nullptr, nullptr);
+        e = p_clEnqueueReadBuffer(g->q, g->outb, CL_FALSE, 0, g->out_off + sizeof(float) * (size_t) k * ne, g->out_host.data(), 0,
+                                  nullptr, &g->ev_read);
+    g->user_out = out;
     if (e == CL_SUCCESS) e = p_clFlush(g->q);
     {
         std::lock_guard<std::mutex> lk(g->mu);
         g->st.dispatches++;
         if (e != CL_SUCCESS) {
             g->st.errors++;
-            for (cl_event * ev : {&g->ev_first, &g->ev_last})
+            for (cl_event * ev : {&g->ev_first, &g->ev_last, &g->ev_read})
                 if (*ev) { p_clReleaseEvent(*ev); *ev = nullptr; }
             return e;
         }
@@ -274,7 +284,18 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
 
 extern "C" int gx_wait(gx_ctx * g) {
     if (!g->pending) return 0;
-    const cl_int e = p_clFinish(g->q);
+    cl_int e;
+    if (g->p.spin_wait && g->ev_read) {   // poll the last command instead of sleeping in clFinish
+        cl_int st = CL_QUEUED;
+        do {
+            e = p_clGetEventInfo(g->ev_read, CL_EVENT_COMMAND_EXECUTION_STATUS, sizeof st, &st, nullptr);
+        } while (e == CL_SUCCESS && st > CL_COMPLETE);
+        if (e == CL_SUCCESS && st < 0) e = st;
+    } else {
+        e = p_clFinish(g->q);
+    }
+    if (e == CL_SUCCESS)
+        memcpy(g->user_out, g->out_host.data() + g->out_off, sizeof(float) * (size_t) g->last_k * g->p.n_embd);
     const uint64_t t1 = now_ns();
     g->pending = false;
     uint64_t dev_ns = 0;
@@ -284,12 +305,15 @@ extern "C" int gx_wait(gx_ctx * g) {
             p_clGetEventProfilingInfo(g->ev_last, CL_PROFILING_COMMAND_END, sizeof b, &b, nullptr) == CL_SUCCESS && b >= a)
             dev_ns = b - a;
     }
-    for (cl_event * ev : {&g->ev_first, &g->ev_last})
+    for (cl_event * ev : {&g->ev_first, &g->ev_last, &g->ev_read})
         if (*ev) { p_clReleaseEvent(*ev); *ev = nullptr; }
     std::lock_guard<std::mutex> lk(g->mu);
     if (e != CL_SUCCESS) { g->st.errors++; return e; }
     uint32_t mask = 0;
-    for (int i = 0; i < g->last_k; i++) mask |= g->risk_host[i] ? (1u << i) : 0u;
+    const cl_int * rk = (const cl_int *) g->out_host.data();
+    for (int i = 0; i < g->last_k; i++)
+        for (size_t w = 0; w < g->risk_wg; w++)
+            if (rk[(size_t) i * g->risk_wg + w]) { mask |= 1u << i; break; }
     g->last_risk = mask;
     if (mask) { g->st.risk_dispatches++; g->st.risk_slots += (uint64_t) __builtin_popcount(mask); }
     g->last_device_ns = dev_ns;

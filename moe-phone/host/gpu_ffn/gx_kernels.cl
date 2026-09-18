@@ -12,6 +12,14 @@
 #define YB1 36              // block_q8_1: fp16 d, fp16 s, int8 qs[32]
 // h (the SwiGLU output) is stored between the kernels at a 36-byte stride for both down types:
 // fp16 d at 0, fp16 s at 2 (Q8_1 only), int8 qs[32] at 4. Only the values must match ggml, not the layout.
+// Packed per-dispatch I/O (one host write in, one host read out; gx.cpp mirrors these offsets):
+//   in  buffer: [x as Q8_0 blocks: NBX*34 bytes][pad to 8][offs: 3*GX_MAX_K ulong]
+//   out buffer: [risk: one int per (slot, kernel-1 work-group), RISK_N ints][out: GX_MAX_K*N_EMBD floats]
+// Risk is one flag per work-group, always written (0 or 1), so it needs no zeroing between dispatches.
+#define IN_OFFS_OFF (((NBX * YB0) + 7) & ~7)
+#define RISK_WG (NBH)                 // kernel-1 work-groups per slot, variant 0 (variant 1 uses NBH/2)
+#define RISK_N (8 * RISK_WG)
+#define OUT_OFF (RISK_N * 4)
 #define DT_Q4_0 0
 #define DT_Q4_1 1
 
@@ -135,9 +143,13 @@ static float hsum8(local const float * l) {
 // sumv0/sumv1 do. Grid: (256 * NBH, k).
 kernel void gx_gate_up(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
                        global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
-                       global const ulong * offs, global const uchar * xq, global uchar * hq,
-                       global float * hdbg, int dbg, int dt, global int * risk) {
+                       global const uchar * inb, global uchar * hq,
+                       global float * hdbg, int dbg, int dt, global uchar * outb) {
     local float lg[256], lu[256], lh[32];
+    local int lrisk;
+    global const ulong * offs = (global const ulong *) (inb + IN_OFFS_OFF);
+    global const uchar * xq = inb;
+    if (get_local_id(0) == 0) lrisk = 0;
     const int t = get_local_id(0), blk = get_group_id(0), s = get_group_id(1);
     const int rr = t >> 3, w = t & 7, p = w >> 2, j = w & 3;
     const int row = blk * 32 + rr;
@@ -166,10 +178,13 @@ kernel void gx_gate_up(global const uchar * w0, global const uchar * w1, global 
         const float h = gx_swiglu_r(hsum8(lg + t), hsum8(lu + t), &r);
         lh[rr] = h;
         if (dbg) hdbg[s * N_FF + row] = h;
-        if (r) risk[s] = 1;
+        if (r) lrisk = 1;
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (t == 0 && q8_block(lh, hq + ((size_t) s * NBH + blk) * YB1, dt == DT_Q4_1)) risk[s] = 1;
+    if (t == 0) {
+        const int rq = q8_block(lh, hq + ((size_t) s * NBH + blk) * YB1, dt == DT_Q4_1);
+        ((global int *) outb)[s * RISK_WG + blk] = (lrisk | rq) ? 1 : 0;
+    }
 }
 
 // Kernel 2: down rows. Q4_1 x Q8_1 (dt = DT_Q4_1): same lane mapping; summs as the ARM build computes it,
@@ -178,8 +193,10 @@ kernel void gx_gate_up(global const uchar * w0, global const uchar * w1, global 
 // Grid: (256 * N_EMBD / 32, k).
 kernel void gx_down(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
                     global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
-                    global const ulong * offs, global const uchar * hq, global float * out, int dt) {
+                    global const uchar * inb, global const uchar * hq, global uchar * outb, int dt) {
     local float la[256];
+    global const ulong * offs = (global const ulong *) (inb + IN_OFFS_OFF);
+    global float * out = (global float *) (outb + OUT_OFF);
     const int t = get_local_id(0), blk = get_group_id(0), s = get_group_id(1);
     const int rr = t >> 3, w = t & 7, p = w >> 2, j = w & 3;
     const int row = blk * 32 + rr;
@@ -241,9 +258,13 @@ static float hsum8p(const float * l) {
 // Grid (64 * NBH / 2, k), local (64, 1): 64 rows = 2 blocks of h per work-group.
 kernel void gx_gate_up_row(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
                            global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
-                           global const ulong * offs, global const uchar * xq, global uchar * hq,
-                           global float * hdbg, int dbg, int dt, global int * risk) {
+                           global const uchar * inb, global uchar * hq,
+                           global float * hdbg, int dbg, int dt, global uchar * outb) {
     local char  lx[NBX * 32];
+    local int   lrisk;
+    global const ulong * offs = (global const ulong *) (inb + IN_OFFS_OFF);
+    global const uchar * xq = inb;
+    if (get_local_id(0) == 0) lrisk = 0;
     local float ldx[NBX];   // fp16 d widened to fp32 (exact)
     local float lh[64];
     const int t = get_local_id(0), s = get_group_id(1);
@@ -268,16 +289,20 @@ kernel void gx_gate_up_row(global const uchar * w0, global const uchar * w1, glo
     const float h = gx_swiglu_r(hsum8p(ag), hsum8p(au), &r);
     lh[t] = h;
     if (dbg) hdbg[s * N_FF + row] = h;
-    if (r) risk[s] = 1;
+    if (r) lrisk = 1;
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (t < 2 && q8_block(lh + 32 * t, hq + ((size_t) s * NBH + get_group_id(0) * 2 + t) * YB1, dt == DT_Q4_1)) risk[s] = 1;
+    if (t < 2 && q8_block(lh + 32 * t, hq + ((size_t) s * NBH + get_group_id(0) * 2 + t) * YB1, dt == DT_Q4_1)) lrisk = 1;
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (t == 0) ((global int *) outb)[s * RISK_WG + get_group_id(0)] = lrisk;   // groups 0..NBH/2-1 of RISK_WG
 }
 
 // Grid (N_EMBD, k), local (64, 1).
 kernel void gx_down_row(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
                         global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
-                        global const ulong * offs, global const uchar * hq, global float * out, int dt) {
+                        global const uchar * inb, global const uchar * hq, global uchar * outb, int dt) {
     local char  ly[NBH * 32];
+    global const ulong * offs = (global const ulong *) (inb + IN_OFFS_OFF);
+    global float * out = (global float *) (outb + OUT_OFF);
     local float ld[NBH], ls[NBH];
     const int t = get_local_id(0), s = get_group_id(1);
     const int row = get_group_id(0) * 64 + t;

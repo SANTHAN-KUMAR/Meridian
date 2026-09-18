@@ -47,6 +47,8 @@ typedef struct gx_params {
                        1 = one work-item per row (whole-block loads). Both are held to the same bit-exact test. */
     int profile;    /* 1: create the dispatch queue with CL_QUEUE_PROFILING_ENABLE and record each dispatch's
                        device time (first kernel start to last kernel end) in gx_stats / gx_last_timing */
+    int spin_wait;  /* 1: gx_wait polls the dispatch's last command instead of blocking in clFinish (the waiting
+                       thread spins; it trades a busy core for the blocking-wait wake-up latency) */
 } gx_params;
 
 typedef struct gx_slot {

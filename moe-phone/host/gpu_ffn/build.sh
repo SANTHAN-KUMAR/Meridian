@@ -44,7 +44,7 @@ case "$what" in
     echo "built $O/ggml_ref_arm" ;;
   android)
     gen_inc
-    O=$HERE/out/android; mkdir -p "$O"
+    O=${ANDROID_OUT:-$HERE/out/android}; mkdir -p "$O"
     $CXX_A64 -std=c++17 -O2 -ffp-contract=off -fPIC -I"$HERE" -I"$CL_HDR" -c "$HERE/gx.cpp" -o "$O/gx.o"
     "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" rcs "$O/libgx.a" "$O/gx.o"
     # M6 tools: OpenCL reached through cl_shim.cpp (dlopen of the device's libOpenCL.so); ggml_ref_arm (arm-ref)

@@ -1,6 +1,6 @@
 // gx_bench.cpp — dispatch latency and throughput of gx, for M6 on the phone. Correctness is gx_test's job;
 // this only times. On the laptop it is a functional smoke test and its numbers mean nothing (NVIDIA copies).
-//   gx_bench [--iters N] [--variants 0,1] [--ks 1,2,4,8] [--slots N]
+//   gx_bench [--iters N] [--variants 0,1] [--ks 1,..,8] [--slots N] [--spin 0,1]
 // Pool: one expert per block (the recommended shape), N slots per down type (default 32), filled with
 // random but valid blocks through map/unmap. Each timed dispatch uses k slots rotating through the pool so
 // consecutive dispatches read different weights (as consecutive layers do), dispatch -> gx_wait wall time.
@@ -39,12 +39,13 @@ static void fill_q4(std::mt19937 & rng, uint8_t * p, size_t bytes, int blk) {   
 
 int main(int argc, char ** argv) {
     int iters = 300, nslots = 32;
-    std::vector<int> variants = {0, 1}, ks = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::vector<int> variants = {0, 1}, ks = {1, 2, 3, 4, 5, 6, 7, 8}, spins = {0, 1};
     for (int i = 1; i + 1 < argc; i += 2) {
         if (!strcmp(argv[i], "--iters")) iters = atoi(argv[i + 1]);
         else if (!strcmp(argv[i], "--variants")) variants = ints(argv[i + 1]);
         else if (!strcmp(argv[i], "--ks")) ks = ints(argv[i + 1]);
         else if (!strcmp(argv[i], "--slots")) nslots = atoi(argv[i + 1]);
+        else if (!strcmp(argv[i], "--spin")) spins = ints(argv[i + 1]);
     }
     cl_platform_id plat;
     cl_device_id dev;
@@ -57,9 +58,10 @@ int main(int argc, char ** argv) {
     std::mt19937 rng(1);
     std::vector<float> x(2048);
     for (auto & v : x) v = (float) ((int) (rng() % 2001) - 1000) / 250.0f;
+    for (int spin : spins)
     for (int variant : variants) {
         char err[1024];
-        gx_ctx * g = gx_init(ctx, dev, gx_params{2048, 768, 0, variant, 1}, err, sizeof err);
+        gx_ctx * g = gx_init(ctx, dev, gx_params{2048, 768, 0, variant, 1, spin}, err, sizeof err);
         if (!g) { printf("BENCH variant=%d status=init_failed why=\"%s\"\n", variant, err); continue; }
         const size_t span = 2 * GU + DN[1];   // Q4_1-sized block holds either type (all sizes are 4 KB multiples)
         const int got = gx_pool_create(g, span, 2 * nslots, err, sizeof err);
@@ -106,8 +108,8 @@ int main(int argc, char ** argv) {
                 std::sort(td.begin(), td.end());
                 const double med = t[t.size() / 2];
                 const double bytes = (double) k * (2 * GU + DN[dt]);
-                printf("BENCH variant=%d down=%s k=%d n=%zu median_ms=%.4f p10_ms=%.4f p90_ms=%.4f GBps_at_median=%.2f "
-                       "device_median_ms=%.4f device_p90_ms=%.4f\n", variant, dt ? "Q4_1" : "Q4_0", k, t.size(), med, t[t.size() / 10],
+                printf("BENCH spin=%d variant=%d down=%s k=%d n=%zu median_ms=%.4f p10_ms=%.4f p90_ms=%.4f GBps_at_median=%.2f "
+                       "device_median_ms=%.4f device_p90_ms=%.4f\n", spin, variant, dt ? "Q4_1" : "Q4_0", k, t.size(), med, t[t.size() / 10],
                        t[t.size() * 9 / 10], bytes / (med / 1e3) / 1e9, td[td.size() / 2], td[td.size() * 9 / 10]);
                 fflush(stdout);
             }

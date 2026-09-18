@@ -354,7 +354,7 @@ int main(int argc, char ** argv) {
         for (int v = 0; v < 2; v++)
             if (!gv[v]) {
                 char err[4096];
-                gv[v] = gx_init(ctx, dev, gx_params{c.ne, c.nf, 1, v}, err, sizeof err);
+                gv[v] = gx_init(ctx, dev, gx_params{c.ne, c.nf, 1, v, 0, v /* spin_wait: v1 polls, v0 blocks */}, err, sizeof err);
                 if (!gv[v]) { fprintf(stderr, "gx_init variant %d: %s\n", v, err); return 1; }
             }
       for (int v = 0; v < 2; v++) {
