@@ -1,0 +1,17 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field<think>
+Okay, I need to write a long detailed essay about the history of computing, including its origins, key milestones, the people involved, and future directions. Let me start by breaking down the question. The user wants a comprehensive overview, so I should make sure each section is thorough.
+
+First, the origins. I remember that early computing concepts date back to ancient times. Maybe start with the abacus? That's one of the earliest calculating tools. Then move to mechanical devices like the Antikythera mechanism. But I need to verify if that's considered a computing device. Also, mention the work of figures like Al-Jazari or Blaise Pascal with his adding machine. Then the 19th century with Charles Babbage and Ada Lovelace. They were pioneers in the concept of a programmable computer.
+
+Next, key milestones. The transition from mechanical to electronic computers. The invention of the transistor in the 1940s, then integrated circuits. The development of programming languages, like Fortran or COBOL. The rise of personal computers in the 1970s and 80s with companies like Apple and IBM. The internet and World Wide Web in the 90s. Then the 2
+
+generation: 256 tokens, 0.184 s/token (5.448 tok/s)
+compute: 88.7% CPU occupancy (0.9764 cpu-s/token over 6 threads), 59.08 major faults/token
+prefill: 34 tokens, 10.846 s (3.1 tok/s) | model load 31.822 s | TTFT 42.668 s
+mode: expert streaming, cache auto, dense anon, overlap
+moe-stream: read 31196.2 MiB (121.86 MiB/token), decode 0.184 s/token (compute 0.116 + cache mgmt 0.028 + flash I/O 0.159 s/token, 764 MiB/s)
+moe-cache: 88.4% hit, resident 4999.7 MiB, budget 5000 MiB (auto)
+moe-cache: 13140 evictions, 10662 re-reads (41.6/token) — bytes the cache had already paid for once
+moe-overlap: stall 0.039 s/token (flash reads overlapped with FFN compute)
+moe-waits: drain 0.000 s/token (inside compute), adopt 0.004 s/token (inside mgmt)
+moe-prefetch: 8537.0 MiB speculative, 2085/3355 experts useful (62%) [stale-gate]

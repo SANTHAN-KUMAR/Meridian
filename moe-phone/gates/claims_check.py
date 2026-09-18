@@ -897,6 +897,15 @@ CLAIMS = [
          text="simulated on that agreement sequence with the measured verify costs, the BEST case (a free draft, 1-token drafts) is 1.015x and longer drafts lose (0.94x, 0.74x): speculative decoding with this draft cannot pay on a streamed MoE, because each verified position routes to its own experts",
          artifact="draft_accept_sim.json", expected=1.015, tol=0.002,
          value=lambda A: A["dsim"]["best_speedup_free_draft"]),
+    # ------------------------- CORE PLACEMENT (device/bmoe_cores.sh -> gates/cores_summary.py, 2026-09-18 18:39)
+    dict(id="cores_6thread_compute",
+         text="six compute threads on cpu0-5 do NOT resolve a compute gain over four on cpu4-7: -8 ms/token, SE 6.8 (SE/|diff| 0.85), so thread count is not the compute lever that perfect scaling would suggest (4->6 perfect scaling would be ~-40 ms); rows mostly at thermal status 3 on the charger",
+         artifact="cores_summary.json", expected=-8.0, tol=0.01,
+         value=lambda A: A["cores"]["vs_f0"]["3f"]["compute_ms"]["mean_diff"]),
+    dict(id="cores_3c_stall",
+         text="moving the four I/O lanes to cpu0,1,6,7 (compute on cpu2-5) cuts the stall by 12.3 ms/token, decisive (SE 1.9, lower in 4 of 4 repeats), but compute on cpu2-5 is not resolved (+8 ms, SE 8.4) and neither is decode",
+         artifact="cores_summary.json", expected=-12.25, tol=0.01,
+         value=lambda A: A["cores"]["vs_f0"]["3c"]["stall_ms"]["mean_diff"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1140,6 +1149,7 @@ def load_all():
         "sgate": load("specgate_summary.json"),
         "stack": load("stack_summary.json"),
         "dsim": load("draft_accept_sim.json"),
+        "cores": load("cores_summary.json"),
     }
 
 
