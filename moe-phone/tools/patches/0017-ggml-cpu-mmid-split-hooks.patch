@@ -1,0 +1,83 @@
+--- a/ggml/include/ggml-cpu.h	2026-09-18 21:45:23.152997328 +0530
++++ b/ggml/include/ggml-cpu.h	2026-09-18 21:50:58.081324058 +0530
+@@ -165,6 +165,17 @@
+     typedef bool (*ggml_cpu_expert_probe_hook_t)(const struct ggml_tensor * src0, int expert, void * user_data);
+     GGML_BACKEND_API void ggml_cpu_set_expert_probe_hook(ggml_cpu_expert_probe_hook_t hook, void * user_data);
+ 
++    // moe-phone (GPU expert path): per-op split of MUL_MAT_ID between the CPU and an external device.
++    // begin: called ONCE per MUL_MAT_ID by thread 0, after the id rows are grouped and BEFORE the barrier
++    //   that releases the other threads. It may set skip[e] = 1 for experts the external device will
++    //   compute (skip has n_as entries, zeroed on entry) and must then make those experts' dst rows safe
++    //   to read (e.g. zero-fill). Returns true if it skipped anything.
++    // end: called by thread 0 after its own share of the op, only if begin returned true; it must leave
++    //   the skipped experts' dst rows complete. It writes rows no CPU thread writes, so no barrier is needed.
++    typedef bool (*ggml_cpu_mmid_begin_hook_t)(const struct ggml_tensor * dst, unsigned char * skip, int n_as, void * user_data);
++    typedef void (*ggml_cpu_mmid_end_hook_t)(const struct ggml_tensor * dst, void * user_data);
++    GGML_BACKEND_API void ggml_cpu_set_mmid_split_hooks(ggml_cpu_mmid_begin_hook_t begin, ggml_cpu_mmid_end_hook_t end, void * user_data);
++
+     // moe-phone: repacked (interleaved, i8mm/dotprod/AVX2) kernels for expert tensors whose data an
+     // external engine streams in. bind tags the tensor for the repacked MUL_MAT_ID kernel (false if
+     // the type/shape has no repacked form); slice repacks ONE expert's raw bytes in place at `slice`
+--- a/ggml/src/ggml-cpu/ggml-cpu.c	2026-09-18 21:45:23.155076047 +0530
++++ b/ggml/src/ggml-cpu/ggml-cpu.c	2026-09-18 21:50:58.086642196 +0530
+@@ -72,6 +72,19 @@
+ }
+ 
+ static ggml_cpu_expert_probe_hook_t g_expert_probe_hook      = NULL; // moe-phone
++// moe-phone: MUL_MAT_ID split hooks (see ggml-cpu.h). The skip mask is process-global: graph nodes run one
++// at a time across the threadpool, begin writes it on thread 0 before the op's barrier, every thread reads it
++// after, so one buffer serves every MUL_MAT_ID in turn.
++static ggml_cpu_mmid_begin_hook_t g_mmid_begin_hook = NULL;
++static ggml_cpu_mmid_end_hook_t   g_mmid_end_hook   = NULL;
++static void *                     g_mmid_hook_data  = NULL;
++static unsigned char              g_mmid_skip[512]; // == GGML_MMID_MAX_REORDER_EXPERTS, asserted below
++static bool                       g_mmid_skip_on    = false;
++void ggml_cpu_set_mmid_split_hooks(ggml_cpu_mmid_begin_hook_t begin, ggml_cpu_mmid_end_hook_t end, void * user_data) {
++    g_mmid_begin_hook = begin;
++    g_mmid_end_hook   = end;
++    g_mmid_hook_data  = user_data;
++}
+ static void *                       g_expert_probe_hook_data = NULL;
+ void ggml_cpu_set_expert_probe_hook(ggml_cpu_expert_probe_hook_t hook, void * user_data) {
+     g_expert_probe_hook      = hook;
+@@ -82,6 +95,7 @@
+ // measured here is far below it (Qwen3-30B-A3B has 128, OLMoE 64); above it the kernel keeps the
+ // original ascending order, which is always correct.
+ #define GGML_MMID_MAX_REORDER_EXPERTS 512
++_Static_assert(sizeof(g_mmid_skip) == GGML_MMID_MAX_REORDER_EXPERTS, "mmid skip mask size");
+ 
+ // moe-phone: the repacked MUL_MAT_ID kernel (repack.cpp) calls this at the same point the generic
+ // kernel calls the hook, so an overlapping streaming engine still gets to block until the expert
+@@ -1672,6 +1686,12 @@
+                 matrix_row_counts[i02] += 1;
+             }
+         }
++        // moe-phone: the split decision is taken here, while only thread 0 runs; the barrier below publishes it.
++        g_mmid_skip_on = false;
++        if (g_mmid_begin_hook && n_as <= GGML_MMID_MAX_REORDER_EXPERTS) {
++            memset(g_mmid_skip, 0, (size_t) n_as);
++            g_mmid_skip_on = g_mmid_begin_hook(dst, g_mmid_skip, n_as, g_mmid_hook_data);
++        }
+     }
+ 
+     // reset current_chunk
+@@ -1700,6 +1720,9 @@
+         if (cne1 == 0) {
+             continue;
+         }
++        if (g_mmid_skip_on && g_mmid_skip[cur_a]) {
++            continue; // moe-phone: an external device computes this expert (mmid split hooks)
++        }
+ 
+         if (reorder) {
+             if (pass == 0) {
+@@ -1776,6 +1799,9 @@
+         }
+     }
+     } // moe-phone: end of the resident-first pass loop
++    if (ith == 0 && g_mmid_skip_on && g_mmid_end_hook) {
++        g_mmid_end_hook(dst, g_mmid_hook_data); // moe-phone: fill the externally computed experts' rows
++    }
+ }
+ 
+ /////////////////////////////////
