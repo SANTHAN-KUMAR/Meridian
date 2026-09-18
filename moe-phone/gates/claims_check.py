@@ -888,6 +888,15 @@ CLAIMS = [
          text="all 24 rows generated identical text",
          artifact="stack_summary.json", expected=24, tol=0,
          value=lambda A: A["stack"]["text_match_ok"]),
+    # ------------------------- SPECULATIVE DECODING WITH A SMALL DRAFT (host/draft_accept.cpp + gates/draft_accept_sim.py, 2026-09-18)
+    dict(id="draft_agreement_0_6b",
+         text="Qwen3-0.6B agrees with Qwen3-30B-A3B's greedy next token on 71.1% of positions (teacher-forced on the phone's own output, 256 tokens; block-bootstrap 95% CI 63-79%), against the 71% a 1-token draft needs just to break even",
+         artifact="draft_accept_sim.json", expected=0.711, tol=0.001,
+         value=lambda A: A["dsim"]["agreement"]),
+    dict(id="draft_best_speedup",
+         text="simulated on that agreement sequence with the measured verify costs, the BEST case (a free draft, 1-token drafts) is 1.015x and longer drafts lose (0.94x, 0.74x): speculative decoding with this draft cannot pay on a streamed MoE, because each verified position routes to its own experts",
+         artifact="draft_accept_sim.json", expected=1.015, tol=0.002,
+         value=lambda A: A["dsim"]["best_speedup_free_draft"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1130,6 +1139,7 @@ def load_all():
         "sadopt": load("specadopt_summary.json"),
         "sgate": load("specgate_summary.json"),
         "stack": load("stack_summary.json"),
+        "dsim": load("draft_accept_sim.json"),
     }
 
 

@@ -1,0 +1,33 @@
+{
+ "n_gen": 256,
+ "agreement": 0.7109375,
+ "agreement_ci95": [
+  0.62890625,
+  0.78515625
+ ],
+ "rows": [
+  {
+   "k": 2,
+   "draft_len": 1,
+   "tokens_per_verify": 1.7364864864864864,
+   "verify_cost": 1.71,
+   "speedup_free_draft": 1.0154891733839102
+  },
+  {
+   "k": 3,
+   "draft_len": 2,
+   "tokens_per_verify": 2.2155172413793105,
+   "verify_cost": 2.37,
+   "speedup_free_draft": 0.9348174014258693
+  },
+  {
+   "k": 5,
+   "draft_len": 4,
+   "tokens_per_verify": 2.734042553191489,
+   "verify_cost": 3.71,
+   "speedup_free_draft": 0.7369386935826117
+  }
+ ],
+ "best_speedup_free_draft": 1.0154891733839102,
+ "breakeven_agreement_k2": 0.71
+}
