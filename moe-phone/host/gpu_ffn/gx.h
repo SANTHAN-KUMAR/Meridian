@@ -107,6 +107,13 @@ int  gx_slot_unmap(gx_ctx * g, const gx_slot * s, void * p);
 const void * gx_slot_map_read(gx_ctx * g, const gx_slot * s);
 int  gx_slot_unmap_read(gx_ctx * g, const gx_slot * s, const void * p);
 
+/* Denormal-risk mask of the last completed dispatch (valid after gx_wait): bit s set means slot s met a
+ * value in the range where a GPU that flushes fp32 denormals may differ from ggml-cpu (|gate| > 80, or a
+ * SwiGLU operand/result or h block maximum near FLT_MIN). Those rows may not be bit-identical to the CPU:
+ * the engine should recompute those experts on the CPU (exact) and count it. Real activations are expected
+ * never to set it; the tests report how often it fires. */
+uint32_t gx_last_risk_mask(const gx_ctx * g);
+
 /* Timing of the last completed dispatch (valid after gx_wait): device_ns = first kernel start to last kernel
  * end from OpenCL profiling events (0 unless gx_params.profile), host_ns = gx_dispatch entry to gx_wait
  * return. Returns 0, or -1 if no dispatch has completed. */
@@ -119,6 +126,7 @@ typedef struct gx_stats {
     uint64_t maps, unmaps, map_errors, bytes_mapped, map_ns, unmap_ns;
     uint64_t read_maps, read_map_ns;           /* gx_slot_map_read / unmap_read pairs */
     uint64_t timed_dispatches, device_ns, host_ns;   /* sums over completed dispatches (device_ns: profile only) */
+    uint64_t risk_dispatches, risk_slots;      /* dispatches / slots with a denormal-risk flag (gx_last_risk_mask) */
 } gx_stats;
 gx_stats gx_get_stats(const gx_ctx * g);
 

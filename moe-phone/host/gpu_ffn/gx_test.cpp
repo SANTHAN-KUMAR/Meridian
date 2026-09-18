@@ -33,9 +33,11 @@ kernel void t_q8(global const float * in, global uchar * out, int with_s) {   //
     for (int i = 0; i < 32; i++) v[i] = in[get_group_id(0) * 32 + i];
     q8_block(v, out + get_group_id(0) * 36, with_s);
 }
-kernel void t_swiglu(global const float * g, global const float * u, global float * h) {
+kernel void t_swiglu(global const float * g, global const float * u, global float * h, global int * risk) {
     const size_t i = get_global_id(0);
-    h[i] = gx_swiglu(g[i], u[i]);
+    int r = 0;
+    h[i] = gx_swiglu_r(g[i], u[i], &r);
+    risk[i] = r;
 }
 kernel void t_div(global const float * a, global const float * b, global float * q) {
     const size_t i = get_global_id(0);
@@ -128,6 +130,12 @@ static std::vector<double> fp64_ffn(const Case & c) {
         }
     }
     return out;
+}
+
+static size_t diff_count(const float * a, const float * b, size_t n) {
+    size_t d = 0;
+    for (size_t i = 0; i < n; i++) d += memcmp(a + i, b + i, 4) != 0;
+    return d;
 }
 
 static int64_t ulp_dist(float a, float b) {
@@ -264,7 +272,7 @@ int main(int argc, char ** argv) {
     }
 
     // ---- SwiGLU (gx_expf + cr_div) on crafted operands over the whole float range, vs ggml ARM's swiglu_split
-    long sw_n = -1, sw_bad = 0;
+    long sw_n = -1, sw_bad = 0, sw_bad_unflagged = 0, sw_flagged = 0, sw_bad_dinput = 0;
     {
         FILE * fp = fopen((dir + "/swiglu_pairs.f32").c_str(), "rb");
         FILE * fr = fopen((dir + "/swiglu_pairs.f32.arm").c_str(), "rb");
@@ -284,18 +292,39 @@ int main(int argc, char ** argv) {
                 cl_mem bg = clCreateBuffer(ctx, CL_MEM_COPY_HOST_PTR, N * 4, v.data(), &e);
                 cl_mem bu = clCreateBuffer(ctx, CL_MEM_COPY_HOST_PTR, N * 4, v.data() + N, &e);
                 cl_mem bh = clCreateBuffer(ctx, CL_MEM_WRITE_ONLY, N * 4, nullptr, &e);
+                cl_mem br = clCreateBuffer(ctx, CL_MEM_WRITE_ONLY, N * 4, nullptr, &e);
                 clSetKernelArg(ks, 0, sizeof bg, &bg); clSetKernelArg(ks, 1, sizeof bu, &bu); clSetKernelArg(ks, 2, sizeof bh, &bh);
+                clSetKernelArg(ks, 3, sizeof br, &br);
                 clEnqueueNDRangeKernel(q, ks, 1, nullptr, &N, nullptr, 0, nullptr, nullptr);
                 std::vector<float> h(N);
+                std::vector<int> rk(N);
                 clEnqueueReadBuffer(q, bh, CL_TRUE, 0, N * 4, h.data(), 0, nullptr, nullptr);
+                clEnqueueReadBuffer(q, br, CL_TRUE, 0, N * 4, rk.data(), 0, nullptr, nullptr);
                 sw_n = (long) N;
-                for (size_t i = 0; i < N; i++)
-                    if (memcmp(&h[i], &ref[i], 4) && !(h[i] != h[i] && ref[i] != ref[i])) sw_bad++;   // NaN == NaN here
-                clReleaseMemObject(bg); clReleaseMemObject(bu); clReleaseMemObject(bh); clReleaseKernel(ks); clReleaseProgram(p);
+                FILE * dump = fopen((dir + "/swiglu_mismatch.csv").c_str(), "w");   // every mismatch, for classification
+                if (dump) fprintf(dump, "index,gate,up,gpu,ref,flagged\n");
+                for (size_t i = 0; i < N; i++) {
+                    sw_flagged += rk[i] != 0;
+                    if (memcmp(&h[i], &ref[i], 4) && !(h[i] != h[i] && ref[i] != ref[i])) {   // NaN == NaN here
+                        sw_bad++;
+                        uint32_t bg, bu;
+                        memcpy(&bg, &v[i], 4); memcpy(&bu, &v[N + i], 4);
+                        bg &= 0x7fffffffu; bu &= 0x7fffffffu;
+                        // a denormal gate/up input cannot occur in a gx dispatch (dot-product outputs are 0 or
+                        // >= ~2^-71; checked below on every case) and a DAZ device hides it from the detector
+                        if ((bg && bg < 0x00800000u) || (bu && bu < 0x00800000u)) sw_bad_dinput++;
+                        else if (!rk[i]) sw_bad_unflagged++;
+                        if (dump) fprintf(dump, "%zu,%a,%a,%a,%a,%d\n", i, v[i], v[N + i], h[i], ref[i], rk[i]);
+                    }
+                }
+                if (dump) fclose(dump);
+                clReleaseMemObject(bg); clReleaseMemObject(bu); clReleaseMemObject(bh); clReleaseMemObject(br);
+                clReleaseKernel(ks); clReleaseProgram(p);
             } else sw_n = -2;
         }
         for (FILE * f : {fp, fr}) if (f) fclose(f);
-        printf("SWIGLU n=%ld mismatches=%ld\n", sw_n, sw_bad);
+        printf("SWIGLU n=%ld mismatches=%ld of_which_denormal_input=%ld unflagged_mismatches(normal inputs)=%ld flagged=%ld\n", sw_n,
+               sw_bad, sw_bad_dinput, sw_bad_unflagged, sw_flagged);
     }
 
     // ---- cases
@@ -310,12 +339,14 @@ int main(int argc, char ** argv) {
     std::sort(files.begin(), files.end());
     FILE * js = fopen(argc > 2 ? argv[2] : "/dev/null", "w");
     fprintf(js, "{\"device\": \"%s\", \"driver\": \"%s\", \"fp32_denorm\": %d, \"div_n\": %zu, \"div_mismatches\": %zu, "
-                "\"quant_blocks\": %ld, \"gpu_q8_0_mismatch\": %ld, \"gpu_q8_1_mismatch\": %ld, \"host_q8_0_mismatch\": %ld, \"swiglu_n\": %ld, \"swiglu_mismatches\": %ld, \"cases\": [\n",
-            name, ver, !!(fpc & CL_FP_DENORM), div_n, div_bad, q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad, sw_n, sw_bad);
+                "\"quant_blocks\": %ld, \"gpu_q8_0_mismatch\": %ld, \"gpu_q8_1_mismatch\": %ld, \"host_q8_0_mismatch\": %ld, \"swiglu_n\": %ld, \"swiglu_mismatches\": %ld, \"swiglu_unflagged_mismatches\": %ld, \"swiglu_flagged\": %ld, \"swiglu_denormal_input_mismatches\": %ld, \"cases\": [\n",
+            name, ver, !!(fpc & CL_FP_DENORM), div_n, div_bad, q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad, sw_n, sw_bad, sw_bad_unflagged, sw_flagged, sw_bad_dinput);
     gx_ctx * gv[2] = {nullptr, nullptr};
     // totals per variant (0 = lane-mapped, 1 = row per work-item); cases are counted once
     size_t tot_down[2] = {0, 0}, tot_down_diff[2] = {0, 0}, tot_h[2] = {0, 0}, tot_h_diff[2] = {0, 0};
     size_t missing_arm = 0, n_cases = 0, gx_errors = 0;
+    size_t flagged_slots[2] = {0, 0}, flagged_real[2] = {0, 0}, unflagged_diff[2] = {0, 0};
+    float min_gu = INFINITY;   // smallest nonzero |gate|, |up| in the ggml reference: the no-denormal-input premise
     for (size_t fi = 0; fi < files.size(); fi++) {
         Case c;
         const std::string base = dir + "/" + files[fi];
@@ -341,6 +372,7 @@ int main(int argc, char ** argv) {
         int rc = gx_dispatch(g, 0, c.dt, c.k, slots.data(), c.x.data(), out.data());
         if (!rc) rc = gx_wait(g);
         if (!rc) rc = gx_debug_h(g, c.k, h.data());
+        const uint32_t rmask = gx_last_risk_mask(g);
         if (rc) { gx_errors++; fprintf(stderr, "gx error %d on %s\n", rc, files[fi].c_str()); }
         clReleaseMemObject(blk);
         const Ref arm = load_ref(base + ".arm.out", c.k, c.nf, c.ne), x86 = load_ref(base + ".x86.out", c.k, c.nf, c.ne);
@@ -351,8 +383,17 @@ int main(int argc, char ** argv) {
             ha = compare(h, arm.h, c.k, c.nf);
             de_arm = compare(arm.down, ex, c.k, c.ne);
             tot_down[v] += da.n; tot_down_diff[v] += da.diff_bits; tot_h[v] += ha.n; tot_h_diff[v] += ha.diff_bits;
+            for (int sl = 0; sl < c.k; sl++) {   // differences in slots the detector did NOT flag
+                if (rmask & (1u << sl)) { flagged_slots[v]++; if (files[fi].rfind("qwen3_", 0) == 0) flagged_real[v]++; continue; }
+                unflagged_diff[v] += diff_count(out.data() + (size_t) sl * c.ne, arm.down.data() + (size_t) sl * c.ne, c.ne) +
+                                     diff_count(h.data() + (size_t) sl * c.nf, arm.h.data() + (size_t) sl * c.nf, c.nf);
+            }
         } else if (v == 0) missing_arm++;
         if (x86.ok) dx = compare(out, x86.down, c.k, c.ne);
+        if (arm.ok && v == 0)
+            for (size_t i = 0; i < arm.gate.size(); i++)
+                for (float z : {arm.gate[i], arm.up[i]})
+                    if (z != 0.0f && fabsf(z) < min_gu) min_gu = fabsf(z);
         de_gx = compare(out, ex, c.k, c.ne);
         if (v == 0) n_cases++;
         printf("CASE %-16s v%d down=%s k=%d arm=%d down_diff_bits=%zu/%zu max_ulp=%lld h_diff_bits=%zu/%zu rel_vs_arm=%.3g "
@@ -372,17 +413,29 @@ int main(int argc, char ** argv) {
     // variant 0 keeps the unsuffixed names (claims gx_down_*); variant 1 is reported as *_row
     fprintf(js, "], \"cases_n\": %zu, \"missing_arm_ref\": %zu, \"down_values\": %zu, \"down_diff_bits\": %zu, "
                 "\"h_values\": %zu, \"h_diff_bits\": %zu, \"down_values_row\": %zu, \"down_diff_bits_row\": %zu, "
-                "\"h_values_row\": %zu, \"h_diff_bits_row\": %zu, \"gx_errors\": %zu, \"gx_stats_errors\": %llu}\n",
+                "\"h_values_row\": %zu, \"h_diff_bits_row\": %zu, \"gx_errors\": %zu, \"gx_stats_errors\": %llu, "
+                "\"flagged_slots\": [%zu, %zu], \"flagged_real_slots\": [%zu, %zu], \"unflagged_diff\": [%zu, %zu], \"min_nonzero_gate_up\": %a}\n",
             n_cases, missing_arm, tot_down[0], tot_down_diff[0], tot_h[0], tot_h_diff[0], tot_down[1], tot_down_diff[1], tot_h[1],
-            tot_h_diff[1], gx_errors, st_err);
+            tot_h_diff[1], gx_errors, st_err, flagged_slots[0], flagged_slots[1], flagged_real[0], flagged_real[1],
+            unflagged_diff[0], unflagged_diff[1], min_gu);
     fclose(js);
     const bool exact = missing_arm == 0 && n_cases > 0 && tot_down_diff[0] == 0 && tot_h_diff[0] == 0 && tot_down_diff[1] == 0 &&
                        tot_h_diff[1] == 0 && tot_down[1] == tot_down[0] && div_bad == 0 && gx_errors == 0 &&
                        q8_blocks > 0 && q8_0_bad == 0 && q8_1_bad == 0 && host_q8_0_bad == 0 && sw_n > 0 && sw_bad == 0;
+    // Rule for devices that flush fp32 denormals (pre-registered 2026-09-18, after M6 run gx_m6_224521):
+    // PASS_WITH_DETECTOR = zero differences in every slot / sweep value the detector did not flag, zero
+    // flags on the real Qwen3 cases, quantizer and division exact. BIT-EXACT additionally needs zero raw diffs.
+    const bool detector_pass = missing_arm == 0 && n_cases > 0 && unflagged_diff[0] == 0 && unflagged_diff[1] == 0 &&
+                               flagged_real[0] == 0 && flagged_real[1] == 0 && sw_n > 0 && sw_bad_unflagged == 0 && min_gu >= 0x1p-126f &&
+                               div_bad == 0 && gx_errors == 0 && q8_blocks > 0 && q8_0_bad == 0 && q8_1_bad == 0 && host_q8_0_bad == 0;
+    printf("PREMISE min_nonzero_gate_up=%a (%s 2^-126)\n", min_gu, min_gu >= 0x1p-126f ? ">=" : "< !!");
+    printf("DETECTOR flagged_slots(v0/v1)=%zu/%zu flagged_real_slots=%zu/%zu unflagged_diff=%zu/%zu swiglu_flagged=%ld "
+           "swiglu_unflagged_mismatches=%ld -> %s\n", flagged_slots[0], flagged_slots[1], flagged_real[0], flagged_real[1],
+           unflagged_diff[0], unflagged_diff[1], sw_flagged, sw_bad_unflagged, detector_pass ? "PASS_WITH_DETECTOR" : "DETECTOR_FAIL");
     printf("SUMMARY cases=%zu missing_arm_ref=%zu down_diff_bits(v0/v1)=%zu/%zu of %zu h_diff_bits(v0/v1)=%zu/%zu of %zu "
            "div_mismatches=%zu quant_blocks=%ld q8_mismatch(gpu0/gpu1/host0)=%ld/%ld/%ld swiglu=%ld/%ld gx_errors=%zu -> %s\n",
            n_cases, missing_arm, tot_down_diff[0], tot_down_diff[1], tot_down[0], tot_h_diff[0], tot_h_diff[1], tot_h[0], div_bad,
            q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad, sw_bad, sw_n, gx_errors, exact ? "BIT-EXACT vs ggml-cpu ARM" : "NOT bit-exact");
     for (gx_ctx * g : gv) if (g) gx_free(g);
-    return exact ? 0 : 3;
+    return exact ? 0 : (detector_pass ? 4 : 3);
 }

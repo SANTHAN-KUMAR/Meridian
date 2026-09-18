@@ -15,6 +15,19 @@ R"GXCL(// gx_kernels.cl — fused MoE expert FFN, bit-matched to ggml-cpu's ARM 
 #define DT_Q4_0 0
 #define DT_Q4_1 1
 
+// fp16 -> fp32 from the bits, exact for every input. Adreno 829 reports no fp32 denormal support, and a
+// vload_half folded into a multiply flushed fp16-subnormal scales to zero there (M6 run gx_m6_224521,
+// variant 0). Every fp16 value, subnormals included, is a NORMAL fp32 number (smallest 2^-24), so this
+// decode has nothing to flush: a subnormal is built as (float) m * 2^-24, an exact product.
+static float h2f(ushort h) {
+    const uint s = (uint) (h >> 15), e = (uint) ((h >> 10) & 31), m = (uint) (h & 1023);
+    float v;
+    if (e == 0) v = (float) m * 0x1p-24f;
+    else if (e == 31) v = as_float(0x7f800000u | (m << 13));
+    else v = as_float(((e + 112u) << 23) | (m << 13));
+    return s ? -v : v;
+}
+
 // Correctly rounded a/b. ggml-cpu's divisions are IEEE fdiv; OpenCL's '/' may be off by 2.5 ulp. One
 // refinement, then pick the nearest of q and its two neighbours by the exact residual a - q*b (exact
 // in fma when q is within an ulp of a/b). A binary quotient is never exactly half-way, so no tie rule
@@ -53,9 +66,21 @@ static float gx_expf(float x) {
 }
 
 // ggml_v_silu: x / (1 + expf(0 - x)), then ggml_vec_swiglu_f32 multiplies by the up value.
-static float gx_swiglu(float g, float u) {
+// *risk |= 1 when the value may differ from ggml-cpu on a device that flushes fp32 denormals (Adreno 829
+// reports no fp32 denormal support). The dot products that produce g and u cannot create denormals: every
+// nonzero partial sum is >= ~2^-71 (fp16 scales >= 2^-24, integer lane sums). Denormals can only arise here:
+//   |g| > 80: exp's special branch and results near FLT_MAX / FLT_MIN
+//   a nonzero operand or result below 2^-100, or a zero result from nonzero operands (a flushed denormal).
+// Real activations sit far from both, so a flag means "recompute this expert on the CPU", not "wrong".
+#define GX_TINY 0x1p-100f
+static int gx_tiny(float v) { return v != 0.0f && fabs(v) < GX_TINY; }
+static float gx_swiglu_r(float g, float u, int * risk) {
     const float e = gx_expf(0.0f - g);
-    return cr_div(g, 1.0f + e) * u;
+    const float sil = cr_div(g, 1.0f + e);
+    const float h = sil * u;
+    *risk |= fabs(g) > 80.0f || gx_tiny(g) || gx_tiny(u) || gx_tiny(sil) || gx_tiny(h) ||
+             (g != 0.0f && sil == 0.0f) || (sil != 0.0f && u != 0.0f && h == 0.0f);
+    return h;
 }
 
 // quantize_row_q8_0 / quantize_row_q8_1, ggml-cpu/arch/arm/quants.c (__ARM_NEON branch), one 32-value
@@ -63,7 +88,7 @@ static float gx_swiglu(float g, float u) {
 //   amax = max|v| (order-free); d = amax / 127 and id = 1 / d, both IEEE fp32 divisions (not 127 / amax);
 //   y.d = fp16_rne(d); q = vcvtnq_s32_f32(v * id), i.e. round to nearest, ties to even;
 //   y.s = fp16_rne(d * (float) sum(q)), with the fp32 d, not the stored fp16 one.
-static void q8_block(local const float * v, global uchar * yo, int with_s) {
+static int q8_block(local const float * v, global uchar * yo, int with_s) {   // returns the risk flag
     float amax = 0.0f;
     for (int i = 0; i < 32; i++) amax = fmax(amax, fabs(v[i]));
     const float d = cr_div(amax, 127.0f);
@@ -76,6 +101,7 @@ static void q8_block(local const float * v, global uchar * yo, int with_s) {
         sum += q;
     }
     if (with_s) vstore_half_rte(d * (float) sum, 1, (global half *) yo);
+    return gx_tiny(amax * 0x1p-26f);   // amax < 2^-74: d = amax/127 and 1/d approach the denormal/overflow range
 }
 
 static global const uchar * pick(int s, global const uchar * w0, global const uchar * w1, global const uchar * w2,
@@ -110,7 +136,7 @@ static float hsum8(local const float * l) {
 kernel void gx_gate_up(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
                        global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
                        global const ulong * offs, global const uchar * xq, global uchar * hq,
-                       global float * hdbg, int dbg, int dt) {
+                       global float * hdbg, int dbg, int dt, global int * risk) {
     local float lg[256], lu[256], lh[32];
     const int t = get_local_id(0), blk = get_group_id(0), s = get_group_id(1);
     const int rr = t >> 3, w = t & 7, p = w >> 2, j = w & 3;
@@ -121,27 +147,29 @@ kernel void gx_gate_up(global const uchar * w0, global const uchar * w1, global 
     float ag = 0.0f, au = 0.0f;
     for (int ib = p; ib < NBX; ib += 2) {
         global const uchar * yb = xq + ib * YB0;
-        const float dy = vload_half(0, (global const half *) yb);
+        const float dy = h2f(((global const ushort *) yb)[0]);
         const char4 yl = vload4(0, (global const char *) (yb + 2 + 4 * j));
         const char4 yh = vload4(0, (global const char *) (yb + 2 + 16 + 4 * j));
         global const uchar * gb = G + ib * QB0;
         global const uchar * ub = U + ib * QB0;
         const int ig = lane_dot(vload4(0, gb + 2 + 4 * j), 8, yl, yh);
         const int iu = lane_dot(vload4(0, ub + 2 + 4 * j), 8, yl, yh);
-        const float sg = vload_half(0, (global const half *) gb) * dy;   // fmul, then fused fmla
-        const float su = vload_half(0, (global const half *) ub) * dy;
+        const float sg = h2f(((global const ushort *) gb)[0]) * dy;   // fmul, then fused fmla
+        const float su = h2f(((global const ushort *) ub)[0]) * dy;
         ag = fma((float) ig, sg, ag);
         au = fma((float) iu, su, au);
     }
     lg[t] = ag; lu[t] = au;
     barrier(CLK_LOCAL_MEM_FENCE);
     if (w == 0) {
-        const float h = gx_swiglu(hsum8(lg + t), hsum8(lu + t));
+        int r = 0;
+        const float h = gx_swiglu_r(hsum8(lg + t), hsum8(lu + t), &r);
         lh[rr] = h;
         if (dbg) hdbg[s * N_FF + row] = h;
+        if (r) risk[s] = 1;
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (t == 0) q8_block(lh, hq + ((size_t) s * NBH + blk) * YB1, dt == DT_Q4_1);
+    if (t == 0 && q8_block(lh, hq + ((size_t) s * NBH + blk) * YB1, dt == DT_Q4_1)) risk[s] = 1;
 }
 
 // Kernel 2: down rows. Q4_1 x Q8_1 (dt = DT_Q4_1): same lane mapping; summs as the ARM build computes it,
@@ -166,7 +194,7 @@ kernel void gx_down(global const uchar * w0, global const uchar * w1, global con
         const char4 yl = vload4(0, (global const char *) (yb + 4 + 4 * j));
         const char4 yh = vload4(0, (global const char *) (yb + 4 + 16 + 4 * j));
         const int is = lane_dot(vload4(0, xb + qo + 4 * j), bias, yl, yh);
-        const float sc = vload_half(0, (global const half *) xb) * vload_half(0, (global const half *) yb);
+        const float sc = h2f(((global const ushort *) xb)[0]) * h2f(((global const ushort *) yb)[0]);
         acc = fma((float) is, sc, acc);
     }
     la[t] = acc;
@@ -176,8 +204,8 @@ kernel void gx_down(global const uchar * w0, global const uchar * w1, global con
         for (int ib = 0; dt == DT_Q4_1 && ib + 1 < NBH; ib += 2) {
             global const uchar * x0 = D + ib * QB1;
             global const uchar * y0 = Y + ib * YB1;
-            const float m0 = vload_half(1, (global const half *) x0), s0 = vload_half(1, (global const half *) y0);
-            const float m1 = vload_half(1, (global const half *) (x0 + QB1)), s1 = vload_half(1, (global const half *) (y0 + YB1));
+            const float m0 = h2f(((global const ushort *) x0)[1]), s0 = h2f(((global const ushort *) y0)[1]);
+            const float m1 = h2f(((global const ushort *) (x0 + QB1))[1]), s1 = h2f(((global const ushort *) (y0 + YB1))[1]);
             summs = summs + fma(m0, s0, m1 * s1);
         }
         const float v = hsum8(la + t);
@@ -214,14 +242,14 @@ static float hsum8p(const float * l) {
 kernel void gx_gate_up_row(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
                            global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
                            global const ulong * offs, global const uchar * xq, global uchar * hq,
-                           global float * hdbg, int dbg, int dt) {
+                           global float * hdbg, int dbg, int dt, global int * risk) {
     local char  lx[NBX * 32];
     local float ldx[NBX];   // fp16 d widened to fp32 (exact)
     local float lh[64];
     const int t = get_local_id(0), s = get_group_id(1);
     const int row = get_group_id(0) * 64 + t;
     for (int i = t; i < NBX; i += 64) {
-        ldx[i] = vload_half(0, (global const half *) (xq + i * YB0));
+        ldx[i] = h2f(((global const ushort *) (xq + i * YB0))[0]);
         for (int b = 0; b < 32; b++) lx[i * 32 + b] = (char) xq[i * YB0 + 2 + b];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -233,14 +261,16 @@ kernel void gx_gate_up_row(global const uchar * w0, global const uchar * w1, glo
         const float dy = ldx[ib];
         global const uchar * gb = G + ib * QB0;
         global const uchar * ub = U + ib * QB0;
-        row_block(ag, ib & 1, gb + 2, vload_half(0, (global const half *) gb) * dy, 8, lx + ib * 32);
-        row_block(au, ib & 1, ub + 2, vload_half(0, (global const half *) ub) * dy, 8, lx + ib * 32);
+        row_block(ag, ib & 1, gb + 2, h2f(((global const ushort *) gb)[0]) * dy, 8, lx + ib * 32);
+        row_block(au, ib & 1, ub + 2, h2f(((global const ushort *) ub)[0]) * dy, 8, lx + ib * 32);
     }
-    const float h = gx_swiglu(hsum8p(ag), hsum8p(au));
+    int r = 0;
+    const float h = gx_swiglu_r(hsum8p(ag), hsum8p(au), &r);
     lh[t] = h;
     if (dbg) hdbg[s * N_FF + row] = h;
+    if (r) risk[s] = 1;
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (t < 2) q8_block(lh + 32 * t, hq + ((size_t) s * NBH + get_group_id(0) * 2 + t) * YB1, dt == DT_Q4_1);
+    if (t < 2 && q8_block(lh + 32 * t, hq + ((size_t) s * NBH + get_group_id(0) * 2 + t) * YB1, dt == DT_Q4_1)) risk[s] = 1;
 }
 
 // Grid (N_EMBD, k), local (64, 1).
@@ -253,8 +283,8 @@ kernel void gx_down_row(global const uchar * w0, global const uchar * w1, global
     const int row = get_group_id(0) * 64 + t;
     global const uchar * Y = hq + (size_t) s * NBH * YB1;
     for (int i = t; i < NBH; i += 64) {
-        ld[i] = vload_half(0, (global const half *) (Y + i * YB1));
-        ls[i] = vload_half(1, (global const half *) (Y + i * YB1));
+        ld[i] = h2f(((global const ushort *) (Y + i * YB1))[0]);
+        ls[i] = h2f(((global const ushort *) (Y + i * YB1))[1]);
         for (int b = 0; b < 32; b++) ly[i * 32 + b] = (char) Y[i * YB1 + 4 + b];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -264,9 +294,9 @@ kernel void gx_down_row(global const uchar * w0, global const uchar * w1, global
     float summs = 0.0f;
     for (int ib = 0; ib < NBH; ib++) {
         global const uchar * xb = D + ib * qb;
-        row_block(acc, ib & 1, xb + qo, vload_half(0, (global const half *) xb) * ld[ib], bias, ly + ib * 32);
+        row_block(acc, ib & 1, xb + qo, h2f(((global const ushort *) xb)[0]) * ld[ib], bias, ly + ib * 32);
         if (dt == DT_Q4_1 && (ib & 1)) {
-            const float m0 = vload_half(1, (global const half *) (xb - QB1)), m1 = vload_half(1, (global const half *) xb);
+            const float m0 = h2f(((global const ushort *) (xb - QB1))[1]), m1 = h2f(((global const ushort *) xb)[1]);
             summs = summs + fma(m0, ls[ib - 1], m1 * ls[ib]);
         }
     }

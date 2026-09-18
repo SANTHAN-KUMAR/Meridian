@@ -114,7 +114,10 @@ struct gx_ctx {
     cl_command_queue q = nullptr;
     cl_program prog = nullptr;
     cl_kernel k1 = nullptr, k2 = nullptr;
-    cl_mem xq = nullptr, offs = nullptr, hq = nullptr, out = nullptr, hdbg = nullptr;
+    cl_mem xq = nullptr, offs = nullptr, hq = nullptr, out = nullptr, hdbg = nullptr, risk = nullptr;
+    cl_int risk_host[GX_MAX_K] = {0};
+    cl_int risk_zero[GX_MAX_K] = {0};
+    uint32_t last_risk = 0;
     gx_params p{};
     uint8_t xq_host[(8192 / 32) * 34];
     cl_ulong offs_host[3 * GX_MAX_K];
@@ -140,7 +143,7 @@ static void seterr(char * err, size_t n, const std::string & s) {
 extern "C" void gx_free(gx_ctx * g) {
     if (!g) return;
     if (g->q) p_clFinish(g->q);
-    for (cl_mem m : {g->xq, g->offs, g->hq, g->out, g->hdbg})
+    for (cl_mem m : {g->xq, g->offs, g->hq, g->out, g->hdbg, g->risk})
         if (m) p_clReleaseMemObject(m);
     for (PoolBlock & b : g->blocks) p_clReleaseMemObject(b.m);
     if (g->q_io) p_clReleaseCommandQueue(g->q_io);
@@ -199,6 +202,7 @@ extern "C" gx_ctx * gx_init(cl_context ctx, cl_device_id dev, gx_params p, char 
     g->hq = mk(CL_MEM_READ_WRITE, (size_t) GX_MAX_K * p.n_ff / 32 * 36);
     g->out = mk(CL_MEM_WRITE_ONLY, (size_t) GX_MAX_K * p.n_embd * sizeof(float));
     g->hdbg = mk(CL_MEM_WRITE_ONLY, (size_t) GX_MAX_K * p.n_ff * sizeof(float));
+    g->risk = mk(CL_MEM_READ_WRITE, sizeof g->risk_host);
     if (e != CL_SUCCESS) { seterr(err, errlen, "setup " + std::to_string(e)); gx_free(g); return nullptr; }
     return g;
 }
@@ -233,6 +237,9 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
     if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 11, sizeof(cl_mem), &g->hdbg);
     if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 12, sizeof(cl_int), &dbg);
     if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 13, sizeof(cl_int), &dt);
+    if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k1, 14, sizeof(cl_mem), &g->risk);
+    if (e == CL_SUCCESS)
+        e = p_clEnqueueWriteBuffer(g->q, g->risk, CL_FALSE, 0, sizeof g->risk_zero, g->risk_zero, 0, nullptr, nullptr);
     if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 8, sizeof(cl_mem), &g->offs);
     if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 9, sizeof(cl_mem), &g->hq);
     if (e == CL_SUCCESS) e = p_clSetKernelArg(g->k2, 10, sizeof(cl_mem), &g->out);
@@ -246,6 +253,8 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
     if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k2, 2, nullptr, g2, l, 0, nullptr, e2);
     if (e == CL_SUCCESS)
         e = p_clEnqueueReadBuffer(g->q, g->out, CL_FALSE, 0, sizeof(float) * k * ne, out, 0, nullptr, nullptr);
+    if (e == CL_SUCCESS)
+        e = p_clEnqueueReadBuffer(g->q, g->risk, CL_FALSE, 0, sizeof g->risk_host, g->risk_host, 0, nullptr, nullptr);
     if (e == CL_SUCCESS) e = p_clFlush(g->q);
     {
         std::lock_guard<std::mutex> lk(g->mu);
@@ -279,6 +288,10 @@ extern "C" int gx_wait(gx_ctx * g) {
         if (*ev) { p_clReleaseEvent(*ev); *ev = nullptr; }
     std::lock_guard<std::mutex> lk(g->mu);
     if (e != CL_SUCCESS) { g->st.errors++; return e; }
+    uint32_t mask = 0;
+    for (int i = 0; i < g->last_k; i++) mask |= g->risk_host[i] ? (1u << i) : 0u;
+    g->last_risk = mask;
+    if (mask) { g->st.risk_dispatches++; g->st.risk_slots += (uint64_t) __builtin_popcount(mask); }
     g->last_device_ns = dev_ns;
     g->last_host_ns = t1 - g->t_dispatch;
     g->have_last = true;
@@ -286,6 +299,11 @@ extern "C" int gx_wait(gx_ctx * g) {
     g->st.device_ns += dev_ns;
     g->st.host_ns += g->last_host_ns;
     return e;
+}
+
+extern "C" uint32_t gx_last_risk_mask(const gx_ctx * g) {
+    std::lock_guard<std::mutex> lk(const_cast<gx_ctx *>(g)->mu);
+    return g->last_risk;
 }
 
 extern "C" int gx_last_timing(const gx_ctx * g, uint64_t * device_ns, uint64_t * host_ns) {

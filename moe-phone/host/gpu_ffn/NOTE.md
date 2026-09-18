@@ -250,3 +250,51 @@ work-groups are 64 work-items.
 | `cl_shim.cpp` | OpenCL entry points by `dlopen`, for the Android builds of the three programs above |
 | `run_phone_m6.sh` | M6, prepared and **not run**: correctness first, then the bench |
 | `build.sh` | `inc`, `host`, `arm-ref`, `android` (libgx.a plus the three M6 programs) |
+
+## 7. M6 run 1 on the phone (2026-09-18, `results/2026-09-18/gx_m6_224521/`) and what changed
+
+The pre-registered gate said NOT bit-exact, so no speed rows were produced. Findings:
+
+**Device.** Adreno 829, OpenCL 3.0. It reports `fp32_denorm=0`, `fp32_fma=0` and
+`fp32_cr_divide=0`. Even so, `cr_div` matched IEEE on 16.8M pairs, and the quantizer matched on
+65,536 blocks.
+
+**Variant 1** was bit-exact on all 27 end-to-end cases.
+
+**Variant 0** failed on 4 random cases (rand_02, 05, 11, 17), with errors of 4–7% relative: not
+rounding. The mechanism is fp16-subnormal block scales flushed to zero:
+- Those cases, and only those, have Q8 scales below 2^-14. In rand_02, 05 and 17 the scales are in h
+  and the down output is wrong. In rand_11 they are in x and h is wrong.
+- Other x-side subnormal cases pass, because their flushed blocks contribute below an ulp.
+- Variant 0 read those scales with `vload_half` folded into a multiply. Variant 1 converts them to
+  float in local memory first, which survived.
+- **Fix:** every fp16 load is now an exact decode from the bits (`h2f`). Every fp16 value, subnormals
+  included, is a normal fp32 number, so there is nothing left to flush, whatever the compiler does.
+
+**SwiGLU sweep: 21,333 of 1,049,088 mismatch.** All crafted inputs are extreme.
+- A host emulation with FTZ/DAZ (x86 MXCSR) reproduces 10,747 of them. They are in three classes:
+  denormal gate or up inputs, gates below −80, and denormal results.
+- The rest is unexplained until run 2 dumps every mismatch (`swiglu_mismatch.csv`).
+- **Detector.** Kernels now flag a slot when a SwiGLU operand or result, or an h block maximum, lies
+  in the denormal-risk range, or |gate| > 80.
+  - The engine gets `gx_last_risk_mask` and should recompute flagged experts on the CPU.
+  - Gate and up come from dot products whose nonzero values are ≥ ~2^-71, so denormal inputs cannot
+    occur in a dispatch. The smallest nonzero |gate| or |up| over all cases is reported as the
+    premise check.
+  - Under FTZ emulation, every mismatch the detector misses has a denormal input: unreachable in a
+    dispatch.
+  - Laptop: 0 real Qwen3 slots flagged, 13 random-case slots flagged; still bit-exact.
+
+**Gate revised for run 2, before it runs.** Speed rows are produced if the result is BIT-EXACT, or
+if it is PASS_WITH_DETECTOR, which requires all of:
+- zero differences in unflagged slots and in unflagged normal-input sweep values;
+- zero flags on real Qwen3 slots;
+- the premise check holds;
+- quantizer and division exact.
+
+A detector that fails to cover a phone mismatch fails the gate.
+
+**Pool on the phone.** The pool test passed. Dispatch took 2.1 ms on the device and 4.3–4.8 ms on
+the host, mean across k (pool test, not a bench). Map took 0.55–0.67 ms and unmap 1.8–1.9 ms.
+Dispatch-while-mapped showed the NEW bytes on Adreno (zero-copy). So on Adreno a protocol violation
+is silent, and the rules in §3b are the only guard.
