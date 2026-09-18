@@ -1,0 +1,16 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the fieldWrite a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field<|im_end|>
+<|im_start|>assistant
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field<|im_end|>
+<|im_start|>assistant
+Write a long detailed essay about the history of computing
+
+generation: 96 tokens, 0.228 s/token (4.383 tok/s)
+compute: 36.9% CPU occupancy (0.3364 cpu-s/token over 4 threads), 0.00 major faults/token
+prefill: 51 tokens, 5.469 s (9.3 tok/s) | model load 2.698 s | TTFT 8.167 s
+mode: expert streaming, cache 2000 MiB, dense anon, overlap
+moe-stream: read 8676.8 MiB (90.38 MiB/token), decode 0.228 s/token (compute 0.058 + cache mgmt 0.036 + flash I/O 0.487 s/token, 185 MiB/s)
+moe-cache: 77.0% hit, resident 1154.2 MiB
+moe-cache: 974 evictions, 1923 re-reads (20.0/token) — bytes the cache had already paid for once
+moe-overlap: stall 0.134 s/token (flash reads overlapped with FFN compute)
+moe-waits: drain 0.000 s/token (inside compute), adopt 0.008 s/token (inside mgmt)
+moe-prefetch: 1312.9 MiB speculative, 269/389 experts useful (69%) [stale-gate]

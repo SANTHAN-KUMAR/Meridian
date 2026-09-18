@@ -964,6 +964,18 @@ CLAIMS = [
          text="the v1 promotion policy churns and overloads the device: 2498 promotions and 2350 tier evictions in 96 tokens, and 4.62 of 8 experts per dispatch at 500 MiB (6.22 at 800 MiB) -- above the ~3 the GPU's measured rate share supports; admission control and a per-layer cap are required before any phone rate is meaningful (design §13)",
          artifact="gtier_m4.json", expected=4.62, tol=0.005,
          value=lambda A: A["gm4"]["rows"]["t500"]["experts_per_dispatch"]),
+    dict(id="gtier_policy_text_identical",
+         text="LAPTOP, stand-in device: all 7 tier configurations (off; cap 3; cap 3 with promote-after-1; cap 1; cap 8; cap 3 with <= 2 and <= 1 promotions per token) generate byte-identical text, including 12,343 owned experts that the CPU computed from read-mapped tier slots under the per-layer cap",
+         artifact="gtier_policy.json", expected=True, tol=0,
+         value=lambda A: A["gpol"]["all_text_identical"] and not A["gpol"]["any_fatal"] and A["gpol"]["n_runs"] == 7),
+    dict(id="gtier_policy_churn_bounded",
+         text="with the default policy (cap 3, second-chance admission, <= 2 promotions per token) the tier promotes 190 experts in 96 tokens with 42 tier evictions, against 2498/2350 for the v1 policy: churn is bounded by construction, at the price of a slower fill",
+         artifact="gtier_policy.json", expected=190, tol=0,
+         value=lambda A: A["gpol"]["rows"]["k3b2"]["promotions"]),
+    dict(id="gtier_policy_cap",
+         text="the per-layer cap holds the device near its rate share: 2.84 experts per dispatch at cap 3 (no budget), against 4.32 with the cap at 8",
+         artifact="gtier_policy.json", expected=2.84, tol=0.005,
+         value=lambda A: A["gpol"]["rows"]["k3"]["experts_per_dispatch"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1276,6 +1288,7 @@ def load_all():
         "fstack": load("fault_stack.json"),
         "sgl": load("swapguard_laptop.json"),
         "gm4": load("gtier_m4.json"),
+        "gpol": load("gtier_policy.json"),
     }
 
 

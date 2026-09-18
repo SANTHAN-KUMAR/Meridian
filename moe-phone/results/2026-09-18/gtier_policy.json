@@ -1,0 +1,79 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/gtier_policy_laptop",
+ "rows": {
+  "k1": {
+   "text_md5": "10c6c8825bc8fc7c67d729f2657e8976",
+   "fatal": false,
+   "promotions": 1857,
+   "tier_evictions": 1709,
+   "dispatches": 1502,
+   "experts_on_device": 1502,
+   "experts_per_dispatch": 1.0,
+   "overflow": 4983,
+   "budget_denied": null
+  },
+  "k3": {
+   "text_md5": "10c6c8825bc8fc7c67d729f2657e8976",
+   "fatal": false,
+   "promotions": 1827,
+   "tier_evictions": 1679,
+   "dispatches": 1499,
+   "experts_on_device": 4252,
+   "experts_per_dispatch": 2.84,
+   "overflow": 2250,
+   "budget_denied": null
+  },
+  "k3b1": {
+   "text_md5": "10c6c8825bc8fc7c67d729f2657e8976",
+   "fatal": false,
+   "promotions": 95,
+   "tier_evictions": 0,
+   "dispatches": 238,
+   "experts_on_device": 584,
+   "experts_per_dispatch": 2.45,
+   "overflow": 365,
+   "budget_denied": 7552
+  },
+  "k3b2": {
+   "text_md5": "10c6c8825bc8fc7c67d729f2657e8976",
+   "fatal": false,
+   "promotions": 190,
+   "tier_evictions": 42,
+   "dispatches": 473,
+   "experts_on_device": 1146,
+   "experts_per_dispatch": 2.42,
+   "overflow": 763,
+   "budget_denied": 6935
+  },
+  "k3h1": {
+   "text_md5": "10c6c8825bc8fc7c67d729f2657e8976",
+   "fatal": false,
+   "promotions": 2092,
+   "tier_evictions": 1855,
+   "dispatches": 1525,
+   "experts_on_device": 4502,
+   "experts_per_dispatch": 2.95,
+   "overflow": 3982,
+   "budget_denied": null
+  },
+  "k8": {
+   "text_md5": "10c6c8825bc8fc7c67d729f2657e8976",
+   "fatal": false,
+   "promotions": 1857,
+   "tier_evictions": 1709,
+   "dispatches": 1502,
+   "experts_on_device": 6485,
+   "experts_per_dispatch": 4.32,
+   "overflow": 0,
+   "budget_denied": null
+  },
+  "off": {
+   "text_md5": "10c6c8825bc8fc7c67d729f2657e8976",
+   "fatal": false
+  }
+ },
+ "n_runs": 7,
+ "all_text_identical": true,
+ "any_fatal": false,
+ "overflow_total": 12343
+}
