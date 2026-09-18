@@ -799,6 +799,27 @@ CLAIMS = [
          text="for the resident attention projections the GPU is the fastest device: 1.64x the CPU on attn_q, 1.38x on attn_output, 2.80x on the K/V projection",
          artifact="matmul_sweep.json", expected=1.64, tol=0.01,
          value=lambda A: round(next(c for c in A["msweep"]["cells"] if c["shape"] == "attn_q" and c["device"] == "GPUOpenCL")["speedup_vs_cpu"], 2)),
+    # ------------------------- SLOT ARENA RE-RUN (device/bmoe_arena2.sh -> gates/arena2_summary.py, 2026-09-18 15:08)
+    dict(id="arena2_mgmt_ms",
+         text="the slot arena removes cache management: 2 ms/token in all six arena rows against 20-22 ms in all six base rows (12/12 rows, ABBA x3, no foreign benchmark process in any row)",
+         artifact="arena2_summary.json", expected=2.0, tol=0.0,
+         value=lambda A: A["arena2"]["cells"]["arena"]["cache_mgmt_ms_max"]),
+    dict(id="arena2_compute_delta_ms",
+         text="and the compute residual rises by 14.0 ms/token (median 103.5 vs 89.5), which is where page-fault cost on the slot memory would appear",
+         artifact="arena2_summary.json", expected=14.0, tol=0.05,
+         value=lambda A: A["arena2"]["compute_delta_ms"]),
+    dict(id="arena2_memavail_delta",
+         text="the arena run's lowest free memory is 337 MiB lower (median of per-row minima, 767 vs 1104 MiB)",
+         artifact="arena2_summary.json", expected=-337.0, tol=1.0,
+         value=lambda A: A["arena2"]["memavail_min_delta_MiB"]),
+    dict(id="arena2_decode_ratio",
+         text="net decode median 0.964x base (6.12 vs 6.35 tok/s); arena slower in 3 of 3 repeats, below the ~10% this design resolves, so recorded as no gain, not as a measured loss",
+         artifact="arena2_summary.json", expected=0.964, tol=0.001,
+         value=lambda A: A["arena2"]["decode_ratio_arena_over_base"]),
+    dict(id="arena2_lossless",
+         text="all 12 rows generated identical text",
+         artifact="arena2_summary.json", expected=12, tol=0,
+         value=lambda A: A["arena2"]["text_match_ok"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1034,6 +1055,7 @@ def load_all():
         "cproj": load("cache_projection.json"),
         "bslru": load("bmoe_slru.json"),
         "msweep": load("matmul_sweep.json"),
+        "arena2": load("arena2_summary.json"),
     }
 
 
