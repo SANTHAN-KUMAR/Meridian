@@ -1,0 +1,384 @@
+# DRAFT - PAUSED 2026-09-18 at the phone session's request (user: out of the single-lever testing loop). Not queued, not built for Android.
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f, applied AFTER 0001-0013 (engine + tests/config_test.cpp; no llama.cpp change).
+# --ab-toggle N --ab-lever {spec-selective|predict-issue|spec-gate}: in-process A/B, arm flips every N decode tokens. See 0014-DRAFT-NOTE.md.
+diff --git a/cli/main.cpp b/cli/main.cpp
+index e275640..72923c2 100644
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -536,6 +536,8 @@ static void print_usage(const char * argv0) {
+         "                          (0 = off; moe-phone)\n"
+         "      --predict-spec-margin M speculate only if (score - top-k boundary)/sd >= M\n"
+         "                          (< 0 = off; moe-phone)\n"
++        "      --ab-toggle N       in-process A/B: flip --ab-lever every N decode tokens (0 = off; moe-phone)\n"
++        "      --ab-lever NAME     spec-selective | predict-issue | spec-gate\n"
+         "      --list-archs        print supported MoE architectures and exit\n"
+         "\n"
+         "  Env overrides (flag wins): BMOE_CACHE_MB, BMOE_IO_THREADS, BMOE_PROGRESS, BMOE_OVERLAP, BMOE_PREFETCH, "
+@@ -810,6 +812,10 @@ extern "C" int bmoe_main(int argc, char ** argv) {
+             cfg.moe.predict_spec_rank = std::atoi(next("--predict-spec-rank"));
+         else if (a == "--predict-spec-margin")
+             cfg.moe.predict_spec_margin = (float) std::atof(next("--predict-spec-margin"));
++        else if (a == "--ab-toggle")
++            cfg.moe.ab_toggle = std::atoi(next("--ab-toggle"));
++        else if (a == "--ab-lever")
++            cfg.moe.ab_lever = next("--ab-lever");
+         else if (a == "--list-archs") {
+             std::printf("supported MoE architectures:\n");
+             for (int k = 0; k < n_moe_recipes(); ++k)
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+index d247e40..2b66ffc 100644
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -297,6 +297,22 @@ struct MoeStreamConfig {
+     int predict_spec_rank = 0;
+     float predict_spec_margin = -1.0f;
+ 
++    // moe-phone (patch 0014): IN-PROCESS A/B. With ab_toggle = N > 0 the decode loop flips one
++    // runtime-switchable lever every N decode tokens, arm A (the lever as configured) first, arm B
++    // (the lever off) next, and so on. Both arms then share one process, one cache, one clock and one
++    // thermal state, which is what a between-run A/B on a governor-capped phone cannot give (5.5%
++    // run-to-run sd; research/2026-09-18_why_levers_flip.md). Every switch drains speculation
++    // destructively first, so no speculative state crosses from one arm into the other. The levers
++    // only change WHEN bytes arrive, never which experts compute or with what bytes, so the text is
++    // identical to an ab_toggle = 0 run. ab_lever names the lever:
++    //   "spec-selective"  spec_adopt_selective on (A) / off (B)             (needs spec_adopt_selective)
++    //   "predict-issue"   speculative issue on (A) / off (B); predictor and
++    //                     retention keep running in both arms               (needs predict_prefetch)
++    //   "spec-gate"       the configured 0013 gates (A) / no gate (B)      (needs predict_prefetch + a gate)
++    // Any other name is a config error.
++    int ab_toggle = 0;
++    std::string ab_lever;
++
+     // ── route-ahead: commit to the prediction (lossy; opt-in; experimental) ───────────
+     // With N > 0, decode routing at MoE layer L is REPLACED by the ranking layer L's own gate
+     // matrix produced on the hidden state N layers earlier in the same forward pass — the
+diff --git a/core/include/bmoe/expert_source.h b/core/include/bmoe/expert_source.h
+index 40b525b..6c32dd0 100644
+--- a/core/include/bmoe/expert_source.h
++++ b/core/include/bmoe/expert_source.h
+@@ -79,6 +79,7 @@ public:
+         uint64_t spec_read_bytes = 0;      // bytes read speculatively by prefetch (subset of read_bytes)
+         long long spec_experts = 0;        // experts fully prefetched
+         long long spec_useful = 0;         // prefetched experts that a later lookup actually hit
++        long long spec_issued = 0;         // moe-phone 0014: experts whose speculative reads were queued
+         uint64_t cache_budget_bytes = 0;   // cache budget in force; fixed for the run once init sizes it
+         long long cache_resizes = 0;       // explicit set_cache_budget_mb() calls that moved the budget
+         // Whether cache-bypassing reads are actually in effect for the expert shards — every shard
+diff --git a/core/include/bmoe/metrics.h b/core/include/bmoe/metrics.h
+index 7b83edf..ce100de 100644
+--- a/core/include/bmoe/metrics.h
++++ b/core/include/bmoe/metrics.h
+@@ -89,6 +89,15 @@ struct TokenMetrics {
+     // without --mtp. Without it the drafting cost can only be inferred by differencing two runs.
+     double mtp_draft_ms = 0.0;
+ 
++    // moe-phone 0014. Speculation this token's decode issued and served (per-token deltas of the
++    // source's cumulative counters; charged to a group's first row), and, under --ab-toggle, which
++    // arm the token ran in (0 = A, 1 = B, -1 = no A/B) and how many tokens of that arm preceded it
++    // since the last switch (0 on a switch token).
++    long long spec_issued = 0;
++    long long spec_useful = 0;
++    int ab_arm = -1;
++    int ab_since = -1;
++
+     std::string piece; // text of just this token (delta, for inline streaming)
+     std::string text;  // full generated answer so far, reasoning stripped (for UI streaming)
+     // The reasoning span so far, when the model is thinking and the chat parser separated it from
+diff --git a/core/src/config.cpp b/core/src/config.cpp
+index dd83d7d..a86c0b6 100644
+--- a/core/src/config.cpp
++++ b/core/src/config.cpp
+@@ -115,6 +115,25 @@ ValidationResult validate(const RunConfig & cfg) {
+     if (cfg.moe.predict_log && !cfg.moe.enabled) {
+         return fail("moe.predict_log requires moe.enabled");
+     }
++    // moe-phone 0014: in-process A/B toggle.
++    if (cfg.moe.ab_toggle < 0) return fail("moe.ab_toggle must be >= 0 (0 = off)");
++    if (cfg.moe.ab_toggle > 0 || !cfg.moe.ab_lever.empty()) {
++        const MoeStreamConfig & m = cfg.moe;
++        if (m.ab_toggle == 0) return fail("moe.ab_lever needs moe.ab_toggle N > 0");
++        if (!m.enabled) return fail("moe.ab_toggle requires moe.enabled (every lever is a streaming lever)");
++        if (m.ab_lever != "spec-selective" && m.ab_lever != "predict-issue" && m.ab_lever != "spec-gate")
++            return fail("moe.ab_lever '" + m.ab_lever + "' is not runtime-switchable; valid: spec-selective, "
++                        "predict-issue, spec-gate");
++        if (cfg.spec.source != DraftSource::none)
++            return fail("moe.ab_toggle excludes speculative decoding: a verify group can straddle a switch");
++        if (m.route_ahead > 0) return fail("moe.ab_toggle excludes moe.route_ahead");
++        if (m.ab_lever == "spec-selective" && !m.spec_adopt_selective)
++            return fail("ab_lever spec-selective toggles spec_adopt_selective, which must be configured on");
++        if ((m.ab_lever == "predict-issue" || m.ab_lever == "spec-gate") && !m.predict_prefetch)
++            return fail("ab_lever " + m.ab_lever + " needs predict_prefetch");
++        if (m.ab_lever == "spec-gate" && m.predict_spec_rank == 0 && m.predict_spec_margin < 0.0f)
++            return fail("ab_lever spec-gate needs a gate configured (predict_spec_rank or predict_spec_margin)");
++    }
+     if (cfg.moe.predict_prefetch && !cfg.moe.enabled) {
+         return fail("moe.predict_prefetch requires moe.enabled");
+     }
+diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
+index 82d0fd3..2fbb04c 100644
+--- a/core/src/engine/session.cpp
++++ b/core/src/engine/session.cpp
+@@ -1546,6 +1546,28 @@ RunResult Session::generate(const GenerateRequest & req,
+     long long prev_spec_bytes = (long long) st_spec0.spec_read_bytes;
+     long long prev_spec_experts = st_spec0.spec_experts;
+     long long prev_spec_useful = st_spec0.spec_useful;
++    // moe-phone 0014: per-token speculation deltas, and the in-process A/B state.
++    long long tok_prev_issued = st_spec0.spec_issued, tok_prev_useful = st_spec0.spec_useful;
++    const int ab_n = moe.enabled ? moe.ab_toggle : 0;
++    const int ab_lever = moe.ab_lever == "spec-selective" ? 1 : moe.ab_lever == "predict-issue" ? 2
++                         : moe.ab_lever == "spec-gate" ? 3 : 0;
++    int ab_cur = 0, ab_since = 0;
++    struct AbSum {
++        long long tokens = 0, issued = 0, useful = 0;
++        double wall = 0.0, stall = 0.0, compute = 0.0, mgmt = 0.0, read_mib = 0.0;
++    } ab_sum[2];
++    // Arm A is the lever as configured; B is the lever off. Every switch first drains speculation
++    // destructively so neither arm inherits the other's queued or half-read entries. The drain runs
++    // outside the timed decode, so its cost lands in the switch token's loop_overhead_ms.
++    auto ab_apply = [&](int arm) {
++        im.source.reset_speculation();
++        const bool on = arm == 0;
++        if (ab_lever == 1) im.source.set_spec_adopt_selective(on);
++        if (ab_lever == 2) im.hook->set_predict_issue(on);
++        if (ab_lever == 3)
++            im.hook->set_predict_gate(on ? moe.predict_spec_rank : 0, on ? moe.predict_spec_margin : -1.0f);
++    };
++    if (ab_n > 0) ab_apply(0); // a previous turn may have ended in arm B
+     // Taken after prefill, so the drop counters describe generation — the phase the policy is armed
+     // for and the one the tok/s number is about.
+     const long long prev_routed = im.hook->experts_routed();
+@@ -1661,6 +1683,14 @@ RunResult Session::generate(const GenerateRequest & req,
+ 
+         // Bracket ONLY the decode: major faults and CPU-time deltas here decompose this token's
+         // compute residual into flash-fault stalls vs. genuine (or throttled) computation.
++        if (ab_n > 0) { // moe-phone 0014: the arm this decode runs in
++            const int want = (n_gen / ab_n) % 2;
++            if (want != ab_cur) {
++                ab_apply(want);
++                ab_cur = want;
++                ab_since = 0;
++            }
++        }
+         const uint64_t f0 = pio::major_faults();
+         const double c0 = pio::process_cpu_seconds();
+         auto s0 = clock_t_::now();
+@@ -1797,6 +1827,25 @@ RunResult Session::generate(const GenerateRequest & req,
+                 tally.record(m, wall, f1 - f0, c1 - c0, im.turn, moe.enabled ? &st : nullptr);
+             else
+                 tally.record(m, 0.0, 0, 0.0, im.turn, moe.enabled ? &st : nullptr);
++            if (e == 0 && moe.enabled) { // moe-phone 0014
++                m.spec_issued = st.spec_issued - tok_prev_issued;
++                m.spec_useful = st.spec_useful - tok_prev_useful;
++                tok_prev_issued = st.spec_issued;
++                tok_prev_useful = st.spec_useful;
++            }
++            if (ab_n > 0) {
++                m.ab_arm = ab_cur;
++                m.ab_since = ab_since++;
++                AbSum & a = ab_sum[ab_cur];
++                ++a.tokens;
++                a.wall += m.wall_ms;
++                a.stall += m.stall_ms;
++                a.compute += m.compute_ms;
++                a.mgmt += m.mgmt_ms;
++                a.read_mib += m.read_bytes / 1048576.0;
++                a.issued += m.spec_issued;
++                a.useful += m.spec_useful;
++            }
+             if (on_token) on_token(m);
+             if (sink) sink->on_token(m);
+         }
+@@ -1811,6 +1860,20 @@ RunResult Session::generate(const GenerateRequest & req,
+         tok = im.smpl ? llama_sampler_sample(im.smpl, ctx, row) : argmax(logits, im.n_vocab);
+     }
+ 
++    if (ab_n > 0) { // moe-phone 0014: per-arm sums, then leave the session in arm A
++        std::fprintf(stderr, "bmoe: ab-toggle: lever=%s N=%d", moe.ab_lever.c_str(), ab_n);
++        for (int a = 0; a < 2; ++a) {
++            const AbSum & s = ab_sum[a];
++            std::fprintf(stderr,
++                         " | %c: tokens %lld wall_ms %.1f stall_ms %.1f compute_ms %.1f mgmt_ms %.1f flash_MiB %.1f "
++                         "spec_issued %lld spec_useful %lld",
++                         a == 0 ? 'A' : 'B', s.tokens, s.wall, s.stall, s.compute, s.mgmt, s.read_mib, s.issued,
++                         s.useful);
++        }
++        std::fprintf(stderr, "\n");
++        if (ab_cur != 0) ab_apply(0);
++    }
++
+     // Speculation can leave the KV ahead of what the caller received: an accepted end-of-generation
+     // token is decoded but never emitted, and a group can be cut short by n_predict. The KV and
+     // kv_tokens must agree exactly or the next turn's prefix reuse decodes from a state that never
+diff --git a/core/src/metrics/csv_metrics_sink.cpp b/core/src/metrics/csv_metrics_sink.cpp
+index ff775a9..fb9a5d6 100644
+--- a/core/src/metrics/csv_metrics_sink.cpp
++++ b/core/src/metrics/csv_metrics_sink.cpp
+@@ -58,13 +58,14 @@ public:
+         write_header(); // a caller that never sent RunInfo still gets a readable file
+         std::fprintf(f_,
+                      "%d,%d,%.3f,%.3f,%.3f,%llu,%.2f,%.3f,%.3f,%llu,%.3f,%.3f,%d,%.2f,%.1f,%.1f,%.1f,"
+-                     "%.1f,%.1f,%.1f,%.1f,%.1f,%.3f,%d,%.3f,%.3f,%.3f,%.3f,%.3f\n",
++                     "%.1f,%.1f,%.1f,%.1f,%.1f,%.3f,%d,%.3f,%.3f,%.3f,%.3f,%.3f,%lld,%lld,%s,%d\n",
+                      m.step, m.steps, m.wall_ms, m.io_ms, m.compute_ms, (unsigned long long) m.read_bytes,
+                      m.cache_hit_pct, m.stall_ms, m.mgmt_ms, (unsigned long long) m.majflt, m.cpu_ms,
+                      m.dense_resident_frac, m.turn, m.majflt_mib, m.cache_budget_mib, m.rss_mib, m.rss_anon_mib,
+                      m.rss_file_mib, m.swap_mib, m.mem_available_mib, m.mem_free_mib, m.swap_free_mib,
+                      m.loop_overhead_ms, m.mtp_batch, m.mtp_draft_ms, m.drain_ms, m.adopt_ms, m.ra_issue_ms,
+-                     m.ra_wd_ms);
++                     m.ra_wd_ms, m.spec_issued, m.spec_useful, m.ab_arm == 0 ? "A" : (m.ab_arm == 1 ? "B" : "-"),
++                     m.ab_since);
+         std::fflush(f_);
+     }
+     void on_summary(const RunSummary & s) override {
+@@ -124,7 +125,8 @@ private:
+         std::fprintf(f_, "step,steps,wall_ms,io_ms,compute_ms,read_bytes,cache_hit_pct,stall_ms,mgmt_ms,majflt,cpu_ms,"
+                          "dense_resident_frac,turn,majflt_mib,cache_budget_mib,rss_mib,rss_anon_mib,"
+                          "rss_file_mib,swap_mib,mem_available_mib,mem_free_mib,swap_free_mib,loop_overhead_ms,"
+-                         "mtp_batch,mtp_draft_ms,drain_ms,adopt_ms,ra_issue_ms,ra_wd_ms\n");
++                         "mtp_batch,mtp_draft_ms,drain_ms,adopt_ms,ra_issue_ms,ra_wd_ms,"
++                         "spec_issued,spec_useful,arm,tokens_since_switch\n"); // last four: moe-phone 0014
+     }
+ 
+     std::FILE * f_ = nullptr;
+diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
+index 4eb8e91..7a01da1 100644
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -548,6 +548,7 @@ void ExpertStreamSource::prefetch(int il, const int32_t * ids, int n_ids) {
+     }
+     if (!any) return;
+ 
++    spec_issued_.fetch_add((long long) staged_ids.size()); // moe-phone 0014
+     std::lock_guard<std::mutex> lk(io_mtx_);
+     for (size_t s = 0; s < staged_ids.size(); ++s) {
+         spec_remaining_[staged_ids[s]] = staged_counts[s];
+@@ -1091,6 +1092,15 @@ void ExpertStreamSource::quiesce_selective(int il, const int32_t * ids, int n_id
+     sel_layer_ = -1;
+ }
+ 
++// moe-phone 0014: see the header. quiesce_spec() with no layer is the destructive path in every mode.
++void ExpertStreamSource::reset_speculation() {
++    if (!active_ || cache_max_ == 0) return;
++    quiesce_spec();
++}
++void ExpertStreamSource::set_spec_adopt_selective(bool on) {
++    spec_adopt_sel_ = on && !spec_adopt_;
++}
++
+ // Integrate every completed speculative entry into the LRU cache, cancelling nothing — the
+ // route-ahead settle. Eval-thread only (LRU mutation), like the quiesce that subsumes it.
+ void ExpertStreamSource::spec_integrate_done() {
+@@ -1773,6 +1783,7 @@ IExpertSource::Stats ExpertStreamSource::stats() const {
+     s.spec_read_bytes = (uint64_t) spec_read_bytes_.load();
+     s.spec_experts = spec_experts_.load();
+     s.spec_useful = spec_useful_.load();
++    s.spec_issued = spec_issued_.load(); // moe-phone 0014
+     s.cache_hits = chits_;
+     s.cache_lookups = clookups_;
+     s.cache_resident_bytes = (uint64_t) cresident_;
+diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
+index b7c5961..2b6cc72 100644
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -98,6 +98,11 @@ public:
+     void prefetch(int il, const int32_t * ids, int n_ids) override;
+     void retain(int il, const int32_t * ids, int n_ids) override;
+     void settle_spec() override;
++    // moe-phone 0014 (in-process A/B): drain speculation destructively (cancel queued reads, wait
++    // for in-flight ones, integrate completed entries cold, release the rest), so an arm switch
++    // carries no speculative state across; and flip selective adoption. Eval thread only.
++    void reset_speculation();
++    void set_spec_adopt_selective(bool on);
+     void query_residency(int il, const int32_t * ids, int n_ids, uint8_t * out) const override;
+     uint64_t expert_bytes(int il) const override;
+     Stats stats() const override;
+@@ -371,6 +376,7 @@ private:
+     std::atomic<long long> spec_read_bytes_{0};
+     std::atomic<long long> spec_experts_{0};
+     std::atomic<long long> spec_useful_{0};
++    std::atomic<long long> spec_issued_{0}; // moe-phone 0014
+ 
+     std::vector<uint8_t> seen_; // per-load dedup scratch [n_expert]
+ 
+diff --git a/core/src/moe/router_hook.cpp b/core/src/moe/router_hook.cpp
+index 3e1936b..fe5c8df 100644
+--- a/core/src/moe/router_hook.cpp
++++ b/core/src/moe/router_hook.cpp
+@@ -1213,7 +1213,7 @@ void RouterHook::predict_after_load(int il) {
+     // Retention first: it is free, and an entry protected before the eviction that a subsequent
+     // prefetch commit might force is protected in time.
+     if (!r.keep.empty()) source_->retain(nl, r.keep.data(), (int) r.keep.size());
+-    if (!r.spec.empty()) source_->prefetch(nl, r.spec.data(), (int) r.spec.size());
++    if (!r.spec.empty() && pred_issue_) source_->prefetch(nl, r.spec.data(), (int) r.spec.size());
+ }
+ 
+ // At the topk of layer il: compare every predictor with what the router actually chose. Must run
+diff --git a/core/src/moe/router_hook.h b/core/src/moe/router_hook.h
+index 65e31b0..6652abf 100644
+--- a/core/src/moe/router_hook.h
++++ b/core/src/moe/router_hook.h
+@@ -139,6 +139,9 @@ public:
+     // moe-phone 0013: confidence gates on the speculation list (see MoeStreamConfig). rank 0 and
+     // margin < 0 are off, which leaves build_spec_lists exactly as before.
+     void set_predict_gate(int rank, float margin);
++    // moe-phone 0014 (in-process A/B): stop or resume issuing speculative reads. The predictor and
++    // the retention of predicted residents keep running either way, so only the issue differs.
++    void set_predict_issue(bool on) { pred_issue_ = on; }
+ 
+     // ── route-ahead: commit to the stale-gate prediction (lossy; see MoeStreamConfig) ─
+     // With n > 0, the expert selection of MoE layer L is REPLACED, during decode, by the ranking
+@@ -330,6 +333,7 @@ private:
+     std::vector<uint8_t> pred_res_;  // scratch: residency of the prediction being filtered
+     int pred_spec_max_ = 2;          // speculated predicted misses per layer (0 = retention only)
+     int pred_spec_rank_ = 0;         // moe-phone 0013: speculate only predicted rank < this (0 = off)
++    bool pred_issue_ = true;         // moe-phone 0014: false = predict and retain, but issue no reads
+     float pred_spec_margin_ = -1.0f; // moe-phone 0013: min (score - boundary)/sd (< 0 = off)
+     // moe-phone 0013 counters, written by the prediction worker: predicted misses considered for
+     // speculation, and how many each gate removed (a miss failing both counts under rank).
+diff --git a/tests/config_test.cpp b/tests/config_test.cpp
+index ede4b76..613043e 100644
+--- a/tests/config_test.cpp
++++ b/tests/config_test.cpp
+@@ -322,6 +322,42 @@ int main() {
+         expect_ok("the confidence floor is valid for the source that has one", c);
+     }
+ 
++    // moe-phone 0014: the in-process A/B toggle.
++    {
++        RunConfig c = ok_moe();
++        c.moe.cache_mb = 2000;
++        c.moe.predict_prefetch = true;
++        c.moe.spec_adopt_selective = true;
++        expect_ok("ab_toggle 0 with no lever is the default and changes nothing", c);
++        c.moe.ab_toggle = 16;
++        c.moe.ab_lever = "spec-selective";
++        expect_ok("ab_toggle 16 on spec-selective, configured on", c);
++        c.moe.ab_lever = "predict-issue";
++        expect_ok("ab_toggle on predict-issue with predict_prefetch", c);
++        c.moe.ab_lever = "spec-gate";
++        expect_fail("spec-gate without a configured gate is rejected", c);
++        c.moe.predict_spec_rank = 2;
++        expect_ok("spec-gate with a rank gate configured", c);
++        c.moe.ab_lever = "cache-size";
++        expect_fail("an unknown / non-switchable lever is rejected", c);
++        c.moe.ab_lever = "";
++        expect_fail("ab_toggle without a lever is rejected", c);
++        c.moe.ab_lever = "spec-selective";
++        c.moe.ab_toggle = 0;
++        expect_fail("a lever without ab_toggle is rejected (it would do nothing)", c);
++        c.moe.ab_toggle = -1;
++        expect_fail("a negative ab_toggle is rejected", c);
++        c.moe.ab_toggle = 16;
++        c.moe.spec_adopt_selective = false;
++        expect_fail("spec-selective toggle needs spec_adopt_selective configured on", c);
++        c.moe.spec_adopt_selective = true;
++        c.spec.source = DraftSource::ngram;
++        expect_fail("ab_toggle excludes speculative decoding", c);
++        c.spec.source = DraftSource::none;
++        c.moe.enabled = false;
++        expect_fail("ab_toggle requires streaming", c);
++    }
++
+     // The verify batch must fit in one graph, or the amortisation it exists for is split away.
+     {
+         RunConfig c = ok_base();
