@@ -906,6 +906,19 @@ CLAIMS = [
          text="moving the four I/O lanes to cpu0,1,6,7 (compute on cpu2-5) cuts the stall by 12.3 ms/token, decisive (SE 1.9, lower in 4 of 4 repeats), but compute on cpu2-5 is not resolved (+8 ms, SE 8.4) and neither is decode",
          artifact="cores_summary.json", expected=-12.25, tol=0.01,
          value=lambda A: A["cores"]["vs_f0"]["3c"]["stall_ms"]["mean_diff"]),
+    # ------------------------- ENGINE OVERHEAD ON ONE MODEL (device/bmoe_overhead.sh -> gates/overhead_summary.py, 2026-09-18 19:16)
+    dict(id="overhead_stream_minus_plain_ms",
+         text="with every OLMoE expert cached (steady tokens 33-128: stall 0, cache mgmt 0.4 ms, ~0.6 MB/token read), our engine takes 20.1 ms/token MORE than plain llama.cpp decode on the same model, same libraries, same cores and clocks (paired SE 3.6, SE/|diff| 0.18, slower in 3 of 3 repeats): decisive, and all of it is compute",
+         artifact="overhead_summary.json", expected=20.05, tol=0.01,
+         value=lambda A: A["ovh"]["stream_minus_plain"]["mean_diff_ms"]),
+    dict(id="overhead_ratio",
+         text="steady-state median 55.7 vs 29.3 ms/token: the engine runs the same arithmetic 1.90x slower (12.5 vs 23.8 GB/s of weights), so compute on Qwen3 is NOT a hardware wall -- roughly half of it is the engine",
+         artifact="overhead_summary.json", expected=1.9017, tol=0.001,
+         value=lambda A: A["ovh"]["overhead_ratio"]),
+    dict(id="overhead_lossless",
+         text="plain and stream generated identical text in all 12 rows",
+         artifact="overhead_summary.json", expected=12, tol=0,
+         value=lambda A: A["ovh"]["text_match_ok"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1150,6 +1163,7 @@ def load_all():
         "stack": load("stack_summary.json"),
         "dsim": load("draft_accept_sim.json"),
         "cores": load("cores_summary.json"),
+        "ovh": load("overhead_summary.json"),
     }
 
 

@@ -1,0 +1,6 @@
+2026-09-18T18:57:58+05:30 waiting for chain_cores
+2026-09-18T19:06:06+05:30 smoke plain: generation: 16 tokens, 0.036 s/token (27.471 tok/s) 
+2026-09-18T19:06:10+05:30 smoke stream: generation: 16 tokens, 0.079 s/token (12.659 tok/s) moe-cache: 78.1% hit, resident 1883.2 MiB 
+2026-09-18T19:16:43+05:30 cool_gate waited 630s, status 1; bmoe_overhead.sh start
+2026-09-18T19:55:53+05:30 pulled /data/local/tmp/moe-stream/bmoe_overhead_20260918_1916/
+2026-09-18T19:55:54+05:30 phone restored

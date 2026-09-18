@@ -1,0 +1,2 @@
+generation: 16 tokens, 0.079 s/token (12.659 tok/s)
+moe-cache: 78.1% hit, resident 1883.2 MiB
