@@ -753,6 +753,25 @@ CLAIMS = [
          artifact="evict_policies_qwen3.json", expected=0.8699, tol=0.0005,
          value=lambda A: next(r["cycle_hit"] for r in A["evict"]["rows"]
                               if abs(r["cache_fraction"] - 0.307) < 1e-9)),
+    # ------------------------- CACHE BUDGET (gates/evict_sim.py + gates/cache_projection.py, 2026-09-18)
+    # The cache ceiling has been 5000 MiB since a day when the phone had ~6 GB available; after a reboot
+    # and a quiesce it reports ~7.6 GB. Hit rate and bytes/token do not depend on the clock, so this part
+    # is answerable while the phone is throttling; the speed column is a PROJECTION and is labelled one.
+    dict(id="budget_hit_at_7000",
+         text="simulated LRU hit rate at a 7000 MiB budget (0.448 of the expert bytes) is 95.56%, against 88.01% at the 5000 MiB budget the engine has been capped to",
+         artifact="evict_zram_budgets.json", expected=0.9556, tol=0.0005,
+         value=lambda A: next(r["lru_hit"] for r in A["ezram"]["rows"]
+                              if abs(r["cache_fraction"] - 0.448) < 1e-9)),
+    dict(id="budget_hit_at_8500",
+         text="at 8500 MiB (0.544) it is 98.06%",
+         artifact="evict_zram_budgets.json", expected=0.9806, tol=0.0005,
+         value=lambda A: next(r["lru_hit"] for r in A["ezram"]["rows"]
+                              if abs(r["cache_fraction"] - 0.544) < 1e-9)),
+    dict(id="budget_projected_7000_tok_s",
+         text="carrying the simulator's +2.7-point optimism across, a 7000 MiB budget projects 58.3 MiB/token of flash traffic against today's 119.8 and 7.33 tok/s against 6.199 (+18.2%) -- a projection that holds compute and cache management fixed, which is optimistic, and that needs a thermally clean run to confirm",
+         artifact="cache_projection.json", expected=7.333, tol=0.01,
+         value=lambda A: next(r["projected_decode_tok_s"] for r in A["cproj"]["rows"]
+                              if r["budget_MiB"] == 7000)),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -984,6 +1003,8 @@ def load_all():
         "ocover": load("order_cover.json"),
         "posfx": load("position_effect.json"),
         "evict": load("evict_policies_qwen3.json"),
+        "ezram": load("evict_zram_budgets.json"),
+        "cproj": load("cache_projection.json"),
     }
 
 

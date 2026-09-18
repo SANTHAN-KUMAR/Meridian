@@ -1,0 +1,72 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-16/traces_Qwen3-30B-A3B-q4_0-llamacpp.npz",
+ "tokens": 4000,
+ "layers": 48,
+ "top_k": 8,
+ "num_experts": 128,
+ "total_slots": 6144,
+ "scope": "global",
+ "replay": "atomic",
+ "rows": [
+  {
+   "cache_fraction": 0.256,
+   "slots": 1573,
+   "lru_hit": 0.8209388020833334,
+   "belady_hit": 0.9229615885416667,
+   "cycle_hit": 0.82025390625,
+   "slru80_hit": 0.8351438802083333,
+   "seconds": 3.690936326980591,
+   "belady_miss_reduction_vs_lru": 0.5697649052130977,
+   "belady_gap_closed": 1.0,
+   "cycle_miss_reduction_vs_lru": -0.0038249260102238836,
+   "cycle_gap_closed": -0.0067131653340308,
+   "slru80_miss_reduction_vs_lru": 0.079330856099884,
+   "slru80_gap_closed": 0.13923436732245473
+  },
+  {
+   "cache_fraction": 0.32,
+   "slots": 1966,
+   "lru_hit": 0.8800865885416667,
+   "belady_hit": 0.9520885416666667,
+   "cycle_hit": 0.8808053385416666,
+   "slru80_hit": 0.893736328125,
+   "seconds": 2.892112970352173,
+   "belady_miss_reduction_vs_lru": 0.6004495431273653,
+   "belady_gap_closed": 1.0,
+   "cycle_miss_reduction_vs_lru": 0.005993908364868239,
+   "cycle_gap_closed": 0.009982368099823544,
+   "slru80_miss_reduction_vs_lru": 0.11382996628426578,
+   "slru80_gap_closed": 0.18957457389574628
+  },
+  {
+   "cache_fraction": 0.448,
+   "slots": 2753,
+   "lru_hit": 0.9555533854166667,
+   "belady_hit": 0.9821907552083333,
+   "cycle_hit": 0.9544947916666666,
+   "slru80_hit": 0.96006640625,
+   "seconds": 1.9287135601043701,
+   "belady_miss_reduction_vs_lru": 0.599311557052878,
+   "belady_gap_closed": 1.0,
+   "cycle_miss_reduction_vs_lru": -0.023817196425957032,
+   "cycle_gap_closed": -0.039740926310646255,
+   "slru80_miss_reduction_vs_lru": 0.10153801083931313,
+   "slru80_gap_closed": 0.16942441647317386
+  },
+  {
+   "cache_fraction": 0.544,
+   "slots": 3342,
+   "lru_hit": 0.9805872395833334,
+   "belady_hit": 0.9912734375,
+   "cycle_hit": 0.9796139322916667,
+   "slru80_hit": 0.982197265625,
+   "seconds": 1.5815339088439941,
+   "belady_miss_reduction_vs_lru": 0.5504728687370016,
+   "belady_gap_closed": 1.0,
+   "cycle_miss_reduction_vs_lru": -0.050137500838419946,
+   "cycle_gap_closed": -0.0910807846959922,
+   "slru80_miss_reduction_vs_lru": 0.08293648132000486,
+   "slru80_gap_closed": 0.15066406725965142
+  }
+ ]
+}

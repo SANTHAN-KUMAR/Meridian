@@ -1,0 +1,52 @@
+{
+ "sim_source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/evict_zram_budgets.json",
+ "engine_source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-17/bmoe_cache.json",
+ "cell": "ceil5000",
+ "policy": "lru_hit",
+ "measured": {
+  "hit": 0.853,
+  "read_MiB_per_token": 119.8,
+  "decode_ms": 161.3163413453783,
+  "compute_ms": 93.0,
+  "cache_mgmt_ms": 20.0,
+  "stall_ms": 48.316341345378305,
+  "decode_tok_s": 6.199
+ },
+ "simulator_offset_at_current_fraction": 0.02708658854166668,
+ "projection_is_optimistic_because": "compute and cache management are held fixed, but a larger cache has more entries to manage and leaves less room for everything else, so both should rise",
+ "rows": [
+  {
+   "budget_MiB": 5000,
+   "cache_fraction": 0.32,
+   "simulated_hit": 0.8800865885416667,
+   "projected_measured_hit": 0.853,
+   "projected_read_MiB_per_token": 119.8,
+   "projected_stall_ms": 48.316341345378305,
+   "projected_decode_ms": 161.3163413453783,
+   "projected_decode_tok_s": 6.198999999999999,
+   "projected_gain_vs_measured": -1.1102230246251565e-16
+  },
+  {
+   "budget_MiB": 7000,
+   "cache_fraction": 0.448,
+   "simulated_hit": 0.9555533854166667,
+   "projected_measured_hit": 0.928466796875,
+   "projected_read_MiB_per_token": 58.297127444727884,
+   "projected_stall_ms": 23.511718773576746,
+   "projected_decode_ms": 136.51171877357675,
+   "projected_decode_tok_s": 7.325378428929138,
+   "projected_gain_vs_measured": 0.1817032471252038
+  },
+  {
+   "budget_MiB": 8500,
+   "cache_fraction": 0.544,
+   "simulated_hit": 0.9805872395833334,
+   "projected_measured_hit": 0.9535006510416667,
+   "projected_read_MiB_per_token": 37.89538779053285,
+   "projected_stall_ms": 15.283526643596549,
+   "projected_decode_ms": 128.28352664359656,
+   "projected_decode_tok_s": 7.795233153967211,
+   "projected_gain_vs_measured": 0.25749849233218436
+  }
+ ]
+}
