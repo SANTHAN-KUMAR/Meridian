@@ -27,15 +27,16 @@ is the source, and none of them is a project claim until it is added to `gates/c
    microseconds, small ops are a minor share, and major faults explain ≈ 3 ms/token. **[M]**
    *(This withdraws a statement I made earlier in conversation, that a fixed ≈ 0.4 ms per matmul
    dominated. That figure came from the one-node benchmark harness, not from the decode graph.)*
-5. Expert matmuls are the dominant arithmetic, and **gate/up run 1.7× slower per byte than down**
-   on the same cores in the same run `[CL: node_ledger.up_vs_down_per_byte_ratio]`. Unexplained.
+5. Expert matmuls are the dominant arithmetic, and **gate/up run 1.5× slower per byte than down**
+   on the same cores in the same run, with the same Q4_0 type in 42 of 48 layers
+   `[CL: node_ledger.up_vs_down_per_byte_ratio]`. Unexplained.
    It is the largest specific, lossless, untested compute lever in the repository. **[M → H]**
 6. A frequency cap limits clock, not core count. The capped CPU uses well under a third of the
    measured DRAM bandwidth, so **width (6 compute threads on the policy0 cores) is the other real
    lever**. It has never been tested on six same-domain cores in the logged capped state (§3.1). **[H]**
-7. **Best case, both levers landing perfectly: ≈ 8.0 tok/s** at today's I/O terms
+7. **Best case, both levers landing perfectly: ≈ 7.9 tok/s** at today's I/O terms
    `[CL: projection.best_case_tok_s_width_plus_gate_up]`. Reaching 10 then *also* needs I/O cut from
-   59 to ≈ 35 ms `[CL: projection.io_ms_allowed_at_10_tok_s_after_both]`. **[T]**
+   59 to ≈ 32 ms `[CL: projection.io_ms_allowed_at_10_tok_s_after_both]`. **[T]**
 8. So: **lossless (Tier E) 10 tok/s at capped clocks is a triple conjunction and is unlikely;
    lossless 7.5–8 is realistic.** 10 tok/s has two credible routes: (a) Tier A top-6 routing on top
    of the compute levers, with its KL measured; (b) a materially higher cap step when the phone is not
@@ -106,37 +107,43 @@ capped clock, a higher cap step, or fewer weight-operations per token.
 
 ### 1.3 A specific anomaly in the dominant op **[M]**
 
-Per byte of weights, in the same run on the same cores: `ffn_moe_down` 26 GB/s, `attn_q` 28 GB/s,
+Per byte of weights, in the same run on the same cores: `ffn_moe_down` 24 GB/s, `attn_q` 28 GB/s,
 `ffn_moe_up` 16 GB/s `[CL: node_ledger.median_GB_s]`. Gate and up are two thirds of expert bytes.
-If they ran at down's rate, expert arithmetic falls from ≈ 58 to ≈ 40 ms at the trace's clock
+If they ran at down's rate, expert arithmetic falls from ≈ 58 to ≈ 43 ms at the trace's clock
 `[CL: node_ledger.expert_ms_if_gate_up_ran_at_down_rate]`, and proportionally more at capped clocks.
 
 > **Correction, 2026-09-18 evening (validation by the analysis session, prompted by the phone
 > session). Read this before coding against the anomaly.**
-> - **Leading hypothesis: it is the quant type, not MUL_MAT_ID.** In this GGUF, gate and up are
->   Q4_0 and down is Q4_1, so "up vs down per byte" compares two different CPU `vec_dot` kernels.
->   The byte counts are already normalised (18 vs 20 bytes per 32 weights), so the 20-vs-18 point
->   alone does not explain the gap. A kernel-type difference could explain part or all of it.
-> - **The size is smaller than 1.68×.** The median includes stall: reads land gate, then up, then
->   down, so up can wait on its own slices too. In the fastest 5–10% of calls (the same trace, same
->   filter) up is about 1.4× slower per byte than down, not 1.7×. Recomputed from
->   `bmoe_trace/trace_nodes.csv`: p5 up 28.6 vs down 40.8 GB/s, p10 25.4 vs 37.2.
+> - **It is not the quant type.** In this GGUF, `ffn_down_exps` is Q4_1 only in layers 0–5 and
+>   Q4_0 in layers 6–47; gate and up are Q4_0 everywhere (`results/2026-09-18/gguf_expert_types.json`,
+>   from `gates/gguf_expert_types.py`). On the 42 layers where down and up share the Q4_0 type and
+>   the same `vec_dot`, down still runs 1.53× faster per byte (median 24.0 vs 15.7 GB/s), and down's
+>   rate is the same on its Q4_1 and Q4_0 layers (23.5 vs 24.0) `[CL: node_ledger.rate_by_layer_type_GB_s,
+>   node_ledger.up_vs_down_same_type_Q4_0_median_ratio]`. The remaining candidates are shape and
+>   ordering (below). The ledger's down bytes are now per layer; an earlier version counted every
+>   down as Q4_1, which overstated down's rate by 1.11× on 42 layers, and every figure in this
+>   document is from the corrected ledger.
+> - **The size is smaller at the fast end.** The median includes stall: reads land gate, then up,
+>   then down, so up can wait on its own slices too. On the same-type layers, at the 95th and 90th
+>   percentile of per-call rate, down 36.9 vs up 28.1 GB/s and 34.0 vs 25.2: about 1.3×
+>   `[CL: node_ledger.rate_by_layer_type_GB_s]`.
 > - **The per-op sweep does not corroborate it.** A sentence here claiming it did (and so ruling
 >   out a tracing artefact) has been deleted per `CLAUDE.md` §7.6. Its CPU rates, which
 >   are also Q4_0 gate/up against Q4_1 down, are 14.9–25.7 GB/s for gate/up and 17.5–25.0 GB/s for
 >   down, medians about 19.8 and 21.8, a ratio of about 1.1× inside a 1.6× run-to-run spread. Clocks
 >   were not logged for that sweep.
-> - **The clean test is the same shape and type for both:** bench gate/up as Q4_1, or down as Q4_0,
->   and measure it in-engine (node trace), where the gap appears, as well as in isolation.
+> - **The clean test is shape alone:** the trace already holds type constant (layers 6–47). Bench
+>   the two shapes (k = 2048, 768 rows vs k = 768, 2048 rows) at equal type and bytes, in-engine (node
+>   trace) and in isolation.
 
 Candidate mechanisms **[H]**, all checkable in one bench session (§4, X1):
 
 1. **Thread granularity.** Gate/up are 768 rows per expert; split across 4 threads that is 192 rows
    of work per thread per expert between barriers, against 512 for down. Short chunks on cores in two
    clock domains amplify the pacing loss.
-2. **Kernel path.** Down is Q4_1 and gate/up are Q4_0 in this GGUF; they take different `vec_dot`
-   paths, and HEADROOM §4.1.4 notes `i8mm`/repack detection has gone wrong on NDK builds before.
-   Assert which symbol executes.
+2. **Kernel symbol.** On layers 6–47 gate, up and down are all Q4_0, so they should run the same
+   `vec_dot`; HEADROOM §4.1.4 notes `i8mm`/repack detection has gone wrong on NDK builds before.
+   Assert which symbol executes for each.
 3. **Input handling.** For gate/up the 2048-wide activation is shared by all 8 experts; for down each
    expert has its own 768-wide input. If the shared input is re-quantised or re-fetched per expert,
    that is pure waste.
@@ -162,9 +169,9 @@ Candidate mechanisms **[H]**, all checkable in one bench session (§4, X1):
 | compute, capped, stacked engine | 124 | `projection.compute_ms_stack` |
 | stall + management, stacked engine | 59 | `projection.io_ms_stack` |
 | compute with *perfect* 4→6 thread scaling | 83 | `projection.compute_ms_perfect_6_thread_scaling` |
-| gate/up recovered fully (at trace clock; larger when capped) | −18 | `projection.gate_up_saving_ms_at_trace_clock` |
-| **best case, both** | **124 → 8.0 tok/s** | `projection.best_case_*` |
-| I/O allowed for 10 tok/s after both | 35 | `projection.io_ms_allowed_at_10_tok_s_after_both` |
+| gate/up recovered fully (at trace clock; larger when capped) | −15 | `projection.gate_up_saving_ms_at_trace_clock` |
+| **best case, both** | **127 → 7.9 tok/s** | `projection.best_case_*` |
+| I/O allowed for 10 tok/s after both | 32 | `projection.io_ms_allowed_at_10_tok_s_after_both` |
 
 Both compute rows are best cases by construction. The honest reading: the compute levers are worth
 **5.5 → 7–8 tok/s**; the remaining gap to 10 needs one of §3.3–§3.4 in addition.

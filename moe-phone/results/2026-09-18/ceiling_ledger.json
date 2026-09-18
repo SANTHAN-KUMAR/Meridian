@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-18T19:16:16+0530",
- "code_version": "d0f5973",
+ "generated": "2026-09-18T22:07:05+0530",
+ "code_version": "0179c01",
  "steady_skip_tokens": 64,
  "node_ledger": {
   "n_tokens": 64,
@@ -59,11 +59,38 @@
    "Kcur": 9.023544710471967,
    "ffn_moe_gate": 9.13920332208454,
    "ffn_moe_up": 15.703183394918682,
-   "ffn_moe_down": 26.453184074916244
+   "ffn_moe_down": 23.9758980073679
   },
+  "rate_by_layer_type_GB_s": {
+   "down_Q4_1": {
+    "n": 384,
+    "median": 23.473933811853342,
+    "p90_rate": 35.59530544906467,
+    "p95_rate": 37.579597746462724
+   },
+   "down_Q4_0": {
+    "n": 2688,
+    "median": 24.016165031424716,
+    "p90_rate": 33.99088503522564,
+    "p95_rate": 36.94828828264478
+   },
+   "up_layers_down_Q4_1": {
+    "n": 384,
+    "median": 14.84243031914167,
+    "p90_rate": 26.688063708485412,
+    "p95_rate": 30.408523801340436
+   },
+   "up_layers_down_Q4_0": {
+    "n": 2688,
+    "median": 15.728639999999999,
+    "p90_rate": 25.245352470359958,
+    "p95_rate": 28.14739638428684
+   }
+  },
+  "up_vs_down_same_type_Q4_0_median_ratio": 1.5269066512695768,
   "expert_arith_ms_gate_as_up": 57.540048,
-  "up_vs_down_per_byte_ratio": 1.6845746120163192,
-  "expert_ms_if_gate_up_ran_at_down_rate": 39.9560448,
+  "up_vs_down_per_byte_ratio": 1.5268176779445972,
+  "expert_ms_if_gate_up_ran_at_down_rate": 42.610028448801444,
   "majflt": {
    "per_token": 647.71875,
    "faulting_nodes_per_token": 9.953125,
@@ -128,10 +155,10 @@
   "io_ms_stack": 59.272727272727266,
   "compute_ms_stack": 123.81818181818181,
   "compute_ms_perfect_6_thread_scaling": 82.54545454545455,
-  "gate_up_saving_ms_at_trace_clock": 17.584003199999998,
-  "best_case_ms_per_token_width_plus_gate_up": 124.23417861818182,
-  "best_case_tok_s_width_plus_gate_up": 8.049314698440392,
-  "io_ms_allowed_at_10_tok_s_after_both": 35.03854865454545,
+  "gate_up_saving_ms_at_trace_clock": 14.930019551198555,
+  "best_case_ms_per_token_width_plus_gate_up": 126.88816226698326,
+  "best_case_tok_s_width_plus_gate_up": 7.880955812851295,
+  "io_ms_allowed_at_10_tok_s_after_both": 32.38456500574401,
   "note": "every entry is a best case: perfect 4->6 scaling and the whole up/down gap recovered"
  },
  "clock_state": {

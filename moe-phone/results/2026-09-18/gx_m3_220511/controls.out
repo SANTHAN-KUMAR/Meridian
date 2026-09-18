@@ -1,0 +1,11 @@
+CONTROL unfused_gate_up_fmla detected=1 :: cases=27 missing_arm_ref=0 down_diff_bits=3849/262144 h_diff_bits=56649/98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=0/0/0 gx_errors=0 -> NOT bit-exact
+CONTROL unfused_down_fmla detected=1 :: cases=27 missing_arm_ref=0 down_diff_bits=150949/262144 h_diff_bits=0/98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=0/0/0 gx_errors=0 -> NOT bit-exact
+CONTROL q41_summs_two_roundings detected=1 :: cases=27 missing_arm_ref=0 down_diff_bits=48952/262144 h_diff_bits=0/98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=0/0/0 gx_errors=0 -> NOT bit-exact
+CONTROL sequential_hsum detected=1 :: cases=27 missing_arm_ref=0 down_diff_bits=132698/262144 h_diff_bits=66882/98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=0/0/0 gx_errors=0 -> NOT bit-exact
+CONTROL native_exp_in_silu detected=1 :: cases=27 missing_arm_ref=0 down_diff_bits=1843/262144 h_diff_bits=25635/98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=0/0/0 gx_errors=0 -> NOT bit-exact
+CONTROL plain_div_in_silu detected=1 :: cases=27 missing_arm_ref=0 down_diff_bits=2047/262144 h_diff_bits=22633/98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=0/0/0 gx_errors=0 -> NOT bit-exact
+CONTROL q8_round_toward_zero detected=1 :: cases=27 missing_arm_ref=0 down_diff_bits=262143/262144 h_diff_bits=0/98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=57344/57344/0 gx_errors=0 -> NOT bit-exact
+CONTROL q8_scale_127_over_amax detected=1 :: cases=27 missing_arm_ref=0 down_diff_bits=1801/262144 h_diff_bits=0/98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=33452/33452/0 gx_errors=0 -> NOT bit-exact
+CONTROL q8_s_from_fp16_d detected=1 :: cases=27 missing_arm_ref=0 down_diff_bits=129008/262144 h_diff_bits=0/98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=0/32249/0 gx_errors=0 -> NOT bit-exact
+CONTROL one_accumulator_per_lane detected=1 :: cases=27 missing_arm_ref=0 down_diff_bits=7939/262144 h_diff_bits=88187/98304 div_mismatches=0 quant_blocks=65536 q8_mismatch(gpu0/gpu1/host0)=0/0/0 gx_errors=0 -> NOT bit-exact
+NEGATIVE_CONTROLS ALL_DETECTED

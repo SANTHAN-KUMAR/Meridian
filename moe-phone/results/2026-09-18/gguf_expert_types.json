@@ -1,0 +1,491 @@
+{
+ "gguf": "Qwen3-30B-A3B-Q4_0.gguf",
+ "gguf_size": 17379988032,
+ "n_layer": 48,
+ "layers": [
+  {
+   "layer": 0,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_1",
+   "down_bytes_per_expert": 983040
+  },
+  {
+   "layer": 1,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_1",
+   "down_bytes_per_expert": 983040
+  },
+  {
+   "layer": 2,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_1",
+   "down_bytes_per_expert": 983040
+  },
+  {
+   "layer": 3,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_1",
+   "down_bytes_per_expert": 983040
+  },
+  {
+   "layer": 4,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_1",
+   "down_bytes_per_expert": 983040
+  },
+  {
+   "layer": 5,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_1",
+   "down_bytes_per_expert": 983040
+  },
+  {
+   "layer": 6,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 7,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 8,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 9,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 10,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 11,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 12,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 13,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 14,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 15,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 16,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 17,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 18,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 19,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 20,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 21,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 22,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 23,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 24,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 25,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 26,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 27,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 28,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 29,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 30,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 31,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 32,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 33,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 34,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 35,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 36,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 37,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 38,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 39,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 40,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 41,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 42,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 43,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 44,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 45,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 46,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  },
+  {
+   "layer": 47,
+   "gate": "Q4_0",
+   "gate_bytes_per_expert": 884736,
+   "up": "Q4_0",
+   "up_bytes_per_expert": 884736,
+   "down": "Q4_0",
+   "down_bytes_per_expert": 884736
+  }
+ ],
+ "down_q4_1_layers": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "down_q4_0_layers": [
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19,
+  20,
+  21,
+  22,
+  23,
+  24,
+  25,
+  26,
+  27,
+  28,
+  29,
+  30,
+  31,
+  32,
+  33,
+  34,
+  35,
+  36,
+  37,
+  38,
+  39,
+  40,
+  41,
+  42,
+  43,
+  44,
+  45,
+  46,
+  47
+ ]
+}

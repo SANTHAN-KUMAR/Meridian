@@ -11,6 +11,7 @@ Inputs (all committed):
   results/2026-09-18/device_bandwidth.json        bytes a token reads (from gguf_active_qwen_olmoe.json)
   results/2026-09-18/stack_summary.json           the latest capped-clock engine terms (12 rows per arm)
   results/2026-09-18/clock_trace/clocks.csv       scaling_max_freq sampled every ~2 s for ~93 min
+  results/2026-09-18/gguf_expert_types.json       per-layer expert quant types (gates/gguf_expert_types.py)
 
 What it does NOT do: it does not measure arithmetic directly. The node trace is serialised (a sync per
 node), so its absolute times are inflated (traced run vs plain run is reported); medians are used as
@@ -29,9 +30,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 R17, R18 = ROOT / "results/2026-09-17", ROOT / "results/2026-09-18"
 STEADY_SKIP = 64          # ESTIMAND.md §1: steady state = tokens 65+
+# Expert bytes per call (8 experts). Gate and up are Q4_0 in every layer. Down is Q4_1 (20 bytes per 32
+# weights) in some layers and Q4_0 (18) in the rest, read from the GGUF: 2026-09-18 correction, an earlier
+# version counted every down as Q4_1 and so overstated down's GB/s by 1.11x on 42 of 48 layers.
+TYPES = json.loads((R18 / "gguf_expert_types.json").read_text())
+DOWN_MB_BY_LAYER = {r["layer"]: 8 * r["down_bytes_per_expert"] / 1e6 for r in TYPES["layers"]}
+DOWN_TYPE_BY_LAYER = {r["layer"]: r["down"] for r in TYPES["layers"]}
 EXPERT_MB = {"ffn_moe_gate": 8 * 2048 * 768 * 18 / 32 / 1e6,   # Q4_0: 18 bytes per 32 weights
              "ffn_moe_up": 8 * 2048 * 768 * 18 / 32 / 1e6,
-             "ffn_moe_down": 8 * 2048 * 768 * 20 / 32 / 1e6}   # Q4_1: 20 bytes per 32 weights
+             "ffn_moe_down": sum(DOWN_MB_BY_LAYER.values()) / len(DOWN_MB_BY_LAYER)}   # layer mean; rates use per-layer bytes
 DENSE_MB = {"Qcur": 2048 * 4096 * 18 / 32 / 1e6, "Kcur": 2048 * 512 * 18 / 32 / 1e6,
             "Vcur": 2048 * 512 * 18 / 32 / 1e6}
 
@@ -58,10 +65,19 @@ def node_ledger():
     rows = [r for r in rows if int(r["step"]) >= steps[0] + STEADY_SKIP]
     n = len({r["step"] for r in rows})
     by = collections.defaultdict(list)
+    down_rate = collections.defaultdict(list)             # per call, per-layer bytes, keyed by down type
+    up_rate = collections.defaultdict(list)               # up calls split by the same layer groups
     flt = collections.defaultdict(lambda: [0, 0, 0])      # faults, nodes with a fault, ns in those nodes
     for r in rows:
         k = (r["op"], re.sub(r"[-_ ]?\d+( \(view\))?$", "", r["name"]))
         by[k].append(int(r["wall_ns"]))
+        if k == ("MUL_MAT_ID", "ffn_moe_down"):
+            L = int(r["layer"])
+            down_rate[DOWN_TYPE_BY_LAYER[L]].append(DOWN_MB_BY_LAYER[L] / (int(r["wall_ns"]) / 1e9) / 1e3)
+            down_rate["all"].append(DOWN_MB_BY_LAYER[L] / (int(r["wall_ns"]) / 1e9) / 1e3)
+        if k == ("MUL_MAT_ID", "ffn_moe_up"):
+            up_rate["layers_down_" + DOWN_TYPE_BY_LAYER[int(r["layer"])]].append(
+                EXPERT_MB["ffn_moe_up"] / (int(r["wall_ns"]) / 1e9) / 1e3)
         m = int(r["majflt"])
         flt[k][0] += m
         if m:
@@ -78,12 +94,26 @@ def node_ledger():
     med_us = {k[1]: st.median(v) / 1e3 for k, v in by.items()
               if k[0] in ("MUL_MAT", "MUL_MAT_ID") and k[1] in {**EXPERT_MB, **DENSE_MB}}
     gbps = {k: {**EXPERT_MB, **DENSE_MB}[k] / (us / 1e6) / 1e3 for k, us in med_us.items()}
+    # down's bytes differ by layer: its rate is the median of per-call rates with each call's own bytes
+    gbps["ffn_moe_down"] = st.median(down_rate["all"])
+
+    def q(v, p):
+        v = sorted(v)
+        return v[min(len(v) - 1, int(p * len(v)))]
+    rate_split = {f"down_{t}": dict(n=len(v), median=st.median(v), p90_rate=q(v, 0.90), p95_rate=q(v, 0.95))
+                  for t, v in down_rate.items() if t != "all"}
+    rate_split.update({f"up_{t}": dict(n=len(v), median=st.median(v), p90_rate=q(v, 0.90), p95_rate=q(v, 0.95))
+                       for t, v in up_rate.items()})
     total_flt = sum(v[0] for v in flt.values())
     return dict(
         n_tokens=n, nodes_per_token=len(rows) / n, categories=cats,
         total_mean_sum_ms=sum(c["mean_sum_ms"] for c in cats.values()),
         total_median_sum_ms=sum(c["median_sum_ms"] for c in cats.values()),
         median_us=med_us, median_GB_s=gbps,
+        # same type (Q4_0 up vs Q4_0 down, layers 6-47) and same shape across types (down Q4_1 vs Q4_0):
+        # the natural experiment on "the up/down gap is the quant type" (it is not; see the handoff §1.3)
+        rate_by_layer_type_GB_s=rate_split,
+        up_vs_down_same_type_Q4_0_median_ratio=rate_split["down_Q4_0"]["median"] / rate_split["up_layers_down_Q4_0"]["median"],
         # gate's median carries the expert-ready wait under serialisation; up is the same shape and type
         expert_arith_ms_gate_as_up=48 * (2 * med_us["ffn_moe_up"] + med_us["ffn_moe_down"]) / 1e3,
         up_vs_down_per_byte_ratio=gbps["ffn_moe_down"] / gbps["ffn_moe_up"],

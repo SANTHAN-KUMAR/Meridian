@@ -12,7 +12,7 @@ an upload copy.
 | | question | how |
 |---|---|---|
 | (a) | Can an expert slice read from flash be handed to OpenCL without a copy? | Four mechanisms: `copy` (device buffer + `clEnqueueWriteBuffer`, the baseline), `use_host_ptr` (page-aligned host memory), `alloc_host_ptr` (driver memory, mapped, O_DIRECT into the mapping), `ion_dmabuf` (a `/dev/dma_heap` buffer imported with `cl_qcom_ion_host_ptr`). Per mechanism: does a map return the pointer the bytes were read into; after new bytes are `pread` into that memory, does the kernel see them with no sync and with only a map/unmap; and what does that sync cost for one expert slice and for the whole region, against a `memcpy` of the same bytes. A copy scales with bytes; a zero-copy handoff does not. |
-| (b) | GPU expert GEMV throughput on Qwen3 shapes | gate/up q4_0 k=2048 n=768 and down **q4_1** k=768 n=2048 (the file's own down type), 8 of the region's experts per layer, n = 1. Weights stay in the file's native block layout (18-byte q4_0, 20-byte q4_1 blocks), which is what zero-copy of file bytes gives. Reported per layer with a `clFinish` per layer (as an engine must) and batched (48 layers, one finish). Work-group width is chosen from 16/32/64 on correctness first, then speed. |
+| (b) | GPU expert GEMV throughput on Qwen3 shapes | gate/up q4_0 k=2048 n=768 and down **q4_1** k=768 n=2048, 8 of the region's experts per layer, n = 1. (Correction, 2026-09-18: Q4_1 is the down type of layers 0–5 only; layers 6–47 store down as Q4_0, `results/2026-09-18/gguf_expert_types.json`. The bench's own weight file used Q4_1 down throughout.) Weights stay in the file's native block layout (18-byte q4_0, 20-byte q4_1 blocks), which is what zero-copy of file bytes gives. Reported per layer with a `clFinish` per layer (as an engine must) and batched (48 layers, one finish). Work-group width is chosen from 16/32/64 on correctness first, then speed. |
 | (c) | CPU and GPU computing disjoint experts at the same time | CPU = ggml's own `MUL_MAT_ID` (the engine's kernels, 4 threads strictly pinned to cores 4–7); GPU host thread pinned to core 3. Every iteration is time-stamped inside its worker; aggregate GB/s counts only iterations inside the window where both ran; overlap is reported as the share of each worker's busy time during which the other was also busy. CPU-alone runs before and after bracket drift. |
 | (d) | Correctness | Every GPU and CPU result is compared with a double-precision scalar reference over the same bytes; max \|error\| / max \|reference\|. GPU must be < 1e-3; ggml quantises activations to q8, so its error is reported but not held to that bound. |
 
@@ -41,7 +41,7 @@ threshold comes from the phone session's request. The 10× and 0.8 figures are s
   produced by `kernel_convert_block_q4_*_trans4_ns`) only for tensors whose name contains `ffn` and
   `exps`, or `as` (`use_adreno_moe_kernels`, ggml-opencl.cpp). The sweep's `ggml_matmul_bench.cpp`
   names its weights `weight0`, `weight1` and so on, so it ran the generic `MUL_MAT_ID` fallback. That
-  fallback is what disagreed on Q4_1 (the down type). The engine's tensors are named `ffn_down_exps`
+  fallback is what disagreed on Q4_1 (the down type of layers 0–5; 6–47 are Q4_0). The engine's tensors are named `ffn_down_exps`
   and would take the Adreno path. So the wrong result is real for the fallback and says nothing about
   the Adreno MoE path.
 - **ggml's Adreno MoE path cannot be zero-copy as written:** it converts each expert tensor to a
@@ -106,9 +106,21 @@ medians across CPU-alone, concurrent and CPU-alone-again.
 Also measured:
 - `use_host_ptr` on ordinary `malloc` memory is **not** zero-copy on Adreno: its sync runs at copy
   speed (18.7 GB/s against memcpy 29.7), and without a sync the kernel reads stale bytes.
-- `ion_dmabuf`: unavailable. The driver advertises `cl_qcom_ext_host_ptr` + iocoherent and
-  dma-buf/AHB extensions, but not `cl_qcom_ion_host_ptr`, so the ION path is gone on this driver. Not
-  needed, since `alloc_host_ptr` already passes.
+- `ion_dmabuf`: unavailable, because `cl_qcom_ion_host_ptr` is not advertised. The run recorded only
+  substring flags, not the full extension string:
+  - `cl_qcom_ext_host_ptr` and `cl_qcom_ext_host_ptr_iocoherent` are present.
+  - Some extension containing "dmabuf" and some containing "ahardwarebuffer" are present. Their exact
+    names are unknown.
+
+  Not needed, since `alloc_host_ptr` already passes.
+- **What the zero-copy result does and does not cover.** The only `alloc_host_ptr` protocol tested was:
+  map (`WRITE_INVALIDATE_REGION`), then `pread`, then unmap, then `clFinish`, then the kernel. Nothing
+  was ever mapped while a kernel ran. Also, the concurrent phase's CPU arm read its own copy of the
+  weights, not the OpenCL buffer. Three things are therefore untested:
+  - whether the GPU sees CPU writes without an unmap;
+  - CPU reads of a buffer while the GPU reads it;
+  - whether the sync cost grows with the number of bytes written (the 0.115 ms was measured with no
+    bytes changed).
 - GPU alone, native-layout kernel: 10.4–12.3 GB/s depending on mechanism and batching, 1.85–2.1 ms per
   layer of 8 experts with a `clFinish` per layer. That is about half the capped CPU's 23.1 GB/s
   (0.95 ms per layer).
@@ -121,6 +133,10 @@ Also measured:
   two 8-second windows, both above the bar, and not a precise estimate.
 - The one change between the runs was a harness selection bug, disclosed in that WHY file. No
   threshold and no analyzer rule changed.
+- **Down type.** Every down in this bench was Q4_1, which is the type of 6 of the model's 48 layers.
+  The other 42 are Q4_0 (the gate/up type and kernel). The GPU-alone and concurrent rates are
+  therefore for a down kernel that 1 layer in 8 uses. Re-measure the concurrent ratio with Q4_0 down
+  at M6 before relying on 1.535×.
 - This is expert-matmul throughput in isolation, not decode. Splitting a layer's experts between CPU
   and GPU in proportion to these rates would cut expert-matmul time to about 0.65×. On this bench's
   own capped numbers (0.95 ms/layer, 48 layers ≈ 46 ms/token) that saves about 16 ms/token. In-engine
