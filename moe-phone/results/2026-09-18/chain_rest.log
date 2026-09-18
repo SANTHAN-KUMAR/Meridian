@@ -1,0 +1,12 @@
+2026-09-18T15:12:18+05:30 waiting for chain_arena
+2026-09-18T15:33:19+05:30 cool_gate waited 0s, status 1
+2026-09-18T15:33:19+05:30 bmoe_perfmode.sh start
+2026-09-18T15:37:20+05:30 bmoe_perfmode.sh exited without DONE (/data/local/tmp/moe-stream/bmoe_perfmode_20260918_1533/)
+2026-09-18T15:37:20+05:30 bmoe_perfmode.sh pulled /data/local/tmp/moe-stream/bmoe_perfmode_20260918_1533/
+2026-09-18T15:37:20+05:30 cool_gate waited 0s, status 1
+2026-09-18T15:37:22+05:30 bmoe_slru.sh start
+2026-09-18T15:54:26+05:30 [rest2] taking over from chain_rest.sh: waiting for bmoe_slru on the phone
+2026-09-18T16:01:29+05:30 [rest2] bmoe_slru.sh pulled /data/local/tmp/moe-stream/bmoe_slru_20260918_1537/
+2026-09-18T16:01:33+05:30 [rest2] 0012 pushed: 031ff05000c1e5b4
+2026-09-18T16:01:33+05:30 [rest2] cool_gate waited 0s, status 1
+2026-09-18T16:01:33+05:30 [rest2] bmoe_specadopt.sh start

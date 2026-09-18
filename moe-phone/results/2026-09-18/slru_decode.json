@@ -1,0 +1,181 @@
+{
+ "source": "results/2026-09-18/bmoe_slru_decode/bmoe_slru_20260918_1537",
+ "rows": [
+  {
+   "cell": "lru",
+   "rep": 1,
+   "slot": "a",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.545,
+   "budget_MiB": 5000,
+   "read_MiB_per_token": 119.8,
+   "kept": true
+  },
+  {
+   "cell": "slru",
+   "rep": 1,
+   "slot": "a",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.789,
+   "budget_MiB": 5000,
+   "read_MiB_per_token": 106.53,
+   "kept": true
+  },
+  {
+   "cell": "slru",
+   "rep": 1,
+   "slot": "b",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.476,
+   "budget_MiB": 5000,
+   "read_MiB_per_token": 106.53,
+   "kept": true
+  },
+  {
+   "cell": "lru",
+   "rep": 1,
+   "slot": "b",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.517,
+   "budget_MiB": 5000,
+   "read_MiB_per_token": 119.8,
+   "kept": true
+  },
+  {
+   "cell": "slru",
+   "rep": 2,
+   "slot": "a",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.219,
+   "budget_MiB": 5000,
+   "read_MiB_per_token": 106.53,
+   "kept": true
+  },
+  {
+   "cell": "lru",
+   "rep": 2,
+   "slot": "a",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.638,
+   "budget_MiB": 4804,
+   "read_MiB_per_token": 133.93,
+   "kept": false
+  },
+  {
+   "cell": "lru",
+   "rep": 2,
+   "slot": "b",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.028,
+   "budget_MiB": 4802,
+   "read_MiB_per_token": 134.19,
+   "kept": false
+  },
+  {
+   "cell": "slru",
+   "rep": 2,
+   "slot": "b",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.674,
+   "budget_MiB": 5000,
+   "read_MiB_per_token": 106.53,
+   "kept": true
+  },
+  {
+   "cell": "lru",
+   "rep": 3,
+   "slot": "a",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.321,
+   "budget_MiB": 5000,
+   "read_MiB_per_token": 119.8,
+   "kept": true
+  },
+  {
+   "cell": "slru",
+   "rep": 3,
+   "slot": "a",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.319,
+   "budget_MiB": 5000,
+   "read_MiB_per_token": 106.53,
+   "kept": true
+  },
+  {
+   "cell": "slru",
+   "rep": 3,
+   "slot": "b",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 6.183,
+   "budget_MiB": 5000,
+   "read_MiB_per_token": 106.53,
+   "kept": true
+  },
+  {
+   "cell": "lru",
+   "rep": 3,
+   "slot": "b",
+   "foreign": "",
+   "exit": 0,
+   "decode_tok_s": 5.224,
+   "budget_MiB": 5000,
+   "read_MiB_per_token": 119.8,
+   "kept": true
+  }
+ ],
+ "n_rows": 12,
+ "n_kept": 10,
+ "median_tok_s": {
+  "lru": 6.4190000000000005,
+  "slru": 6.3975
+ },
+ "ratio_minus_1": -0.0033494313756037286,
+ "per_repeat": [
+  {
+   "rep": 1,
+   "slru": [
+    6.789,
+    6.476
+   ],
+   "lru": [
+    6.545,
+    6.517
+   ],
+   "slru_all_faster": false
+  },
+  {
+   "rep": 2,
+   "slru": [
+    6.219,
+    6.674
+   ],
+   "lru": [],
+   "slru_all_faster": false
+  },
+  {
+   "rep": 3,
+   "slru": [
+    6.319,
+    6.183
+   ],
+   "lru": [
+    6.321,
+    5.224
+   ],
+   "slru_all_faster": false
+  }
+ ],
+ "verdict": "no decode effect resolved at n=3",
+ "n_repeats_slru_all_faster": 0
+}

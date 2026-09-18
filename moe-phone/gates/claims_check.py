@@ -781,6 +781,10 @@ CLAIMS = [
          text="hit rate 86.6% against 85.3%",
          artifact="bmoe_slru.json", expected=86.6, tol=0.05,
          value=lambda A: next(c["cache_hit_pct_median"] for c in A["bslru"]["cells"] if c["cell"] == "slru")),
+    dict(id="slru_decode_clean",
+         text="the clean SLRU decode re-run, scored by its pre-registered rule (10 of 12 rows kept; 2 LRU rows got a 4802-4804 MiB budget), gives medians 6.40 vs 6.42 tok/s (-0.3%) and SLRU faster in 0 of 3 repeats: no decode effect resolved at n=3, although SLRU reads 11.1% fewer bytes",
+         artifact="slru_decode.json", expected=-0.0033, tol=0.0001,
+         value=lambda A: A["sdec"]["ratio_minus_1"]),
     # ------------------------- PER-OP MATMUL SWEEP (host/matmul_sweep.sh -> gates/matmul_sweep_analyze.py, 2026-09-18 14:42)
     # Qwen3-30B-A3B shapes, q4_0, weights already on the device, 60 iterations x 2 repeats, each checked against the CPU backend.
     dict(id="msweep_htp_expert_down_speedup",
@@ -1066,6 +1070,7 @@ def load_all():
         "msweep": load("matmul_sweep.json"),
         "arena2": load("arena2_summary.json"),
         "capt": load("cap_vs_temp.json"),
+        "sdec": load("slru_decode.json"),
     }
 
 
