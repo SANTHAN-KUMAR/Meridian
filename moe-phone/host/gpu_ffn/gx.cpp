@@ -147,6 +147,7 @@ struct gx_ctx {
     size_t block_bytes = 0;
     std::vector<PoolBlock> blocks;
     std::map<std::pair<cl_mem, size_t>, size_t> slot_span;   // (block, off_gate) -> bytes
+    std::map<std::pair<cl_mem, size_t>, int> slot_dtype;      // variant 2: down type each slot was repacked with
     // timing of the pending / last dispatch
     cl_event ev_first = nullptr, ev_last = nullptr;
     uint64_t t_dispatch = 0, last_device_ns = 0, last_host_ns = 0;
@@ -425,6 +426,7 @@ extern "C" void gx_slot_free(gx_ctx * g, const gx_slot * s) {
     if (sp == g->slot_span.end()) { g->st.errors++; return; }
     const size_t span = sp->second;
     g->slot_span.erase(sp);
+    g->slot_dtype.erase({s->block, s->off_gate});
     g->st.slots_live--;
     for (PoolBlock & b : g->blocks) {
         if (b.m != s->block) continue;
@@ -520,6 +522,41 @@ extern "C" int gx_repack_expert(const gx_ctx * g, const gx_slot * s, void * mapp
     repack_matrix((const uint8_t *) src_gate, base, nf, ne / 32, 0);
     repack_matrix((const uint8_t *) src_up, base + (s->off_up - s->off_gate), nf, ne / 32, 0);
     repack_matrix((const uint8_t *) src_down, base + (s->off_down - s->off_gate), ne, nf / 32, down_type == GX_DOWN_Q4_1);
+    gx_ctx * gm = const_cast<gx_ctx *>(g);
+    std::lock_guard<std::mutex> lk(gm->mu);
+    gm->slot_dtype[{s->block, s->off_gate}] = down_type;
     return 0;
 }
 
+
+// Inverse of repack_matrix: planes back to GGUF blocks.
+static void unpack_matrix(const uint8_t * src, uint8_t * dst, size_t rows, size_t nb, int q41) {
+    const size_t bs = q41 ? 20 : 18, qo = q41 ? 4 : 2;
+    const uint8_t * qs = src, * dp = src + nb * rows * 16, * mp = src + nb * rows * 18;
+    for (size_t r = 0; r < rows; r++)
+        for (size_t ib = 0; ib < nb; ib++) {
+            uint8_t * b = dst + (r * nb + ib) * bs;
+            const size_t j = ib * rows + r;
+            memcpy(b + qo, qs + j * 16, 16);
+            memcpy(b, dp + j * 2, 2);
+            if (q41) memcpy(b + 2, mp + j * 2, 2);
+        }
+}
+
+extern "C" int gx_unpack_expert(const gx_ctx * g, const gx_slot * s, const void * mapped, void * dst_gate, void * dst_up,
+                                void * dst_down, int down_type) {
+    if (!g || !s || !mapped || (down_type != GX_DOWN_Q4_0 && down_type != GX_DOWN_Q4_1)) return -1;
+    {   // refuse a slot that was never repacked here, or was repacked with the other down type (would misread)
+        gx_ctx * gm = const_cast<gx_ctx *>(g);
+        std::lock_guard<std::mutex> lk(gm->mu);
+        auto it = gm->slot_dtype.find({s->block, s->off_gate});
+        if (it == gm->slot_dtype.end()) return -3;
+        if (it->second != down_type) return -2;
+    }
+    const size_t ne = (size_t) g->p.n_embd, nf = (size_t) g->p.n_ff;
+    const uint8_t * base = (const uint8_t *) mapped;
+    if (dst_gate) unpack_matrix(base, (uint8_t *) dst_gate, nf, ne / 32, 0);
+    if (dst_up) unpack_matrix(base + (s->off_up - s->off_gate), (uint8_t *) dst_up, nf, ne / 32, 0);
+    if (dst_down) unpack_matrix(base + (s->off_down - s->off_gate), (uint8_t *) dst_down, ne, nf / 32, down_type == GX_DOWN_Q4_1);
+    return 0;
+}

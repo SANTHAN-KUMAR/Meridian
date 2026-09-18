@@ -117,6 +117,17 @@ int  gx_slot_unmap_read(gx_ctx * g, const gx_slot * s, const void * p);
 int gx_repack_expert(const gx_ctx * g, const gx_slot * s, void * mapped, const void * src_gate, const void * src_up,
                      const void * src_down, int down_type);
 
+/* Variant 2 only: the exact inverse of gx_repack_expert. Reads a repacked slot (mapped = the gate-slice
+ * pointer from gx_slot_map_read or gx_slot_map_write) and writes the expert's three slices back in GGUF block
+ * layout into caller buffers (gate, up: n_ff * n_embd/32 * 18 bytes; down: n_embd * n_ff/32 * 18 or 20), for
+ * the CPU paths (overflow experts, risk recompute) that run ggml on the bytes. Any dst_* may be NULL to skip
+ * that slice. down_type must be the one the slot was repacked with: gx records it at gx_repack_expert and
+ * refuses a mismatch (returns -2) or a slot never repacked in this context (-3); -1 = bad arguments. The slot
+ * record is dropped by gx_slot_free. Thread-safe. */
+#define GX_HAS_UNPACK 1
+int gx_unpack_expert(const gx_ctx * g, const gx_slot * s, const void * mapped, void * dst_gate, void * dst_up, void * dst_down,
+                     int down_type);
+
 /* Denormal-risk mask of the last completed dispatch (valid after gx_wait): bit s set means slot s met a
  * value in the range where a GPU that flushes fp32 denormals may differ from ggml-cpu (|gate| > 80, or a
  * SwiGLU operand/result or h block maximum near FLT_MIN). Those rows may not be bit-identical to the CPU:

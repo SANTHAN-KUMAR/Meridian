@@ -346,7 +346,8 @@ int main(int argc, char ** argv) {
     size_t tot_down[3] = {0, 0, 0}, tot_down_diff[3] = {0, 0, 0}, tot_h[3] = {0, 0, 0}, tot_h_diff[3] = {0, 0, 0};
     size_t missing_arm = 0, n_cases = 0, gx_errors = 0;
     size_t flagged_slots[3] = {0, 0, 0}, flagged_real[3] = {0, 0, 0}, unflagged_diff[3] = {0, 0, 0};
-    float min_gu = INFINITY;   // smallest nonzero |gate|, |up| in the ggml reference: the no-denormal-input premise
+    float min_gu = INFINITY;
+    size_t roundtrip_n = 0, roundtrip_bad = 0, wrongtype_n = 0, wrongtype_undetected = 0;   // variant 2: gx_unpack_expert(gx_repack_expert(x)) == x   // smallest nonzero |gate|, |up| in the ggml reference: the no-denormal-input premise
     for (size_t fi = 0; fi < files.size(); fi++) {
         Case c;
         const std::string base = dir + "/" + files[fi];
@@ -370,6 +371,18 @@ int main(int argc, char ** argv) {
                 const gx_slot se = {blk, per * ex, per * ex + gu, per * ex + 2 * gu};
                 const uint8_t * src = c.w.data() + per * ex;
                 if (gx_repack_expert(g, &se, (uint8_t *) mp + per * ex, src, src + gu, src + 2 * gu, c.dt)) gx_errors++;
+                // round trip: unpack must give back the GGUF bytes exactly
+                std::vector<uint8_t> back(per);
+                if (gx_unpack_expert(g, &se, (uint8_t *) mp + per * ex, back.data(), back.data() + gu, back.data() + 2 * gu, c.dt) ||
+                    memcmp(back.data(), src, per)) { roundtrip_bad++; }
+                roundtrip_n++;
+                // negative check: unpacking with the wrong down type must be refused (-2), never misread
+                {
+                    std::vector<uint8_t> wrong((size_t) c.ne * (c.nf / 32) * 20);
+                    if (gx_unpack_expert(g, &se, (uint8_t *) mp + per * ex, nullptr, nullptr, wrong.data(),
+                                         c.dt ? GX_DOWN_Q4_0 : GX_DOWN_Q4_1) != -2) wrongtype_undetected++;
+                    wrongtype_n++;
+                }
             }
         } else {
             memcpy(mp, c.w.data(), c.w.size());
@@ -428,7 +441,7 @@ int main(int argc, char ** argv) {
             tot_h_diff[1], tot_down[2], tot_down_diff[2], tot_h[2], tot_h_diff[2], gx_errors, st_err, flagged_slots[0], flagged_slots[1], flagged_real[0], flagged_real[1],
             unflagged_diff[0], unflagged_diff[1], min_gu);
     fclose(js);
-    const bool exact = missing_arm == 0 && n_cases > 0 && tot_down_diff[0] == 0 && tot_h_diff[0] == 0 && tot_down_diff[1] == 0 &&
+    const bool exact = missing_arm == 0 && n_cases > 0 && roundtrip_bad == 0 && roundtrip_n > 0 && wrongtype_undetected == 0 && tot_down_diff[0] == 0 && tot_h_diff[0] == 0 && tot_down_diff[1] == 0 &&
                        tot_h_diff[1] == 0 && tot_down[1] == tot_down[0] && tot_down_diff[2] == 0 && tot_h_diff[2] == 0 &&
                        tot_down[2] == tot_down[0] && div_bad == 0 && gx_errors == 0 &&
                        q8_blocks > 0 && q8_0_bad == 0 && q8_1_bad == 0 && host_q8_0_bad == 0 && sw_n > 0 && sw_bad == 0;
@@ -437,8 +450,10 @@ int main(int argc, char ** argv) {
     // flags on the real Qwen3 cases, quantizer and division exact. BIT-EXACT additionally needs zero raw diffs.
     const bool detector_pass = missing_arm == 0 && n_cases > 0 && unflagged_diff[0] == 0 && unflagged_diff[1] == 0 &&
                                unflagged_diff[2] == 0 && flagged_real[2] == 0 && tot_down[2] == tot_down[0] &&
-                               flagged_real[0] == 0 && flagged_real[1] == 0 && sw_n > 0 && sw_bad_unflagged == 0 && min_gu >= 0x1p-126f &&
+                               roundtrip_bad == 0 && flagged_real[0] == 0 && flagged_real[1] == 0 && sw_n > 0 && sw_bad_unflagged == 0 && min_gu >= 0x1p-126f &&
                                div_bad == 0 && gx_errors == 0 && q8_blocks > 0 && q8_0_bad == 0 && q8_1_bad == 0 && host_q8_0_bad == 0;
+    printf("ROUNDTRIP repack/unpack experts=%zu mismatched=%zu wrong_down_type_checks=%zu undetected=%zu\n", roundtrip_n,
+           roundtrip_bad, wrongtype_n, wrongtype_undetected);
     printf("PREMISE min_nonzero_gate_up=%a (%s 2^-126)\n", min_gu, min_gu >= 0x1p-126f ? ">=" : "< !!");
     printf("DETECTOR flagged_slots(v0/v1/v2)=%zu/%zu/%zu flagged_real_slots=%zu/%zu/%zu unflagged_diff=%zu/%zu/%zu swiglu_flagged=%ld "
            "swiglu_unflagged_mismatches=%ld -> %s\n", flagged_slots[0], flagged_slots[1], flagged_slots[2], flagged_real[0],
