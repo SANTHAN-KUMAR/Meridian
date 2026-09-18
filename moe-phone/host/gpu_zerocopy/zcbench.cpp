@@ -682,6 +682,7 @@ static bool fill_from_file(const char * path, int file_E, int first, Region & r,
 // experts' bytes read from flash, and check whether the kernel sees the new bytes (i) with no sync at all
 // and (ii) after a map+unmap of the touched range; time the sync step for one expert slice and for the
 // whole region. A copy scales with bytes; a zero-copy handoff does not.
+static bool g_zc_pass[M_N] = {false, false, false, false}; // zero_copy && correct, per mechanism
 static void zero_copy_test(Cl & c, Kern & K, GpuRegion & g, const char * path, int file_E) {
     const char * nm = mech_name[g.m];
     ReadStat st;
@@ -794,6 +795,11 @@ static void zero_copy_test(Cl & c, Kern & K, GpuRegion & g, const char * path, i
     const bool handoff = (g.m == M_UHP || g.m == M_ION) ? (same_ptr && (e_nosync < 1e-3 || e_mapsync < 1e-3))
                                                         : (g.m == M_AHP ? (ahp_same && e_mapsync < 1e-3) : false);
     const bool zero_copy = handoff && std::isfinite(call) && (g.r.bytes / call) >= 10.0 * (g.r.bytes / mc);
+    // correct for the verdict = right after the in-place update with the mechanism's own sync (map/unmap
+    // for use_host_ptr / dmabuf / alloc_host_ptr); err_initial is also reported but, for use_host_ptr, it
+    // was taken without any sync and a copying driver fails it by design.
+    const double e_used = (g.m == M_COPY) ? e_copy : e_mapsync;
+    g_zc_pass[g.m] = zero_copy && e_used < 1e-3;
     printf("RESULT phase=zc mech=%s status=ok %s correct=%d err_initial=%.3g same_ptr=%d err_update_nosync=%.3g "
            "err_update_mapsync=%.3g err_update_copy=%.3g handoff=%d zero_copy=%d first_sync_ms=%.3f sync_1slice_ms=%.4f "
            "sync_region_ms=%.3f region_MB=%.1f sync_region_GBps=%.2f memcpy_region_GBps=%.2f "
@@ -1084,11 +1090,19 @@ int main(int argc, char ** argv) {
         const double e = cpu_check(cs, ids);
         printf("RESULT phase=cpu_check max_rel_err=%.3g note=ggml_quantizes_activations_to_q8\n", e);
     }
-    // the GPU arm for (c): the best zero-copy mechanism that was correct; else copy, flagged
+    // the GPU arm for (c): a mechanism that PASSED the zero-copy test (zero_copy=1 and correct), in the
+    // order alloc_host_ptr, ion_dmabuf, use_host_ptr; else the copy baseline, flagged in the output.
+    // (Fixed 2026-09-18 after the first phone run: the previous loop took the first zero-copy-FAMILY
+    // mechanism present, use_host_ptr, which had just failed the test on Adreno.)
     GpuRegion * gz = nullptr;
-    for (auto & g : regs)
-        if (g.m == M_UHP || g.m == M_ION || g.m == M_AHP) { gz = &g; break; }
+    for (Mech want : {M_AHP, M_ION, M_UHP})
+        for (auto & g : regs)
+            if (!gz && g.m == want && g_zc_pass[g.m]) gz = &g;
+    if (!gz)
+        for (auto & g : regs)
+            if (!gz && g.m == M_COPY) gz = &g;
     if (!gz && !regs.empty()) gz = &regs[0];
+    printf("RESULT phase=concurrent_arm mech=%s passed_zero_copy=%d\n", mech_name[gz->m], (int) g_zc_pass[gz->m]);
     pin_self(cpu_mask);
     log_clocks("cpu_alone_1");
     g_phase = "cpu_alone_1";

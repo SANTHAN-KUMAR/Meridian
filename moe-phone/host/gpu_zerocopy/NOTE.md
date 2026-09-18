@@ -1,6 +1,6 @@
 # GPU zero-copy expert micro-benchmark (`zcbench`) — question, decision rule, how to read it
 
-**Status (2026-09-18): built (arm64 + x86) and self-tested on the laptop; NOT yet run on the phone.** The
+**Status (2026-09-18 ~20:05): run on the phone. Verdict by the pre-registered rule: VIABLE, with a thin margin on condition 3. See "Phone result" below.** The
 decision rule below is fixed before any phone row exists. Goal (user, via the phone session):
 Qwen3-30B-A3B, unmodified, at 10 tok/s. The measured blocker is CPU compute at the governor's clock
 caps (about 121 ms/token of 190). The only route in the data that could take that term below 100 ms is
@@ -89,3 +89,44 @@ Result on 2026-09-18 (RTX 4060 laptop, 16 experts per region, 1 s phases):
 - Two harness bugs were found and fixed on the way. Activations were never uploaded (every output
   was 0). And `CL_MAP_WRITE` reads the stale device copy back over freshly read bytes on a copying
   driver; all maps now use `CL_MAP_WRITE_INVALIDATE_REGION`.
+
+## Phone result (OnePlus 15R, Adreno 829, 2026-09-18 ~20:03; `results/2026-09-18/zcbench/`)
+
+`analyze.py` on `zcbench.out`: **VERDICT: viable.** All four conditions hold in one run, with the CPU
+caps sampled every second at 1.90 GHz (policy0) and 1.65 GHz (policy6), thermal status 2, identical
+medians across CPU-alone, concurrent and CPU-alone-again.
+
+| condition | measured | bar |
+|---|---|---|
+| 1 zero-copy | `alloc_host_ptr`: O_DIRECT `pread` straight into the OpenCL mapping works (27/27 reads direct); a whole-region (132 MB) map/unmap costs 0.115 ms = 1146 GB/s, against `memcpy` 27 GB/s | ≥ 10× memcpy |
+| 2 correct | GPU vs fp64 reference 1.8e-7 (gate, up and the Q4_1 down); ggml CPU 4.3e-3 (q8 activations) | < 1e-3 (GPU) |
+| 3 concurrent gain | CPU 22.51 + GPU 12.99 = **35.50 GB/s**; CPU alone 23.10 / 23.16 (bracketing) | **1.535×** against ≥ 1.5× |
+| 4 overlap | 1.000 of CPU busy time and 1.000 of GPU busy time overlapped | ≥ 0.8 |
+
+Also measured:
+- `use_host_ptr` on ordinary `malloc` memory is **not** zero-copy on Adreno: its sync runs at copy
+  speed (18.7 GB/s against memcpy 29.7), and without a sync the kernel reads stale bytes.
+- `ion_dmabuf`: unavailable. The driver advertises `cl_qcom_ext_host_ptr` + iocoherent and
+  dma-buf/AHB extensions, but not `cl_qcom_ion_host_ptr`, so the ION path is gone on this driver. Not
+  needed, since `alloc_host_ptr` already passes.
+- GPU alone, native-layout kernel: 10.4–12.3 GB/s depending on mechanism and batching, 1.85–2.1 ms per
+  layer of 8 experts with a `clFinish` per layer. That is about half the capped CPU's 23.1 GB/s
+  (0.95 ms per layer).
+- The copy path (upload each routed expert per layer): 4.0–4.2 GB/s. That is why copying was hopeless.
+- GPU frequency could not be read (`kgsl` sysfs gave NA from the shell domain).
+
+**How to read it, honestly.**
+- The margin on condition 3 is thin: 1.535 against 1.5. Run 1, with a different GPU mechanism
+  (`results/2026-09-18/zcbench_run1_wrong_concurrent_arm/`, see its WHY file), gave 1.565. That is
+  two 8-second windows, both above the bar, and not a precise estimate.
+- The one change between the runs was a harness selection bug, disclosed in that WHY file. No
+  threshold and no analyzer rule changed.
+- This is expert-matmul throughput in isolation, not decode. Splitting a layer's experts between CPU
+  and GPU in proportion to these rates would cut expert-matmul time to about 0.65×. On this bench's
+  own capped numbers (0.95 ms/layer, 48 layers ≈ 46 ms/token) that saves about 16 ms/token. In-engine
+  the expert share of compute is larger, so the saving could be larger, but a per-layer GPU sync and
+  the GPU host thread's CPU cost are not in this number. **It does not reach 10 tok/s by itself.** It
+  is a real, measured lever of the same size as the others.
+- The GPU kernel is deliberately simple (native layout, one row per work-group). ggml's Adreno MoE
+  kernels, in the transposed layout stored on flash, or a better native kernel, are the obvious
+  headroom. The GPU runs at about half the CPU's rate today.

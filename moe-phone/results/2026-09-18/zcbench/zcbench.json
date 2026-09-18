@@ -1,0 +1,600 @@
+{
+ "viable": true,
+ "failed_conditions": [],
+ "zero_copy_mechanisms_passing": [
+  "alloc_host_ptr"
+ ],
+ "zc_rows": [
+  {
+   "phase": "zc",
+   "mech": "copy",
+   "status": "ok",
+   "correct": 1.0,
+   "err_initial": 1.78e-07,
+   "same_ptr": 0.0,
+   "err_update_nosync": NaN,
+   "err_update_mapsync": NaN,
+   "err_update_copy": 1.6e-07,
+   "handoff": 0.0,
+   "zero_copy": 0.0,
+   "first_sync_ms": 61.126,
+   "sync_1slice_ms": 0.0421,
+   "sync_region_ms": 5.339,
+   "region_MB": 132.1,
+   "sync_region_GBps": 24.75,
+   "memcpy_region_GBps": 26.81,
+   "odirect_ok": 27.0,
+   "odirect_fail": 0.0,
+   "buffered": 0.0,
+   "last_errno": 0.0,
+   "read_GBps": 2.51
+  },
+  {
+   "phase": "zc",
+   "mech": "use_host_ptr",
+   "status": "ok",
+   "correct": 0.0,
+   "err_initial": 1.0,
+   "same_ptr": 1.0,
+   "err_update_nosync": 1.0,
+   "err_update_mapsync": 1.6e-07,
+   "err_update_copy": NaN,
+   "handoff": 1.0,
+   "zero_copy": 0.0,
+   "first_sync_ms": 0.0,
+   "sync_1slice_ms": 0.1839,
+   "sync_region_ms": 7.056,
+   "region_MB": 132.1,
+   "sync_region_GBps": 18.72,
+   "memcpy_region_GBps": 29.73,
+   "odirect_ok": 27.0,
+   "odirect_fail": 0.0,
+   "buffered": 0.0,
+   "last_errno": 0.0,
+   "read_GBps": 1.62
+  },
+  {
+   "phase": "zc",
+   "mech": "alloc_host_ptr",
+   "status": "ok",
+   "correct": 1.0,
+   "err_initial": 1.78e-07,
+   "same_ptr": 1.0,
+   "err_update_nosync": NaN,
+   "err_update_mapsync": 1.6e-07,
+   "err_update_copy": NaN,
+   "handoff": 1.0,
+   "zero_copy": 1.0,
+   "first_sync_ms": 0.068,
+   "sync_1slice_ms": 0.1282,
+   "sync_region_ms": 0.115,
+   "region_MB": 132.1,
+   "sync_region_GBps": 1145.77,
+   "memcpy_region_GBps": 27.07,
+   "odirect_ok": 27.0,
+   "odirect_fail": 0.0,
+   "buffered": 0.0,
+   "last_errno": 0.0,
+   "read_GBps": 2.91
+  }
+ ],
+ "unavailable": {
+  "ion_dmabuf": "no cl_qcom_ion_host_ptr / cl_qcom_ext_host_ptr"
+ },
+ "lanes": [
+  {
+   "phase": "lanes",
+   "mech": "use_host_ptr",
+   "lanes": 16.0,
+   "max_rel_err": 1.73e-07,
+   "correct": 1.0,
+   "GBps_sync": 11.54
+  },
+  {
+   "phase": "lanes",
+   "mech": "use_host_ptr",
+   "lanes": 32.0,
+   "max_rel_err": 1.93e-07,
+   "correct": 1.0,
+   "GBps_sync": 12.15
+  },
+  {
+   "phase": "lanes",
+   "mech": "use_host_ptr",
+   "lanes": 64.0,
+   "max_rel_err": 1.93e-07,
+   "correct": 1.0,
+   "GBps_sync": 11.22
+  }
+ ],
+ "gpu_alone": [
+  {
+   "phase": "gpu_alone",
+   "mech": "copy",
+   "lanes": 32.0,
+   "batch": 1.0,
+   "iters": 770.0,
+   "GBps": 4.24,
+   "ms_per_layer": 5.197,
+   "note": "includes_per_layer_upload_of_8_experts"
+  },
+  {
+   "phase": "gpu_alone",
+   "mech": "copy",
+   "lanes": 32.0,
+   "batch": 48.0,
+   "iters": 16.0,
+   "GBps": 3.99,
+   "ms_per_layer": 5.524,
+   "note": "includes_per_layer_upload_of_8_experts"
+  },
+  {
+   "phase": "gpu_alone",
+   "mech": "use_host_ptr",
+   "lanes": 32.0,
+   "batch": 1.0,
+   "iters": 2163.0,
+   "GBps": 11.9,
+   "ms_per_layer": 1.85
+  },
+  {
+   "phase": "gpu_alone",
+   "mech": "use_host_ptr",
+   "lanes": 32.0,
+   "batch": 48.0,
+   "iters": 44.0,
+   "GBps": 11.56,
+   "ms_per_layer": 1.905
+  },
+  {
+   "phase": "gpu_alone",
+   "mech": "alloc_host_ptr",
+   "lanes": 32.0,
+   "batch": 1.0,
+   "iters": 1889.0,
+   "GBps": 10.4,
+   "ms_per_layer": 2.118
+  },
+  {
+   "phase": "gpu_alone",
+   "mech": "alloc_host_ptr",
+   "lanes": 32.0,
+   "batch": 48.0,
+   "iters": 42.0,
+   "GBps": 10.85,
+   "ms_per_layer": 2.029
+  }
+ ],
+ "concurrent": {
+  "phase": "concurrent",
+  "mech": "alloc_host_ptr",
+  "window_s": 8.0,
+  "cpu_GBps": 22.51,
+  "gpu_GBps": 12.99,
+  "aggregate_GBps": 35.5,
+  "cpu_alone_GBps": 23.13,
+  "cpu_alone_rep1": 23.1,
+  "cpu_alone_rep2": 23.16,
+  "gpu_alone_GBps": 11.97,
+  "ratio_vs_cpu_alone": 1.535,
+  "overlap_frac_of_cpu_busy": 1.0,
+  "overlap_frac_of_gpu_busy": 1.0,
+  "cpu_busy_frac": 1.0,
+  "gpu_busy_frac": 1.0
+ },
+ "clocks": {
+  "start": {
+   "cap0": 1900800.0,
+   "cap6": 1651200.0
+  },
+  "copy_b1": {
+   "cap0": 1900800.0,
+   "cap6": 1651200.0
+  },
+  "copy_b48": {
+   "cap0": 2188800.0,
+   "cap6": 1651200.0
+  },
+  "use_host_ptr_b1": {
+   "cap0": 2188800.0,
+   "cap6": 1651200.0
+  },
+  "use_host_ptr_b48": {
+   "cap0": 2188800.0,
+   "cap6": 1651200.0
+  },
+  "alloc_host_ptr_b1": {
+   "cap0": 1900800.0,
+   "cap6": 1651200.0
+  },
+  "alloc_host_ptr_b48": {
+   "cap0": 1900800.0,
+   "cap6": 1651200.0
+  },
+  "cpu_alone_1": {
+   "cap0": 1900800.0,
+   "cap6": 1651200.0
+  },
+  "concurrent": {
+   "cap0": 1900800.0,
+   "cap6": 1651200.0
+  },
+  "cpu_alone_2": {
+   "cap0": 1900800.0,
+   "cap6": 1651200.0
+  },
+  "end": {
+   "cap0": 1900800.0,
+   "cap6": 1651200.0
+  }
+ },
+ "clock_samples_by_phase": {
+  "init": {
+   "n": 1,
+   "cap0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cur0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "gpu_cur": null
+  },
+  "lanes16": {
+   "n": 2,
+   "cap0": {
+    "min": 1900800,
+    "median": 2476800,
+    "max": 2476800
+   },
+   "cur0": {
+    "min": 1900800,
+    "median": 2476800,
+    "max": 2476800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 2841600,
+    "max": 2841600
+   },
+   "cur6": {
+    "min": 1651200,
+    "median": 2841600,
+    "max": 2841600
+   },
+   "gpu_cur": null
+  },
+  "lanes32": {
+   "n": 2,
+   "cap0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cur0": {
+    "min": 556800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 806400,
+    "median": 806400,
+    "max": 806400
+   },
+   "gpu_cur": null
+  },
+  "lanes64": {
+   "n": 2,
+   "cap0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cur0": {
+    "min": 556800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 806400,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "gpu_cur": null
+  },
+  "zero_copy_test": {
+   "n": 2,
+   "cap0": {
+    "min": 1900800,
+    "median": 2188800,
+    "max": 2188800
+   },
+   "cur0": {
+    "min": 806400,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 806400,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "gpu_cur": null
+  },
+  "gpu_alone_copy_sync": {
+   "n": 4,
+   "cap0": {
+    "min": 1900800,
+    "median": 2188800,
+    "max": 2188800
+   },
+   "cur0": {
+    "min": 556800,
+    "median": 1152000,
+    "max": 1900800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 806400,
+    "median": 806400,
+    "max": 1651200
+   },
+   "gpu_cur": null
+  },
+  "gpu_alone_copy_batch48": {
+   "n": 4,
+   "cap0": {
+    "min": 2188800,
+    "median": 2188800,
+    "max": 2188800
+   },
+   "cur0": {
+    "min": 556800,
+    "median": 806400,
+    "max": 2188800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 806400,
+    "median": 806400,
+    "max": 806400
+   },
+   "gpu_cur": null
+  },
+  "gpu_alone_use_host_ptr_sync": {
+   "n": 4,
+   "cap0": {
+    "min": 2188800,
+    "median": 2188800,
+    "max": 2188800
+   },
+   "cur0": {
+    "min": 556800,
+    "median": 1401600,
+    "max": 2188800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 806400,
+    "median": 806400,
+    "max": 806400
+   },
+   "gpu_cur": null
+  },
+  "gpu_alone_use_host_ptr_batch48": {
+   "n": 4,
+   "cap0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cur0": {
+    "min": 556800,
+    "median": 556800,
+    "max": 1900800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 806400,
+    "median": 806400,
+    "max": 806400
+   },
+   "gpu_cur": null
+  },
+  "gpu_alone_alloc_host_ptr_sync": {
+   "n": 4,
+   "cap0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cur0": {
+    "min": 556800,
+    "median": 556800,
+    "max": 556800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 806400,
+    "median": 806400,
+    "max": 806400
+   },
+   "gpu_cur": null
+  },
+  "gpu_alone_alloc_host_ptr_batch48": {
+   "n": 4,
+   "cap0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cur0": {
+    "min": 556800,
+    "median": 556800,
+    "max": 1900800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 806400,
+    "median": 806400,
+    "max": 806400
+   },
+   "gpu_cur": null
+  },
+  "cpu_alone_1": {
+   "n": 8,
+   "cap0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cur0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "gpu_cur": null
+  },
+  "gpu_alone_for_c": {
+   "n": 8,
+   "cap0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cur0": {
+    "min": 556800,
+    "median": 556800,
+    "max": 556800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 806400,
+    "median": 806400,
+    "max": 806400
+   },
+   "gpu_cur": null
+  },
+  "concurrent": {
+   "n": 8,
+   "cap0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cur0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "gpu_cur": null
+  },
+  "cpu_alone_2": {
+   "n": 8,
+   "cap0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cur0": {
+    "min": 1900800,
+    "median": 1900800,
+    "max": 1900800
+   },
+   "cap6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "cur6": {
+    "min": 1651200,
+    "median": 1651200,
+    "max": 1651200
+   },
+   "gpu_cur": null
+  }
+ },
+ "caps_same_across_compared_phases": true,
+ "thresholds": {
+  "zc_speed_over_memcpy": 10.0,
+  "gpu_err_max": 0.001,
+  "agg_over_cpu": 1.5,
+  "overlap_min": 0.8
+ }
+}

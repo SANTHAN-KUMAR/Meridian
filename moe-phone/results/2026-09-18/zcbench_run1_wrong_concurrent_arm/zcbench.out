@@ -1,0 +1,96 @@
+RESULT phase=config file=/data/local/tmp/zcbench/zc_experts.bin experts_per_region=48 secs=8.0 threads=4 cpu_mask=0xf0 gpu_host_mask=0x8 layer_MB=22.020
+RESULT phase=make_file status=ok secs=1.5
+CLOCKS tag=start cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA gpu_max=NA gpu_busy=NA
+CLKS t=27408.011 phase=init cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+RESULT phase=opencl status=ok device="QUALCOMM Adreno(TM) 829" page=4096 ext_pad=0 ion_host_ptr=0 ext_host_ptr=1 iocoherent=1 dmabuf_ext=1 ahb_ext=1
+CLKS t=27409.012 phase=lanes16 cap0=3129600 cur0=3129600 cap6=3436800 cur6=3436800 gpu_cur=NA
+CLKS t=27410.013 phase=lanes16 cap0=1900800 cur0=1651200 cap6=1651200 cur6=1651200 gpu_cur=NA
+RESULT phase=lanes mech=use_host_ptr lanes=16 max_rel_err=1.4e-07 correct=1 GBps_sync=11.36
+CLKS t=27411.015 phase=lanes32 cap0=1900800 cur0=1555200 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27412.018 phase=lanes32 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+RESULT phase=lanes mech=use_host_ptr lanes=32 max_rel_err=1.4e-07 correct=1 GBps_sync=11.40
+CLKS t=27413.020 phase=lanes64 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27414.021 phase=lanes64 cap0=1900800 cur0=1900800 cap6=1651200 cur6=921600 gpu_cur=NA
+RESULT phase=lanes mech=use_host_ptr lanes=64 max_rel_err=1.4e-07 correct=1 GBps_sync=10.79
+CLKS t=27415.022 phase=zero_copy_test cap0=1900800 cur0=1267200 cap6=1651200 cur6=1651200 gpu_cur=NA
+RESULT phase=zc mech=copy status=ok  correct=1 err_initial=1.22e-07 same_ptr=0 err_update_nosync=nan err_update_mapsync=nan err_update_copy=1.36e-07 handoff=0 zero_copy=0 first_sync_ms=64.748 sync_1slice_ms=0.0980 sync_region_ms=5.451 region_MB=132.1 sync_region_GBps=24.24 memcpy_region_GBps=29.90 odirect_ok=27 odirect_fail=0 buffered=0 last_errno=0 read_GBps=2.88
+CLOCKS tag=copy_b1 cap0=1900800 cur0=1900800 cap6=1651200 cur6=806400 gpu_cur=NA gpu_max=NA gpu_busy=NA
+CLKS t=27416.024 phase=gpu_alone_copy_sync cap0=1900800 cur0=691200 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27417.025 phase=gpu_alone_copy_sync cap0=1900800 cur0=806400 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27418.027 phase=gpu_alone_copy_sync cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27419.029 phase=gpu_alone_copy_sync cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+RESULT phase=gpu_alone mech=copy lanes=32 batch=1 iters=740 GBps=4.07 ms_per_layer=5.407 note=includes_per_layer_upload_of_8_experts
+CLOCKS tag=copy_b48 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA gpu_max=NA gpu_busy=NA
+CLKS t=27420.031 phase=gpu_alone_copy_batch48 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27421.033 phase=gpu_alone_copy_batch48 cap0=1900800 cur0=1036800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27422.034 phase=gpu_alone_copy_batch48 cap0=1900800 cur0=1152000 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27423.036 phase=gpu_alone_copy_batch48 cap0=1900800 cur0=902400 cap6=1651200 cur6=806400 gpu_cur=NA
+RESULT phase=gpu_alone mech=copy lanes=32 batch=48 iters=15 GBps=3.91 ms_per_layer=5.631 note=includes_per_layer_upload_of_8_experts
+CLKS t=27424.038 phase=zero_copy_test cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+RESULT phase=zc mech=use_host_ptr status=ok  correct=0 err_initial=1 same_ptr=1 err_update_nosync=1 err_update_mapsync=1.36e-07 err_update_copy=nan handoff=1 zero_copy=0 first_sync_ms=0.000 sync_1slice_ms=0.0826 sync_region_ms=5.562 region_MB=132.1 sync_region_GBps=23.75 memcpy_region_GBps=25.11 odirect_ok=27 odirect_fail=0 buffered=0 last_errno=0 read_GBps=1.86
+CLOCKS tag=use_host_ptr_b1 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1497600 gpu_cur=NA gpu_max=NA gpu_busy=NA
+CLKS t=27425.039 phase=gpu_alone_use_host_ptr_sync cap0=1900800 cur0=1036800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27426.041 phase=gpu_alone_use_host_ptr_sync cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27427.042 phase=gpu_alone_use_host_ptr_sync cap0=1900800 cur0=1152000 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27428.043 phase=gpu_alone_use_host_ptr_sync cap0=1900800 cur0=1900800 cap6=1651200 cur6=806400 gpu_cur=NA
+RESULT phase=gpu_alone mech=use_host_ptr lanes=32 batch=1 iters=2235 GBps=12.30 ms_per_layer=1.790
+CLOCKS tag=use_host_ptr_b48 cap0=1900800 cur0=1747200 cap6=1651200 cur6=806400 gpu_cur=NA gpu_max=NA gpu_busy=NA
+CLKS t=27429.048 phase=gpu_alone_use_host_ptr_batch48 cap0=1900800 cur0=1036800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27430.050 phase=gpu_alone_use_host_ptr_batch48 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27431.053 phase=gpu_alone_use_host_ptr_batch48 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27432.054 phase=gpu_alone_use_host_ptr_batch48 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+RESULT phase=gpu_alone mech=use_host_ptr lanes=32 batch=48 iters=41 GBps=10.81 ms_per_layer=2.036
+RESULT phase=zc mech=alloc_host_ptr status=ok  correct=1 err_initial=1.22e-07 same_ptr=1 err_update_nosync=nan err_update_mapsync=1.36e-07 err_update_copy=nan handoff=1 zero_copy=1 first_sync_ms=0.059 sync_1slice_ms=0.1169 sync_region_ms=0.114 region_MB=132.1 sync_region_GBps=1162.03 memcpy_region_GBps=24.34 odirect_ok=27 odirect_fail=0 buffered=0 last_errno=0 read_GBps=3.06
+CLOCKS tag=alloc_host_ptr_b1 cap0=1900800 cur0=691200 cap6=1651200 cur6=806400 gpu_cur=NA gpu_max=NA gpu_busy=NA
+CLKS t=27433.056 phase=gpu_alone_alloc_host_ptr_sync cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27434.057 phase=gpu_alone_alloc_host_ptr_sync cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27435.059 phase=gpu_alone_alloc_host_ptr_sync cap0=1900800 cur0=691200 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27436.060 phase=gpu_alone_alloc_host_ptr_sync cap0=1900800 cur0=1900800 cap6=1651200 cur6=806400 gpu_cur=NA
+RESULT phase=gpu_alone mech=alloc_host_ptr lanes=32 batch=1 iters=1985 GBps=10.93 ms_per_layer=2.015
+CLOCKS tag=alloc_host_ptr_b48 cap0=1900800 cur0=1036800 cap6=1651200 cur6=806400 gpu_cur=NA gpu_max=NA gpu_busy=NA
+CLKS t=27437.061 phase=gpu_alone_alloc_host_ptr_batch48 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27438.063 phase=gpu_alone_alloc_host_ptr_batch48 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27439.066 phase=gpu_alone_alloc_host_ptr_batch48 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27440.068 phase=gpu_alone_alloc_host_ptr_batch48 cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+RESULT phase=gpu_alone mech=alloc_host_ptr lanes=32 batch=48 iters=41 GBps=10.74 ms_per_layer=2.051
+RESULT phase=zc mech=ion_dmabuf status=unavailable why="no cl_qcom_ion_host_ptr / cl_qcom_ext_host_ptr"
+RESULT phase=cpu_check max_rel_err=0.00427 note=ggml_quantizes_activations_to_q8
+CLOCKS tag=cpu_alone_1 cap0=1900800 cur0=691200 cap6=1651200 cur6=1651200 gpu_cur=NA gpu_max=NA gpu_busy=NA
+CLKS t=27441.069 phase=cpu_alone_1 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27442.069 phase=cpu_alone_1 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27443.070 phase=cpu_alone_1 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27444.071 phase=cpu_alone_1 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27445.072 phase=cpu_alone_1 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27446.073 phase=cpu_alone_1 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27447.074 phase=cpu_alone_1 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27448.075 phase=cpu_alone_1 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+RESULT phase=cpu_alone rep=1 iters=8399 GBps=23.12 ms_per_layer=0.953
+CLKS t=27449.076 phase=gpu_alone_for_c cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27450.078 phase=gpu_alone_for_c cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27451.079 phase=gpu_alone_for_c cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27452.081 phase=gpu_alone_for_c cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27453.082 phase=gpu_alone_for_c cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27454.084 phase=gpu_alone_for_c cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27455.086 phase=gpu_alone_for_c cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+CLKS t=27456.088 phase=gpu_alone_for_c cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA
+RESULT phase=gpu_alone_for_c mech=use_host_ptr iters=4339 GBps=11.94
+CLOCKS tag=concurrent cap0=1900800 cur0=556800 cap6=1651200 cur6=806400 gpu_cur=NA gpu_max=NA gpu_busy=NA
+CLKS t=27457.090 phase=concurrent cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27458.090 phase=concurrent cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27459.091 phase=concurrent cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27460.092 phase=concurrent cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27461.093 phase=concurrent cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27462.094 phase=concurrent cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27463.094 phase=concurrent cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27464.095 phase=concurrent cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLOCKS tag=cpu_alone_2 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA gpu_max=NA gpu_busy=NA
+CLKS t=27465.096 phase=cpu_alone_2 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27466.097 phase=cpu_alone_2 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27467.098 phase=cpu_alone_2 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27468.099 phase=cpu_alone_2 cap0=1900800 cur0=1900800 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27469.101 phase=cpu_alone_2 cap0=1747200 cur0=1747200 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27470.102 phase=cpu_alone_2 cap0=1747200 cur0=1747200 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27471.102 phase=cpu_alone_2 cap0=1747200 cur0=1747200 cap6=1651200 cur6=1651200 gpu_cur=NA
+CLKS t=27472.103 phase=cpu_alone_2 cap0=1747200 cur0=1747200 cap6=1651200 cur6=1651200 gpu_cur=NA
+RESULT phase=concurrent mech=use_host_ptr window_s=8.00 cpu_GBps=22.53 gpu_GBps=13.00 aggregate_GBps=35.53 cpu_alone_GBps=22.70 cpu_alone_rep1=23.12 cpu_alone_rep2=22.29 gpu_alone_GBps=11.94 ratio_vs_cpu_alone=1.565 overlap_frac_of_cpu_busy=1.000 overlap_frac_of_gpu_busy=1.000 cpu_busy_frac=1.000 gpu_busy_frac=1.000
+CLOCKS tag=end cap0=1747200 cur0=1747200 cap6=1651200 cur6=1651200 gpu_cur=NA gpu_max=NA gpu_busy=NA
