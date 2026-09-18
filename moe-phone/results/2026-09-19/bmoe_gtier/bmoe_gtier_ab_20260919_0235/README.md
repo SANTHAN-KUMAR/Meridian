@@ -16,6 +16,6 @@ The two arms' difference is smaller than this hidden two-state factor, which is 
 tonight ran on the charger with wakefulness=Awake. The kgsl-arena A/B (stopped early) ran under the same condition.
 
 The only thing both arms' FAST modes say (a labelled observation, not a verdict): base-fast is 80-86 ms compute and
-tier-fast is 106-108 ms. That points to a tier cost when the device is awake, which matches the overflow read-map
-mechanism (bmoe_gtier.sh FOLLOW-UP note).
+tier-fast is 106-108 ms. That points to a tier cost when the device is awake. The cause is unexplained: an overflow read-map mechanism was
+proposed and then refuted by the counters (~0.09 ms per overflow expert; see the bmoe_gtier.sh CORRECTION).
 Next: rerun with the device held Awake (a screen-on waker before each row, wakefulness logged at row start and end).

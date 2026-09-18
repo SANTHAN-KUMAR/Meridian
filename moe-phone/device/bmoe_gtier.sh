@@ -46,12 +46,13 @@
 # FIX 2026-09-19 02:30: smoke bmoe_gtier_smoke_20260919_0223 was invalid -- the stack row exited 1 with "unknown arg" because
 # --gpu-spin-wait takes a value and the bare flag swallowed --gpu-tier-prior. Now "--gpu-spin-wait 1"; the exact TIER
 # string is validated on the laptop engine (same CLI) before each push.
-# FOLLOW-UP PRE-REGISTERED 2026-09-19 03:05 (before any cap-8 row; the cap-3 A/B is still running): GT_CAP (default 3)
-# sets --gpu-max-per-layer. Mechanism seen in the cap-3 A/B's repeat 1: ~2,500 overflow experts per row (owned by the tier
-# but beyond cap 3) are read-mapped for the CPU through blocking OpenCL maps (pool test: map 1.4 + unmap 2.7 ms), about
-# 40 ms/token of host time, against compute +56..+120 ms/token. At cap 8 every owned expert is dispatched to the device
-# during decode. Only prefill still read-maps. Laptop: overflow 644 -> 116. The same A/B rule, keep rule and outcomes
-# apply; binary bmoe-i8mm-0023 = 0022 + host-time counters (overflow map / unmap / promotion ms), gx still at 58b13dd.
+# FOLLOW-UP PRE-REGISTERED 2026-09-19 03:00 (before any cap-8 row): GT_CAP (default 3) sets --gpu-max-per-layer; the
+# follow-up runs cap 8, binary bmoe-i8mm-0023 (0022 + host-time counters; gx at 58b13dd), same rule and outcomes.
+# CORRECTION 04:45 (before any cap-8 A/B row): the rationale written at 03:00 -- overflow read-maps costing ~40 ms/token
+# -- is WRONG. The new counters (smoke bmoe_gtier_smoke_20260919_0438) measure 258 overflow experts at 7.4 ms of map and
+# 14.7 ms of unmap in total, ~0.09 ms each, so under 1 ms/token even at cap 3. The pool test's 1.4 / 2.7 ms per call does
+# not carry over to the engine. The cause of the tier arm's extra compute is unexplained. The cap-8 A/B is still a
+# valid pre-registered test of cap 8, not of that mechanism.
 # REVISION 2026-09-19 04:55 (before any row of the rerun): tonight's A/B (bmoe_gtier_ab_20260919_0235) ran with
 # wakefulness=Dozing (unplugged; stayon holds only when plugged), and SoC autosuspend made rows bimodal in both arms, so it
 # was not resolved. From now on awake() runs before each row: if the phone is not Awake it wakes it; if the keyguard is
