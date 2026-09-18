@@ -1,6 +1,6 @@
 // gx_bench.cpp — dispatch latency and throughput of gx, for M6 on the phone. Correctness is gx_test's job;
 // this only times. On the laptop it is a functional smoke test and its numbers mean nothing (NVIDIA copies).
-//   gx_bench [--iters N] [--variants 0,1,2,3] [--ks 1,..,8] [--slots N] [--spin 0,1] [--memprobe-only 1]
+//   gx_bench [--iters N] [--variants 0,1,2,3] [--ks 1,..,8] [--slots N] [--spin 0,1] [--downs 0,1] [--memprobe-only 1]
 // A memory-only probe (MEMPROBE lines: aos / soa / tiled read orders, no arithmetic) runs once first.
 // A 1.5 s k=8 warm-up precedes timing, and the (down type, k) cells are timed in interleaved rounds of 10.
 // Pool: one expert per block (the recommended shape), N slots per down type (default 32), filled with
@@ -108,6 +108,7 @@ static void mem_probe(cl_context ctx, cl_device_id dev, const std::vector<gx_slo
 int main(int argc, char ** argv) {
     int iters = 300, nslots = 32;
     int memprobe_only = 0;
+    std::vector<int> downs = {0, 1};
     std::vector<int> variants = {0, 1, 2, 3}, ks = {1, 2, 3, 4, 5, 6, 7, 8}, spins = {0, 1};
     for (int i = 1; i + 1 < argc; i += 2) {
         if (!strcmp(argv[i], "--iters")) iters = atoi(argv[i + 1]);
@@ -116,6 +117,7 @@ int main(int argc, char ** argv) {
         else if (!strcmp(argv[i], "--slots")) nslots = atoi(argv[i + 1]);
         else if (!strcmp(argv[i], "--spin")) spins = ints(argv[i + 1]);
         else if (!strcmp(argv[i], "--memprobe-only")) memprobe_only = atoi(argv[i + 1]);
+        else if (!strcmp(argv[i], "--downs")) downs = ints(argv[i + 1]);
     }
     cl_platform_id plat;
     cl_device_id dev;
@@ -184,7 +186,7 @@ int main(int argc, char ** argv) {
         }
         struct Cell { int dt, k; std::vector<double> t, td; long it = 0; };
         std::vector<Cell> cells;
-        for (int dt = 0; dt < 2; dt++)
+        for (int dt : downs)
             for (int k : ks) cells.push_back(Cell{dt, k, {}, {}});
         const int per_round = 10, rounds = (iters + per_round - 1) / per_round;
         for (int r = 0; r < rounds; r++)

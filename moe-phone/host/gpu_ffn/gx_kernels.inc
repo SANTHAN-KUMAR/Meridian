@@ -239,20 +239,20 @@ kernel void gx_down(global const uchar * w0, global const uchar * w1, global con
 // ---------------------------------------------------------------------------------------------------
 
 // acc[p*4 + j] = fma(float(lane_dot_j), dx*dy, acc[...]) for one block; off = 8 for Q4_0, 0 for Q4_1.
-static void row_block(float * acc, int p, global const uchar * qs, float sc, int off, local const char * yq) {
+static void row_block(float4 * a4, global const uchar * qs, float sc, int off, local const char * yq) {
     const uchar16 q = vload16(0, qs);
     const char16 yl = vload16(0, yq), yh = vload16(0, yq + 16);
     const int16 lo = convert_int16(q & (uchar16)(15)) - off, hi = convert_int16(q >> (uchar16)(4)) - off;
     const int16 a = convert_int16(yl), c = convert_int16(yh);
     const int16 pr = lo * a + hi * c;
-    acc[p * 4 + 0] = fma((float) (pr.s0 + pr.s1 + pr.s2 + pr.s3), sc, acc[p * 4 + 0]);
-    acc[p * 4 + 1] = fma((float) (pr.s4 + pr.s5 + pr.s6 + pr.s7), sc, acc[p * 4 + 1]);
-    acc[p * 4 + 2] = fma((float) (pr.s8 + pr.s9 + pr.sa + pr.sb), sc, acc[p * 4 + 2]);
-    acc[p * 4 + 3] = fma((float) (pr.sc + pr.sd + pr.se + pr.sf), sc, acc[p * 4 + 3]);
+    // one NEON float32x4 accumulator (even or odd blocks, chosen by the caller): lane j += fma(lane sum, sc)
+    const float4 ls = (float4)((float) (pr.s0 + pr.s1 + pr.s2 + pr.s3), (float) (pr.s4 + pr.s5 + pr.s6 + pr.s7),
+                               (float) (pr.s8 + pr.s9 + pr.sa + pr.sb), (float) (pr.sc + pr.sd + pr.se + pr.sf));
+    *a4 = fma(ls, (float4)(sc), *a4);
 }
 
-static float hsum8p(const float * l) {
-    return ((l[0] + l[1]) + (l[2] + l[3])) + ((l[4] + l[5]) + (l[6] + l[7]));
+static float hsum2(float4 a, float4 b) {   // vaddvq_f32(sumv0) + vaddvq_f32(sumv1)
+    return ((a.x + a.y) + (a.z + a.w)) + ((b.x + b.y) + (b.z + b.w));
 }
 
 // Grid (64 * NBH / 2, k), local (64, 1): 64 rows = 2 blocks of h per work-group.
@@ -277,16 +277,18 @@ kernel void gx_gate_up_row(global const uchar * w0, global const uchar * w1, glo
     global const uchar * W = pick(s, w0, w1, w2, w3, w4, w5, w6, w7);
     global const uchar * G = W + offs[s * 3 + 0] + (size_t) row * NBX * QB0;
     global const uchar * U = W + offs[s * 3 + 1] + (size_t) row * NBX * QB0;
-    float ag[8] = {0, 0, 0, 0, 0, 0, 0, 0}, au[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    for (int ib = 0; ib < NBX; ib++) {
-        const float dy = ldx[ib];
+    float4 ag0 = (float4)(0.0f), ag1 = (float4)(0.0f), au0 = (float4)(0.0f), au1 = (float4)(0.0f);
+    for (int ib = 0; ib < NBX; ib += 2) {   // even block -> sumv0 (ag0/au0), odd block -> sumv1 (ag1/au1)
+        const float dy0 = ldx[ib], dy1 = ldx[ib + 1];
         global const uchar * gb = G + ib * QB0;
         global const uchar * ub = U + ib * QB0;
-        row_block(ag, ib & 1, gb + 2, h2f(((global const ushort *) gb)[0]) * dy, 8, lx + ib * 32);
-        row_block(au, ib & 1, ub + 2, h2f(((global const ushort *) ub)[0]) * dy, 8, lx + ib * 32);
+        row_block(&ag0, gb + 2, h2f(((global const ushort *) gb)[0]) * dy0, 8, lx + ib * 32);
+        row_block(&au0, ub + 2, h2f(((global const ushort *) ub)[0]) * dy0, 8, lx + ib * 32);
+        row_block(&ag1, gb + QB0 + 2, h2f(((global const ushort *) (gb + QB0))[0]) * dy1, 8, lx + (ib + 1) * 32);
+        row_block(&au1, ub + QB0 + 2, h2f(((global const ushort *) (ub + QB0))[0]) * dy1, 8, lx + (ib + 1) * 32);
     }
     int r = 0;
-    const float h = gx_swiglu_r(hsum8p(ag), hsum8p(au), &r);
+    const float h = gx_swiglu_r(hsum2(ag0, ag1), hsum2(au0, au1), &r);
     lh[t] = h;
     if (dbg) hdbg[s * N_FF + row] = h;
     if (r) lrisk = 1;
@@ -315,17 +317,18 @@ kernel void gx_down_row(global const uchar * w0, global const uchar * w1, global
     barrier(CLK_LOCAL_MEM_FENCE);
     const int qb = dt == DT_Q4_1 ? QB1 : QB0, qo = dt == DT_Q4_1 ? 4 : 2, bias = dt == DT_Q4_1 ? 0 : 8;
     global const uchar * D = pick(s, w0, w1, w2, w3, w4, w5, w6, w7) + offs[s * 3 + 2] + (size_t) row * NBH * qb;
-    float acc[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    float4 ac0 = (float4)(0.0f), ac1 = (float4)(0.0f);
     float summs = 0.0f;
-    for (int ib = 0; ib < NBH; ib++) {
+    for (int ib = 0; ib < NBH; ib += 2) {
         global const uchar * xb = D + ib * qb;
-        row_block(acc, ib & 1, xb + qo, h2f(((global const ushort *) xb)[0]) * ld[ib], bias, ly + ib * 32);
-        if (dt == DT_Q4_1 && (ib & 1)) {
-            const float m0 = h2f(((global const ushort *) (xb - QB1))[1]), m1 = h2f(((global const ushort *) xb)[1]);
-            summs = summs + fma(m0, ls[ib - 1], m1 * ls[ib]);
+        row_block(&ac0, xb + qo, h2f(((global const ushort *) xb)[0]) * ld[ib], bias, ly + ib * 32);
+        row_block(&ac1, xb + qb + qo, h2f(((global const ushort *) (xb + qb))[0]) * ld[ib + 1], bias, ly + (ib + 1) * 32);
+        if (dt == DT_Q4_1) {
+            const float m0 = h2f(((global const ushort *) xb)[1]), m1 = h2f(((global const ushort *) (xb + QB1))[1]);
+            summs = summs + fma(m0, ls[ib], m1 * ls[ib + 1]);
         }
     }
-    const float v = hsum8p(acc);
+    const float v = hsum2(ac0, ac1);
     out[(size_t) s * N_EMBD + row] = dt == DT_Q4_1 ? summs + v : v;
 }
 
@@ -338,15 +341,15 @@ kernel void gx_down_row(global const uchar * w0, global const uchar * w1, global
 // Consecutive work-items (rows) read consecutive 16-byte chunks and consecutive scales: coalesced loads.
 // Each row's 8 lane accumulators still see the blocks in order 0..NB-1: the arithmetic is unchanged.
 // ---------------------------------------------------------------------------------------------------
-static void row_block_v(float * acc, int p, uchar16 q, float sc, int off, local const char * yq) {
+static void row_block_v(float4 * a4, uchar16 q, float sc, int off, local const char * yq) {
     const char16 yl = vload16(0, yq), yh = vload16(0, yq + 16);
     const int16 lo = convert_int16(q & (uchar16)(15)) - off, hi = convert_int16(q >> (uchar16)(4)) - off;
     const int16 a = convert_int16(yl), c = convert_int16(yh);
     const int16 pr = lo * a + hi * c;
-    acc[p * 4 + 0] = fma((float) (pr.s0 + pr.s1 + pr.s2 + pr.s3), sc, acc[p * 4 + 0]);
-    acc[p * 4 + 1] = fma((float) (pr.s4 + pr.s5 + pr.s6 + pr.s7), sc, acc[p * 4 + 1]);
-    acc[p * 4 + 2] = fma((float) (pr.s8 + pr.s9 + pr.sa + pr.sb), sc, acc[p * 4 + 2]);
-    acc[p * 4 + 3] = fma((float) (pr.sc + pr.sd + pr.se + pr.sf), sc, acc[p * 4 + 3]);
+    // one NEON float32x4 accumulator (even or odd blocks, chosen by the caller): lane j += fma(lane sum, sc)
+    const float4 ls = (float4)((float) (pr.s0 + pr.s1 + pr.s2 + pr.s3), (float) (pr.s4 + pr.s5 + pr.s6 + pr.s7),
+                               (float) (pr.s8 + pr.s9 + pr.sa + pr.sb), (float) (pr.sc + pr.sd + pr.se + pr.sf));
+    *a4 = fma(ls, (float4)(sc), *a4);
 }
 
 #define SOA_Q(base, ib, row, R) as_uchar16(((global const uint4 *) (base))[(size_t) (ib) * (R) + (row)])
@@ -375,14 +378,16 @@ kernel void gx_gate_up_soa(global const uchar * w0, global const uchar * w1, glo
     global const uchar * W = pick(s, w0, w1, w2, w3, w4, w5, w6, w7);
     global const uchar * G = W + offs[s * 3 + 0];
     global const uchar * U = W + offs[s * 3 + 1];
-    float ag[8] = {0, 0, 0, 0, 0, 0, 0, 0}, au[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    for (int ib = 0; ib < NBX; ib++) {
-        const float dy = ldx[ib];
-        row_block_v(ag, ib & 1, SOA_Q(G, ib, row, N_FF), SOA_H(G, NBX, N_FF, 0, ib, row) * dy, 8, lx + ib * 32);
-        row_block_v(au, ib & 1, SOA_Q(U, ib, row, N_FF), SOA_H(U, NBX, N_FF, 0, ib, row) * dy, 8, lx + ib * 32);
+    float4 ag0 = (float4)(0.0f), ag1 = (float4)(0.0f), au0 = (float4)(0.0f), au1 = (float4)(0.0f);
+    for (int ib = 0; ib < NBX; ib += 2) {
+        const float dy0 = ldx[ib], dy1 = ldx[ib + 1];
+        row_block_v(&ag0, SOA_Q(G, ib, row, N_FF), SOA_H(G, NBX, N_FF, 0, ib, row) * dy0, 8, lx + ib * 32);
+        row_block_v(&au0, SOA_Q(U, ib, row, N_FF), SOA_H(U, NBX, N_FF, 0, ib, row) * dy0, 8, lx + ib * 32);
+        row_block_v(&ag1, SOA_Q(G, ib + 1, row, N_FF), SOA_H(G, NBX, N_FF, 0, ib + 1, row) * dy1, 8, lx + (ib + 1) * 32);
+        row_block_v(&au1, SOA_Q(U, ib + 1, row, N_FF), SOA_H(U, NBX, N_FF, 0, ib + 1, row) * dy1, 8, lx + (ib + 1) * 32);
     }
     int r = 0;
-    const float h = gx_swiglu_r(hsum8p(ag), hsum8p(au), &r);
+    const float h = gx_swiglu_r(hsum2(ag0, ag1), hsum2(au0, au1), &r);
     lh[t] = h;
     if (dbg) hdbg[s * N_FF + row] = h;
     if (r) lrisk = 1;
@@ -411,16 +416,17 @@ kernel void gx_down_soa(global const uchar * w0, global const uchar * w1, global
     barrier(CLK_LOCAL_MEM_FENCE);
     const int bias = dt == DT_Q4_1 ? 0 : 8;
     global const uchar * D = pick(s, w0, w1, w2, w3, w4, w5, w6, w7) + offs[s * 3 + 2];
-    float acc[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    float4 ac0 = (float4)(0.0f), ac1 = (float4)(0.0f);
     float summs = 0.0f;
-    for (int ib = 0; ib < NBH; ib++) {
-        row_block_v(acc, ib & 1, SOA_Q(D, ib, row, N_EMBD), SOA_H(D, NBH, N_EMBD, 0, ib, row) * ld[ib], bias, ly + ib * 32);
-        if (dt == DT_Q4_1 && (ib & 1)) {
-            const float m0 = SOA_H(D, NBH, N_EMBD, 1, ib - 1, row), m1 = SOA_H(D, NBH, N_EMBD, 1, ib, row);
-            summs = summs + fma(m0, ls[ib - 1], m1 * ls[ib]);
+    for (int ib = 0; ib < NBH; ib += 2) {
+        row_block_v(&ac0, SOA_Q(D, ib, row, N_EMBD), SOA_H(D, NBH, N_EMBD, 0, ib, row) * ld[ib], bias, ly + ib * 32);
+        row_block_v(&ac1, SOA_Q(D, ib + 1, row, N_EMBD), SOA_H(D, NBH, N_EMBD, 0, ib + 1, row) * ld[ib + 1], bias, ly + (ib + 1) * 32);
+        if (dt == DT_Q4_1) {
+            const float m0 = SOA_H(D, NBH, N_EMBD, 1, ib, row), m1 = SOA_H(D, NBH, N_EMBD, 1, ib + 1, row);
+            summs = summs + fma(m0, ls[ib], m1 * ls[ib + 1]);
         }
     }
-    const float v = hsum8p(acc);
+    const float v = hsum2(ac0, ac1);
     out[(size_t) s * N_EMBD + row] = dt == DT_Q4_1 ? summs + v : v;
 }
 
@@ -459,14 +465,16 @@ kernel void gx_gate_up_tiled(global const uchar * w0, global const uchar * w1, g
     global const uchar * W = pick(s, w0, w1, w2, w3, w4, w5, w6, w7);
     global const uchar * G = W + offs[s * 3 + 0];
     global const uchar * U = W + offs[s * 3 + 1];
-    float ag[8] = {0, 0, 0, 0, 0, 0, 0, 0}, au[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    for (int ib = 0; ib < NBX; ib++) {
-        const float dy = ldx[ib];
-        row_block_v(ag, ib & 1, TIL_Q(G, ib, row, N_FF), TIL_H(G, NBX, N_FF, 0, ib, row) * dy, 8, lx + ib * 32);
-        row_block_v(au, ib & 1, TIL_Q(U, ib, row, N_FF), TIL_H(U, NBX, N_FF, 0, ib, row) * dy, 8, lx + ib * 32);
+    float4 ag0 = (float4)(0.0f), ag1 = (float4)(0.0f), au0 = (float4)(0.0f), au1 = (float4)(0.0f);
+    for (int ib = 0; ib < NBX; ib += 2) {
+        const float dy0 = ldx[ib], dy1 = ldx[ib + 1];
+        row_block_v(&ag0, TIL_Q(G, ib, row, N_FF), TIL_H(G, NBX, N_FF, 0, ib, row) * dy0, 8, lx + ib * 32);
+        row_block_v(&au0, TIL_Q(U, ib, row, N_FF), TIL_H(U, NBX, N_FF, 0, ib, row) * dy0, 8, lx + ib * 32);
+        row_block_v(&ag1, TIL_Q(G, ib + 1, row, N_FF), TIL_H(G, NBX, N_FF, 0, ib + 1, row) * dy1, 8, lx + (ib + 1) * 32);
+        row_block_v(&au1, TIL_Q(U, ib + 1, row, N_FF), TIL_H(U, NBX, N_FF, 0, ib + 1, row) * dy1, 8, lx + (ib + 1) * 32);
     }
     int r = 0;
-    const float h = gx_swiglu_r(hsum8p(ag), hsum8p(au), &r);
+    const float h = gx_swiglu_r(hsum2(ag0, ag1), hsum2(au0, au1), &r);
     lh[t] = h;
     if (dbg) hdbg[s * N_FF + row] = h;
     if (r) lrisk = 1;
@@ -495,16 +503,17 @@ kernel void gx_down_tiled(global const uchar * w0, global const uchar * w1, glob
     barrier(CLK_LOCAL_MEM_FENCE);
     const int bias = dt == DT_Q4_1 ? 0 : 8;
     global const uchar * D = pick(s, w0, w1, w2, w3, w4, w5, w6, w7) + offs[s * 3 + 2];
-    float acc[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    float4 ac0 = (float4)(0.0f), ac1 = (float4)(0.0f);
     float summs = 0.0f;
-    for (int ib = 0; ib < NBH; ib++) {
-        row_block_v(acc, ib & 1, TIL_Q(D, ib, row, N_EMBD), TIL_H(D, NBH, N_EMBD, 0, ib, row) * ld[ib], bias, ly + ib * 32);
-        if (dt == DT_Q4_1 && (ib & 1)) {
-            const float m0 = TIL_H(D, NBH, N_EMBD, 1, ib - 1, row), m1 = TIL_H(D, NBH, N_EMBD, 1, ib, row);
-            summs = summs + fma(m0, ls[ib - 1], m1 * ls[ib]);
+    for (int ib = 0; ib < NBH; ib += 2) {
+        row_block_v(&ac0, TIL_Q(D, ib, row, N_EMBD), TIL_H(D, NBH, N_EMBD, 0, ib, row) * ld[ib], bias, ly + ib * 32);
+        row_block_v(&ac1, TIL_Q(D, ib + 1, row, N_EMBD), TIL_H(D, NBH, N_EMBD, 0, ib + 1, row) * ld[ib + 1], bias, ly + (ib + 1) * 32);
+        if (dt == DT_Q4_1) {
+            const float m0 = TIL_H(D, NBH, N_EMBD, 1, ib, row), m1 = TIL_H(D, NBH, N_EMBD, 1, ib + 1, row);
+            summs = summs + fma(m0, ls[ib], m1 * ls[ib + 1]);
         }
     }
-    const float v = hsum8p(acc);
+    const float v = hsum2(ac0, ac1);
     out[(size_t) s * N_EMBD + row] = dt == DT_Q4_1 ? summs + v : v;
 }
 )GXCL"
