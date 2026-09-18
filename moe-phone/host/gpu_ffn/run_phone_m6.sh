@@ -22,7 +22,13 @@ busy=$(adb shell "ps -A -o NAME 2>/dev/null | grep -E 'bmoe-cli|llama-|zcbench|g
 if [ -n "$busy" ]; then echo "phone busy: $busy"; exit 1; fi
 mkdir -p "$R"
 adb shell "mkdir -p $D/cases"
-adb push "$HERE/out/android/gx_test" "$HERE/out/android/gx_pool_test" "$HERE/out/android/gx_bench" "$HERE/out/arm/ggml_ref_arm" "$D/" >/dev/null
+# GX_ANDROID_DIR: which Android build to push (default out/android; out/android_next = the host-overhead levers)
+AD=${GX_ANDROID_DIR:-$HERE/out/android}
+case "$AD" in /*) ;; *) for base in "$HERE" "$MP" "$(pwd)"; do [ -d "$base/$AD" ] && { AD="$base/$AD"; break; }; done;; esac
+[ -x "$AD/gx_bench" ] || { echo "no Android build in $AD"; exit 1; }
+echo "android build: $AD" > "$R/BUILD"
+md5sum "$AD/gx_test" "$AD/gx_pool_test" "$AD/gx_bench" >> "$R/BUILD"
+adb push "$AD/gx_test" "$AD/gx_pool_test" "$AD/gx_bench" "$HERE/out/arm/ggml_ref_arm" "$D/" >/dev/null
 for f in "$CASES"/*.bin "$CASES"/quant_blocks.f32 "$CASES"/swiglu_pairs.f32; do adb push "$f" "$D/cases/" >/dev/null; done
 TG=/data/local/tmp/moe-stream/thermal_gate.sh
 adb shell "if [ -f $TG ]; then . $TG; quiesce; mem_ready 2000 60; thermal_state; else echo NO_THERMAL_GATE; fi" > "$R/state_before.txt" 2>&1 || true
