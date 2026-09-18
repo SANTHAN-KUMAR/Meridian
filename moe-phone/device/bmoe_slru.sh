@@ -22,7 +22,11 @@ BASE="--chatml -n 256 --ubatch 512 --moe-stream --cache-mb auto --cache-floor-mb
 run() {
   tag=$1_rep$3
   g=$(thermal_wait 30)
-  echo "=== $tag $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
+  mr=$(mem_ready 6500 120)
+  # Any OTHER benchmark on the phone during a row voids its rate: on 2026-09-18 an orphaned host driver ran
+  # llama-bench in com.moephone.npu2 through the first SLRU campaign. Logged per row, before the engine starts.
+  foreign=$(ps -A -o ARGS | grep -E "llama-bench|bmoe-cli|com\.moephone" | grep -v grep | tr " " "_" | tr "\n" "," )
+  echo "=== $tag $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) $mr foreign=[${foreign}] BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
   ( cd $H/bmoe-i8mm-slru && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" )
   echo "exit=$? AFTER $(thermal_state) $(grep -hE 'generation:|moe-stream:|moe-cache:|expert order|expert-order probes' "$O/$tag.out" "$O/$tag.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
 }

@@ -38,7 +38,10 @@ run() {
   tag=$1_rep$3
   g=$(thermal_wait 30)
   mr=$(mem_ready 6500 120)
-  echo "=== $tag $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) $mr BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
+  # Any OTHER benchmark on the phone during a row voids its rate: on 2026-09-18 an orphaned host driver ran
+  # llama-bench in com.moephone.npu2 through the first SLRU campaign. Logged per row, before the engine starts.
+  foreign=$(ps -A -o ARGS | grep -E "llama-bench|bmoe-cli|com\.moephone" | grep -v grep | tr " " "_" | tr "\n" "," )
+  echo "=== $tag $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) $mr foreign=[${foreign}] BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
   # Sample memory while the run happens (the engine's own budget figure does not include arena slots).
   # The ENGINE runs in the background and the sampler loop in the foreground until it exits, so nothing is
   # ever killed. The first version backgrounded the sampler and killed it after each row; under the phone's

@@ -1,0 +1,48 @@
+2026-09-18T12:43:22+05:30 waiting for the phone (USB or wireless)
+2026-09-18T13:39:58+05:30 USB device 3C15CK0028J00000 present: enabling tcpip 5555
+2026-09-18T13:40:04+05:30 connected; uptime 8650.43s
+2026-09-18T13:40:06+05:30 scripts pushed
+2026-09-18T13:40:13+05:30 mem_gate: MemAvailable 4968 MiB (need >= 6000)
+2026-09-18T13:40:13+05:30 SKIPPED bmoe_hitrate: not enough free memory for a 7000 MiB cell
+2026-09-18T13:40:19+05:30 mem_gate: MemAvailable 5088 MiB (need >= 6000)
+2026-09-18T13:40:19+05:30 SKIPPED bmoe_slru: not enough free memory
+2026-09-18T13:40:19+05:30 cool_gate: waited 0s, thermal status now 0
+2026-09-18T13:40:26+05:30 mem_gate: MemAvailable 5075 MiB (need >= 6000)
+2026-09-18T13:40:26+05:30 cool_gate: waited 0s, thermal status now 0
+2026-09-18T13:41:09+05:30 phone restored to normal settings
+2026-09-18T13:43:25+05:30 waiting for the phone (USB or wireless)
+2026-09-18T13:43:25+05:30 USB device 3C15CK0028J00000 present: enabling tcpip 5555
+2026-09-18T13:43:31+05:30 connected; uptime 8857.66s
+2026-09-18T13:43:33+05:30 scripts pushed
+2026-09-18T13:43:39+05:30 mem_gate: MemAvailable 5432 MiB (need >= 4000)
+2026-09-18T13:43:39+05:30 bmoe_hitrate.sh start
+2026-09-18T13:45:42+05:30 stopped [sh bmoe_]: 16517
+17371
+2026-09-18T13:45:42+05:30 stopped [bmoe-cli]: 17372
+2026-09-18T13:45:48+05:30 phone restored to normal settings
+2026-09-18T13:53:48+05:30 waiting for the phone (USB or wireless)
+2026-09-18T13:53:48+05:30 connected; uptime 9474.08s
+2026-09-18T13:53:51+05:30 scripts pushed
+2026-09-18T13:53:58+05:30 mem_gate: MemAvailable 7227 MiB (need >= 4000)
+2026-09-18T13:53:58+05:30 bmoe_hitrate.sh start
+2026-09-18T14:04:02+05:30 bmoe_hitrate.sh pulled from /data/local/tmp/moe-stream/bmoe_hitrate_20260918_1353/
+2026-09-18T14:04:17+05:30 mem_gate: MemAvailable 7558 MiB (need >= 5000)
+2026-09-18T14:04:17+05:30 bmoe_slru.sh start
+2026-09-18T14:07:54+05:30 stopped [sh bmoe_]: 4890
+32678
+2026-09-18T14:07:58+05:30 phone restored to normal settings
+2026-09-18T14:08:08+05:30 waiting for the phone (USB or wireless)
+2026-09-18T14:08:08+05:30 connected; uptime 10334.70s
+2026-09-18T14:08:10+05:30 scripts pushed; engine binaries present
+2026-09-18T14:08:10+05:30 bmoe_hitrate already pulled; not re-running
+2026-09-18T14:08:16+05:30 mem_gate: MemAvailable 7052 MiB (need >= 5000)
+2026-09-18T14:08:16+05:30 bmoe_slru.sh start
+2026-09-18T14:31:52+05:30 bmoe_slru.sh pulled from /data/local/tmp/moe-stream/bmoe_slru_20260918_1408/
+2026-09-18T14:31:52+05:30 cool_gate: waited 0s, thermal status now 1
+2026-09-18T14:31:59+05:30 mem_gate: MemAvailable 7279 MiB (need >= 5000)
+2026-09-18T14:31:59+05:30 bmoe_arena2.sh start
+2026-09-18T14:34:29+05:30 bmoe_arena2.sh exited without DONE ('/data/local/tmp/moe-stream/bmoe_arena2_20260918_1431/')
+2026-09-18T14:34:29+05:30 bmoe_arena2.sh pulled from /data/local/tmp/moe-stream/bmoe_arena2_20260918_1431/
+2026-09-18T14:34:30+05:30 cool_gate: waited 0s, thermal status now 0
+2026-09-18T14:42:24+05:30 agg_bandwidth done
+2026-09-18T14:42:25+05:30 cool_gate: waited 0s, thermal status now 0

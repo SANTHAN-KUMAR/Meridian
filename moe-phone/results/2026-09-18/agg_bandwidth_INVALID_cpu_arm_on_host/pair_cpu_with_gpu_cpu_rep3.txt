@@ -1,0 +1,2 @@
+/run/media/santhankumar/New Volume/identifying-variation/moe-phone/host/agg_bandwidth.sh: line 43: cd: /data/local/tmp/moe-stream/ocl: No such file or directory
+exit=1

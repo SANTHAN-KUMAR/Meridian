@@ -35,14 +35,21 @@ APP_MODEL=/data/data/$PKG/files/olmoe.gguf
 N=${N:-64}
 REPS=${1:-3}
 mkdir -p "$R"
+# One driver at a time. Two copies of this script ran concurrently on 2026-09-18 (13:40-14:35 and 14:34-14:42,
+# the first an orphan of an earlier chain) and the orphan's GPU/HTP runs overlapped the SLRU campaign.
+exec 9>"/tmp/claude-1000/agg_bandwidth.lock"
+flock -n 9 || { echo "agg_bandwidth: another driver holds the lock; refusing" >&2; exit 3; }
 log() { echo "$(date -Iseconds) $*" >> "$R/driver.log"; }
 
 # llama-bench in the shell domain (CPU only; the DSP is refused here and OpenCL is not what we test here)
 shell_cpu() {  # tag
   local tag=$1
-  ( cd $H/ocl && LD_LIBRARY_PATH=. ./llama-bench -m $SHELL_MODEL -p 0 -n $N -r 1 -t 4 -ngl 0 ) \
-    > "$R/$tag.txt" 2>&1
-  echo "exit=$?" >> "$R/$tag.txt"
+  # ON THE PHONE. Until 2026-09-18 14:45 this line had no `adb shell`, so it ran `cd /data/local/tmp/...`
+  # on the laptop, failed, and every CPU arm -- solo and paired -- measured nothing; the "pairs" were then
+  # single-device runs. The result directory of that version was renamed *_INVALID_cpu_arm_on_host.
+  adb shell "cd $H/ocl && LD_LIBRARY_PATH=. ./llama-bench -m $SHELL_MODEL -p 0 -n $N -r 1 -t 4 -ngl 0; echo exit=\$?" \
+    > "$R/$tag.txt" 2>&1 </dev/null
+  grep -qE 'tg[0-9]+' "$R/$tag.txt" || log "FAILED $tag: no tg row (see $tag.txt)"
 }
 
 # llama-bench in the app process (the only domain where HTP0 opens; OpenCL works in both but is kept
