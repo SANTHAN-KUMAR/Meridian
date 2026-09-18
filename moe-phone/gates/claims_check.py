@@ -955,6 +955,15 @@ CLAIMS = [
          text="LAPTOP, forced swap: the full guard removes 96.6% of major faults per token (4943 -> 170) and 36.9% of the compute term (49.1 -> 31.0 ms): the faults were being paid on compute threads. It trades them for flash re-reads (65 -> 166 MiB/token, stall 84 -> 109 ms), so the net is set by the device's fault vs flash costs -- a phone question (M6), not settled here",
          artifact="swapguard_laptop.json", expected=0.9657, tol=0.001,
          value=lambda A: A["sgl"]["majflt_reduction_full_vs_off"]),
+    # ------------------------- M4 GPU EXPERT TIER, LAPTOP PLUMBING ACCEPTANCE (patch 0019, CPU stand-in; gates/gtier_m4.py)
+    dict(id="gtier_m4_text_identical",
+         text="LAPTOP, CPU stand-in device: with the GPU expert tier ON the engine's text is byte-identical to tier OFF (OLMoE, 96 tokens, stack config), across 16,449 experts computed by the stand-in in two runs (500 MiB promote-after-2 and 800 MiB promote-after-1), with 0 failures and no fail-loud abort: promotion, release, skip, dispatch at the layer's first expert op, and fill at down are correct",
+         artifact="gtier_m4.json", expected=True, tol=0,
+         value=lambda A: A["gm4"]["text_identical"] and not A["gm4"]["any_fatal"] and A["gm4"]["experts_on_device_total"] == 16449),
+    dict(id="gtier_m4_policy_churn",
+         text="the v1 promotion policy churns and overloads the device: 2498 promotions and 2350 tier evictions in 96 tokens, and 4.62 of 8 experts per dispatch at 500 MiB (6.22 at 800 MiB) -- above the ~3 the GPU's measured rate share supports; admission control and a per-layer cap are required before any phone rate is meaningful (design §13)",
+         artifact="gtier_m4.json", expected=4.62, tol=0.005,
+         value=lambda A: A["gm4"]["rows"]["t500"]["experts_per_dispatch"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1262,6 +1271,7 @@ def load_all():
         "farena": load("fault_arena2.json"),
         "fstack": load("fault_stack.json"),
         "sgl": load("swapguard_laptop.json"),
+        "gm4": load("gtier_m4.json"),
     }
 
 

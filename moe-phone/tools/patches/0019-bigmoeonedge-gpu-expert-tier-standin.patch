@@ -1,0 +1,704 @@
+--- a/cli/main.cpp	2026-09-18 22:16:22.283803101 +0530
++++ b/cli/main.cpp	2026-09-18 22:26:31.469445196 +0530
+@@ -530,6 +530,8 @@
+         "                          predicted below the drop threshold are not speculated.\n"
+         "      --predict-spec-max N  speculated predicted misses per layer [0..8] (default 2;\n"
+         "                          0 = retention only, the prediction spends no flash at all)\n"
++        "      --gpu-tier-mb N     GPU expert tier of N MiB (taken from the CPU cache), standin backend (moe-phone)\n"
++        "      --gpu-promote-hits N  CPU-tier hits before an expert moves to the GPU tier (default 2)\n"
+         "      --swap-guard N      re-read cache hits that zram swapped out instead of faulting them in (0 off, 1 sample, 2 full)\n"
+         "      --spec-adopt-selective  keep speculative reads the router confirms instead of\n"
+         "                          cancelling and re-reading them (moe-phone; lossless)\n"
+@@ -723,6 +725,10 @@
+             cfg.moe.slru_protected_frac = std::atof(next("--slru-protected-frac"));
+         else if (a == "--swap-guard")
+             cfg.moe.swap_guard = std::atoi(next("--swap-guard"));
++        else if (a == "--gpu-tier-mb")
++            cfg.moe.gpu_tier_mb = std::atoi(next("--gpu-tier-mb"));
++        else if (a == "--gpu-promote-hits")
++            cfg.moe.gpu_promote_hits = std::atoi(next("--gpu-promote-hits"));
+         else if (a == "--defer-evict")
+             cfg.moe.defer_evict = true;
+         else if (a == "--recycle-pages")
+--- a/core/include/bmoe/config.h	2026-09-18 22:16:22.287894248 +0530
++++ b/core/include/bmoe/config.h	2026-09-18 22:26:31.481301861 +0530
+@@ -107,6 +107,14 @@
+     // discards the swap entries without swapping in) and it is re-read by O_DIRECT like any miss.
+     // 0 = off, 1 = sample (first and last page of each slice), 2 = full (every page). Plain LRU mode only.
+     int swap_guard = 0;
++    // moe-phone 0019 GPU expert tier (design §12): 0 = off. Otherwise the tier's size in MiB, taken OUT of the CPU
++    // cache budget so the total stays the same. An expert whose CPU-tier hits reach gpu_promote_hits is moved into
++    // the tier (copied, then released from the CPU tier); at one-token decode every selected expert the tier owns
++    // is computed by the device backend while the CPU computes the rest. Multi-token batches flush the tier first.
++    // Plain LRU/SLRU cache with --overlap only. Backend: "standin" (CPU, bit-identical; laptop) or "gx" (not yet).
++    int gpu_tier_mb = 0;
++    int gpu_promote_hits = 2;
++    const char * gpu_backend = "standin";
+ 
+ 
+     bool o_direct = true;     // bypass the page cache (O_DIRECT / FILE_FLAG_NO_BUFFERING)
+--- a/core/include/bmoe/expert_source.h	2026-09-18 22:16:22.291327394 +0530
++++ b/core/include/bmoe/expert_source.h	2026-09-18 22:26:31.488445404 +0530
+@@ -27,6 +27,9 @@
+     // per expert (via the fork's expert-ready hook) until that expert's slice arrives.
+     // Returns false on I/O failure (serial) or if a prior async batch already failed.
+     virtual bool load_layer(int il, const int32_t * ids, int n_ids) = 0;
++    // moe-phone 0019: the routing batch's shape (experts per token, tokens), sent right before load_layer, so a
++    // source that treats one-token decode differently from multi-token batches can tell them apart.
++    virtual void set_batch_shape(int /*n_used*/, int /*n_tokens*/) {}
+ 
+     // Hint that layer `il` is likely to route `ids` (n_ids of them) on a future token, so the
+     // implementation may read them ahead on otherwise-idle lanes. Purely advisory: a correct
+--- a/core/src/moe/router_hook.cpp	2026-09-18 22:16:22.295026407 +0530
++++ b/core/src/moe/router_hook.cpp	2026-09-18 22:26:31.496445491 +0530
+@@ -272,6 +272,7 @@
+     }
+ 
+     if (tracing) pending_.dropped = drop_mask_;
++    source_->set_batch_shape(D.nu, D.nt); // moe-phone 0019
+     source_->load_layer(D.layer, drop_ids_.data(), (int) drop_ids_.size());
+     D.deferred = false;
+     predict_after_load(D.layer);
+@@ -1635,6 +1636,7 @@
+         if (defer) {
+             drop_ids_ = gathered_;
+         } else {
++            source_->set_batch_shape(nu, nt); // moe-phone 0019
+             source_->load_layer(il, gathered_.data(), (int) gathered_.size());
+             // Deferred layers speculate from apply_drop instead — after THEIR load, for the same
+             // reason this call sits after the one above: the load's quiesce would cancel it.
+--- a/core/src/moe/expert_stream_source.h	2026-09-18 22:16:22.301945313 +0530
++++ b/core/src/moe/expert_stream_source.h	2026-09-18 22:26:31.506687650 +0530
+@@ -22,6 +22,7 @@
+ #include "../io/platform_io.h"
+ #include "../io/file_reader.h"
+ #include "dense_weights.h" // DenseWeights + DenseTensorRef
++#include "gpu_tier.h"      // moe-phone 0019
+ 
+ #include <atomic>
+ #include <condition_variable>
+@@ -213,6 +214,40 @@
+     bool touch_entry(int il, int e, bool & hit, bool promote = true, int commit_only_proj = -1);
+     // moe-phone 0018 swap guard
+     bool entry_swapped(int il, int e);
++public:
++    void set_batch_shape(int n_used, int n_tokens) override { cur_nu_ = n_used; cur_nt_ = n_tokens; } // moe-phone 0019
++private:
++    // moe-phone 0019 GPU expert tier (gpu_tier.h, design §12)
++    bool gtier_init(const MoeStreamConfig & cfg);
++    bool gtier_promote(int32_t id);          // CPU tier -> GPU tier; false if not possible now
++    void gtier_evict_tail();                 // drop the GPU tier's LRU slot (the expert leaves both tiers)
++    void gtier_flush();                      // empty the GPU tier (before a multi-token batch)
++    void gtier_release_cpu(int32_t id);      // remove an entry from the CPU tier without counting an eviction
++    void gtier_touch(int32_t id);            // MRU in the GPU tier's own LRU
++    static bool c_mmid_begin(const ggml_tensor * dst, unsigned char * skip, int n_as, void * ud);
++    static void c_mmid_end(const ggml_tensor * dst, void * ud);
++    bool on_mmid_begin(const ggml_tensor * dst, unsigned char * skip, int n_as);
++    void on_mmid_end(const ggml_tensor * dst);
++    int cur_nu_ = 0, cur_nt_ = 0;
++    std::unique_ptr<GpuExpertsBackend> gpu_;
++    bool gtier_on_ = false;
++    int gpromote_hits_ = 2;
++    std::vector<int32_t> gslot_of_;          // per entry id: its GPU slot, or -1
++    std::vector<int32_t> gowner_;            // per slot: entry id, or -1
++    std::vector<int32_t> gfree_;             // free slots
++    std::vector<int32_t> gprev_, gnext_;     // GPU-tier LRU over slots
++    int32_t ghead_ = -1, gtail_ = -1;
++    std::vector<uint16_t> ghits_;            // per entry id: CPU-tier hits since it entered the CPU tier
++    uint64_t gload_seq_ = 0;                 // bumped at every load_layer (one per layer per batch)
++    uint64_t gdispatch_seq_ = ~0ull;         // gload_seq_ of the layer whose dispatch is in flight
++    int gdispatch_layer_ = -1;
++    std::vector<int> gdisp_slotpos_;         // for the in-flight dispatch: the MUL_MAT_ID slot index of each expert
++    std::vector<int> gdisp_slots_;           // ... and its GPU slot
++    std::vector<float> gout_;                // device output rows (k x n_embd)
++    long long gt_promotions_ = 0, gt_evictions_ = 0, gt_flushes_ = 0, gt_hits_ = 0, gt_dispatches_ = 0,
++              gt_experts_ = 0, gt_wait_ns_ = 0, gt_fail_ = 0;
++    size_t gt_cpu_budget_taken_ = 0;
++private:
+     int swap_guard_ = 0;
+     long long guard_checks_ = 0, guard_swapped_ = 0, guard_ns_ = 0;
+     std::vector<unsigned char> guard_vec_;
+--- a/core/src/moe/expert_stream_source.cpp	2026-09-18 22:16:22.298478695 +0530
++++ b/core/src/moe/expert_stream_source.cpp	2026-09-18 22:26:31.513445678 +0530
+@@ -334,6 +334,10 @@
+     for (int lane = first_worker_lane; lane < io_threads_; ++lane)
+         io_pool_.emplace_back(&ExpertStreamSource::io_worker, this, lane);
+ 
++    if (cfg.gpu_tier_mb > 0 && !gtier_init(cfg)) {
++        std::fprintf(stderr, "bmoe: gpu-tier: could not start; running without it\n");
++        gtier_on_ = false;
++    }
+     // effective_direct_ (set where the readers opened) is the run's o_direct fact — see above.
+     std::fprintf(stderr, "bmoe: expert streaming ON  n_expert=%d o_direct=%d io_threads=%d cache=%zu MiB shards=%zu\n",
+                  n_expert_, (int) effective_direct_, io_threads_, cache_max_ >> 20, readers_.size());
+@@ -516,6 +520,7 @@
+             if (e < 0 || e >= n_expert_) continue;
+             const int32_t id = il * n_expert_ + e;
+             if (cvalid_[id] || spec_remaining_[id] != 0) continue; // already resident or already queued
++            if (gtier_on_ && gslot_of_[id] >= 0) continue;          // moe-phone 0019: resident in the GPU tier
+             cand.push_back(e);
+         }
+     }
+@@ -964,6 +969,11 @@
+     // probation is empty, which is what makes a one-off expert unable to displace a recurring one.
+     const int32_t id = (slru_ && ctail_ == -1 && ptail_ != -1) ? ptail_ : ctail_;
+     if (id == -1) return;
++    // moe-phone 0019 fix to 0011: lru_unlink reads cprot_[id] to pick the list, so it must run BEFORE cprot_ is
++    // cleared; unlinking afterwards took a protected-tail victim out of the PROBATION list and corrupted both.
++    // (Never reached in the 2026-09-18 phone runs: "0 evictions from the protected list" in every SLRU row. The GPU
++    // tier makes it reachable, because promotions can empty probation.)
++    lru_unlink(id);
+     if (slru_ && !cprot_.empty() && cprot_[id]) {
+         cprot_bytes_ -= entry_bytes(id / n_expert_);
+         cprot_[id] = 0;
+@@ -975,7 +985,6 @@
+     cvalid_[id] = 0;
+     cspec_[id] = 0;
+     cresident_ -= entry_bytes(id / n_expert_);
+-    lru_unlink(id);
+ }
+ 
+ // ── route-trace support: describe what a routing costs, without changing it ─────────
+@@ -1178,6 +1187,212 @@
+     }
+ }
+ 
++// ── moe-phone 0019: the GPU expert tier (gpu_tier.h; research/2026-09-18_gpu_expert_path_design.md §12) ──────
++bool ExpertStreamSource::gtier_init(const MoeStreamConfig & cfg) {
++    if (cache_max_ == 0 || arena_ || recycle_pages_ || defer_evict_ || !overlap_) {
++        std::fprintf(stderr, "bmoe: gpu-tier needs the plain LRU/SLRU cache with --overlap (not shared-slot, --slot-arena, "
++                             "--recycle-pages or --defer-evict)\n");
++        return false;
++    }
++    GpuTierShape sh{};
++    for (int p = 0; p < 3; ++p) sh.slice_bytes[p] = 0;
++    for (const LayerExperts & L : layers_) {
++        if (!L.bound) continue;
++        // separate gate, up, down, as llama.cpp's build_moe_ffn computes them (up, gate, swiglu_split, down); a fused
++        // gate_up layout or a missing projection is a different graph the device does not implement
++        for (int p = 0; p < 3; ++p)
++            if (!L.proj[p].tensor || !L.proj[p].nb2) {
++                std::fprintf(stderr, "bmoe: gpu-tier: layer without separate gate/up/down experts; unsupported\n");
++                return false;
++            }
++        const ggml_tensor * g = L.proj[0].tensor;
++        const ggml_tensor * d = L.proj[2].tensor;
++        if (sh.n_embd == 0) { sh.n_embd = (int) g->ne[0]; sh.n_ff = (int) g->ne[1]; }
++        if (g->ne[0] != sh.n_embd || g->ne[1] != sh.n_ff || d->ne[0] != sh.n_ff || d->ne[1] != sh.n_embd) {
++            std::fprintf(stderr, "bmoe: gpu-tier: expert shapes differ across layers; unsupported\n");
++            return false;
++        }
++        for (int p = 0; p < 3; ++p) sh.slice_bytes[p] = std::max<size_t>(sh.slice_bytes[p], (size_t) L.proj[p].nb2);
++    }
++    size_t slot_bytes = 0;
++    for (int p = 0; p < 3; ++p) slot_bytes += (sh.slice_bytes[p] + 4095) & ~(size_t) 4095;
++    const int want = (int) (((size_t) cfg.gpu_tier_mb << 20) / slot_bytes);
++    if (want <= 0) return false;
++    if (std::string(cfg.gpu_backend ? cfg.gpu_backend : "") != "standin") {
++        std::fprintf(stderr, "bmoe: gpu-tier: backend '%s' not available in this build\n", cfg.gpu_backend);
++        return false;
++    }
++    gpu_ = make_gpu_backend_standin();
++    const int n = gpu_->init(sh, want);
++    if (n <= 0) return false;
++    // the tier's memory comes OUT of the CPU cache budget, so the run's total stays what the budget allowed
++    const size_t take = std::min(cache_max_ / 2, (size_t) n * slot_bytes);
++    gt_cpu_budget_taken_ = take;
++    cache_max_ -= take;
++    const size_t n_entry = (size_t) n_layer_ * (size_t) n_expert_;
++    gslot_of_.assign(n_entry, -1);
++    ghits_.assign(n_entry, 0);
++    gowner_.assign((size_t) n, -1);
++    gprev_.assign((size_t) n, -1);
++    gnext_.assign((size_t) n, -1);
++    gfree_.clear();
++    for (int i = n - 1; i >= 0; --i) gfree_.push_back(i);
++    gpromote_hits_ = std::max(1, cfg.gpu_promote_hits);
++    gtier_on_ = true;
++    std::fprintf(stderr, "bmoe: gpu-tier: backend %s, %d slots x %zu KiB (n_embd %d, n_ff %d), promote after %d hits, "
++                         "CPU cache budget now %zu MiB\n", gpu_->name(), n, slot_bytes >> 10, sh.n_embd, sh.n_ff,
++                 gpromote_hits_, cache_max_ >> 20);
++    return true;
++}
++
++void ExpertStreamSource::gtier_touch(int32_t s) {
++    if (ghead_ == s) return;
++    // unlink
++    if (gprev_[s] != -1) gnext_[gprev_[s]] = gnext_[s]; else if (ghead_ == s) ghead_ = gnext_[s];
++    if (gnext_[s] != -1) gprev_[gnext_[s]] = gprev_[s]; else if (gtail_ == s) gtail_ = gprev_[s];
++    // push front
++    gprev_[s] = -1;
++    gnext_[s] = ghead_;
++    if (ghead_ != -1) gprev_[ghead_] = s;
++    ghead_ = s;
++    if (gtail_ == -1) gtail_ = s;
++}
++
++void ExpertStreamSource::gtier_evict_tail() {
++    const int32_t s = gtail_;
++    if (s < 0) return;
++    const int32_t id = gowner_[s];
++    gtail_ = gprev_[s];
++    if (gtail_ != -1) gnext_[gtail_] = -1; else ghead_ = -1;
++    gprev_[s] = gnext_[s] = -1;
++    gowner_[s] = -1;
++    if (id >= 0) { gslot_of_[id] = -1; ghits_[id] = 0; }
++    gfree_.push_back(s);
++    ++gt_evictions_;
++}
++
++void ExpertStreamSource::gtier_flush() {
++    while (gtail_ != -1) gtier_evict_tail();
++    ++gt_flushes_;
++}
++
++void ExpertStreamSource::gtier_release_cpu(int32_t id) {
++    // evict_tail's bookkeeping for one chosen entry, without counting an eviction (the expert is moving tiers)
++    lru_unlink(id); // before cprot_ changes: it picks the list from cprot_
++    const int il = id / n_expert_;
++    if (slru_ && !cprot_.empty() && cprot_[id]) {
++        cprot_bytes_ -= entry_bytes(il);
++        cprot_[id] = 0;
++    }
++    release_entry_pages(id);
++    cvalid_[id] = 0;
++    cspec_[id] = 0;
++    cresident_ -= entry_bytes(il);
++}
++
++bool ExpertStreamSource::gtier_promote(int32_t id) {
++    if (gfree_.empty()) gtier_evict_tail();
++    if (gfree_.empty()) return false;
++    const int32_t s = gfree_.back();
++    gfree_.pop_back();
++    const int il = id / n_expert_, e = id % n_expert_;
++    const LayerExperts & L = layers_[il];
++    for (int p = 0; p < 3; ++p) {
++        const uint64_t slice = L.proj[p].nb2;
++        void * dst = gpu_->map_write(s, p);
++        std::memcpy(dst, (const char *) lbuf_[p][il] + (uint64_t) e * slice, slice);
++        gpu_->unmap(s, p);
++    }
++    gtier_release_cpu(id);
++    gslot_of_[id] = s;
++    gowner_[s] = id;
++    gprev_[s] = -1;
++    gnext_[s] = ghead_;
++    if (ghead_ != -1) gprev_[ghead_] = s;
++    ghead_ = s;
++    if (gtail_ == -1) gtail_ = s;
++    ++gt_promotions_;
++    return true;
++}
++
++bool ExpertStreamSource::c_mmid_begin(const ggml_tensor * dst, unsigned char * skip, int n_as, void * ud) {
++    return static_cast<ExpertStreamSource *>(ud)->on_mmid_begin(dst, skip, n_as);
++}
++void ExpertStreamSource::c_mmid_end(const ggml_tensor * dst, void * ud) {
++    static_cast<ExpertStreamSource *>(ud)->on_mmid_end(dst);
++}
++
++// Thread 0, once per MUL_MAT_ID, before the op's barrier (ggml-cpu split hooks, patch 0017).
++bool ExpertStreamSource::on_mmid_begin(const ggml_tensor * dst, unsigned char * skip, int n_as) {
++    const ggml_tensor * src0 = dst->src[0];
++    const ggml_tensor * src1 = dst->src[1];
++    const ggml_tensor * ids = dst->src[2];
++    auto it = std::lower_bound(texp_.begin(), texp_.end(), (const void *) src0,
++                               [](const std::pair<const void *, uint32_t> & a, const void * k) { return a.first < k; });
++    if (it == texp_.end() || it->first != (const void *) src0) return false;
++    const int il = (int) (it->second >> 8);
++    const int p = (int) (it->second & 0xff);
++    if (dst->ne[2] != 1 || cur_nt_ != 1) return false; // decode only
++    const int nu = (int) ids->ne[0];
++    std::vector<int> pos, slots;
++    for (int s = 0; s < nu; ++s) {
++        const int e = *(const int32_t *) ((const char *) ids->data + (size_t) s * ids->nb[0]);
++        if (e < 0 || e >= n_as || e >= n_expert_) continue;
++        const int32_t slot = gslot_of_[(size_t) il * (size_t) n_expert_ + (size_t) e];
++        if (slot < 0) continue;
++        skip[e] = 1;
++        pos.push_back(s);
++        slots.push_back(slot);
++    }
++    if (pos.empty()) return false;
++    for (int s : pos) std::memset((char *) dst->data + (size_t) s * dst->nb[1], 0, (size_t) dst->ne[0] * sizeof(float));
++    if (gdispatch_seq_ != gload_seq_) {
++        // first expert matmul of this layer (up, in llama.cpp's graph): its src1 is the layer's fp32 input row
++        if (p == 2 || src1->type != GGML_TYPE_F32 || src1->ne[0] != layers_[il].proj[0].tensor->ne[0]) {
++            std::fprintf(stderr, "bmoe: gpu-tier FATAL: first expert op of layer %d is proj %d with an unexpected input\n", il, p);
++            std::abort();
++        }
++        gdisp_slotpos_ = pos;
++        gdisp_slots_ = slots;
++        gdispatch_layer_ = il;
++        gout_.resize((size_t) slots.size() * (size_t) src1->ne[0]);
++        const LayerExperts & L = layers_[il];
++        if (!gpu_->dispatch(il, L.proj[0].tensor->type, L.proj[1].tensor->type, L.proj[2].tensor->type,
++                            (int) slots.size(), slots.data(), (const float *) src1->data, gout_.data())) {
++            ++gt_fail_;
++            std::fprintf(stderr, "bmoe: gpu-tier FATAL: dispatch failed at layer %d (the CPU copies are released)\n", il);
++            std::abort();
++        }
++        gdispatch_seq_ = gload_seq_;
++        ++gt_dispatches_;
++        gt_experts_ += (long long) slots.size();
++    } else if (pos != gdisp_slotpos_ || il != gdispatch_layer_) {
++        std::fprintf(stderr, "bmoe: gpu-tier FATAL: layer %d proj %d selects a different GPU set than its dispatch\n", il, p);
++        std::abort();
++    }
++    return true;
++}
++
++// Thread 0, after its own share of the op; only called if begin returned true.
++void ExpertStreamSource::on_mmid_end(const ggml_tensor * dst) {
++    const ggml_tensor * src0 = dst->src[0];
++    auto it = std::lower_bound(texp_.begin(), texp_.end(), (const void *) src0,
++                               [](const std::pair<const void *, uint32_t> & a, const void * k) { return a.first < k; });
++    if (it == texp_.end() || it->first != (const void *) src0) return;
++    const int p = (int) (it->second & 0xff);
++    if (p != 2) return; // gate/up: the device's result arrives with down
++    const auto t0 = clock_t_::now();
++    if (!gpu_->wait()) {
++        ++gt_fail_;
++        std::fprintf(stderr, "bmoe: gpu-tier FATAL: device reported failure at layer %d\n", gdispatch_layer_);
++        std::abort();
++    }
++    gt_wait_ns_ += (long long) std::chrono::duration_cast<std::chrono::nanoseconds>(clock_t_::now() - t0).count();
++    const size_t n_embd = (size_t) dst->ne[0];
++    for (size_t i = 0; i < gdisp_slotpos_.size(); ++i)
++        std::memcpy((char *) dst->data + (size_t) gdisp_slotpos_[i] * dst->nb[1], gout_.data() + i * n_embd, n_embd * sizeof(float));
++}
++
+ void ExpertStreamSource::query_residency(int il, const int32_t * ids, int n_ids, uint8_t * out) const {
+     for (int i = 0; i < n_ids; ++i)
+         out[i] = 0;
+@@ -1187,6 +1402,7 @@
+         const int e = ids[i];
+         if (e < 0 || e >= n_expert_) continue;
+         const int32_t id = il * n_expert_ + e;
++        if (gtier_on_ && gslot_of_[id] >= 0) { out[i] = 1; continue; } // moe-phone 0019: GPU tier
+         if (!cvalid_[id]) continue;  // miss: this routing pays a read
+         out[i] = cspec_[id] ? 2 : 1; // resident; 2 = a speculative prefetch guessed it right
+     }
+@@ -1293,6 +1509,14 @@
+     const int32_t id = il * n_expert_ + e;
+     clookups_++;
+     cstamp_[id] = cgen_;
++    if (gtier_on_ && gslot_of_[id] >= 0) {
++        // moe-phone 0019: owned by the GPU tier -- the device computes it at this decode; nothing to read.
++        chits_++;
++        ++gt_hits_;
++        gtier_touch(gslot_of_[id]);
++        hit = true;
++        return true;
++    }
+     if (cvalid_[id]) {
+         // moe-phone 0018: a hit whose pages zram swapped out is demoted to a miss. Safe here: staging runs before
+         // any thread computes this layer, the entry stays resident and linked, and the caller's miss path re-reads
+@@ -1328,6 +1552,15 @@
+                 lru_push_front(id);
+             }
+         }
++        // moe-phone 0019: a CPU-tier expert hit often enough moves to the GPU tier now (decode only, whole entry
++        // resident, no speculative read of it pending); the device then computes it at this very layer.
++        if (gtier_on_ && cur_nt_ == 1 && commit_only_proj < 0 && spec_remaining_[id] == 0) {
++            if (ghits_[id] < 0xffff) ++ghits_[id];
++            if (ghits_[id] >= gpromote_hits_ && gtier_promote(id)) {
++                hit = true;
++                return true;
++            }
++        }
+         hit = true;
+         return true;
+     }
+@@ -1342,6 +1575,7 @@
+         if (!commit_proj_pages(il, e, p)) return false;
+     }
+     if (ever_evicted_[id]) ++rereads_; // this entry was resident once; the cache is buying it again
++    if (gtier_on_) ghits_[id] = 0;     // moe-phone 0019: hits toward promotion restart on entry
+     cvalid_[id] = 1;
+     cspec_[id] = 0; // a real read, not speculative
+     cresident_ += entry_bytes(il);
+@@ -1353,6 +1587,10 @@
+ // ── load: stage routed experts, read the batch, evict cold entries to budget ────────
+ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
+     if (!active_ || il < 0 || il >= n_layer_ || !layers_[il].bound || !ids || n_ids <= 0) return false;
++    ++gload_seq_; // moe-phone 0019: one per layer per batch; marks "first MUL_MAT_ID of this layer" for the dispatch
++    // moe-phone 0019: the device computes GPU-tier experts only at one-token decode, and their CPU pages are gone,
++    // so a multi-token batch must not route to them: empty the tier first (they become ordinary misses). Counted.
++    if (gtier_on_ && cur_nt_ != 1 && ghead_ != -1) gtier_flush();
+     if (overlap_) return load_layer_async(il, ids, n_ids);
+     LayerExperts & L = layers_[il];
+     cgen_++;
+@@ -1762,6 +2000,12 @@
+         }
+         return;
+     }
++    if (gtier_on_ && gslot_of_[(size_t) il * (size_t) n_expert_ + (size_t) expert] >= 0) {
++        // moe-phone 0019: fail loudly. This expert's CPU pages were released when it moved to the GPU tier, so
++        // computing it here would read zeros; the split hooks must have skipped it. A logic error, not a slow path.
++        std::fprintf(stderr, "bmoe: gpu-tier FATAL: CPU asked for GPU-tier expert %d of layer %d (proj %d)\n", expert, il, p);
++        std::abort();
++    }
+     const size_t idx = (size_t) p * (size_t) n_expert_ + (size_t) expert;
+     const uint32_t want = async_gen_.load(std::memory_order_relaxed);
+     if (ready_[idx].gen.load(std::memory_order_acquire) == want) return; // already resident
+@@ -1813,6 +2057,7 @@
+     }
+ #endif
+     if (arena_) ggml_cpu_set_expert_data_hook(&ExpertStreamSource::c_expert_data, this);
++    if (gtier_on_) ggml_cpu_set_mmid_split_hooks(&ExpertStreamSource::c_mmid_begin, &ExpertStreamSource::c_mmid_end, this);
+     hook_registered_ = true;
+ #endif
+ }
+@@ -1886,6 +2131,14 @@
+         }
+ #endif
+         ggml_cpu_set_expert_data_hook(nullptr, nullptr);
++        ggml_cpu_set_mmid_split_hooks(nullptr, nullptr, nullptr); // moe-phone 0019
++        if (gtier_on_)
++            std::fprintf(stderr, "bmoe: gpu-tier: backend %s slots %zu, promotions %lld, evictions %lld, flushes %lld, "
++                                 "gpu-hits %lld, dispatches %lld, experts on device %lld (%.2f/dispatch), wait %.1f ms, "
++                                 "failures %lld, cpu budget reduced by %zu MiB\n",
++                         gpu_ ? gpu_->name() : "-", gowner_.size(), gt_promotions_, gt_evictions_, gt_flushes_, gt_hits_,
++                         gt_dispatches_, gt_experts_, gt_dispatches_ ? (double) gt_experts_ / (double) gt_dispatches_ : 0.0,
++                         gt_wait_ns_ / 1e6, gt_fail_, gt_cpu_budget_taken_ >> 20);
+         hook_registered_ = false;
+     }
+ #endif
+--- a/core/CMakeLists.txt	2026-09-18 22:16:22.305477568 +0530
++++ b/core/CMakeLists.txt	2026-09-18 22:26:31.524880802 +0530
+@@ -28,6 +28,7 @@
+         src/moe/row_stream.cpp
+         src/moe/gguf_offsets.cpp
+         src/moe/expert_stream_source.cpp
++        src/moe/gpu_tier.cpp
+         src/moe/router_hook.cpp
+         src/engine/session.cpp
+         src/engine/chat_parse.cpp
+--- /dev/null
++++ b/core/src/moe/gpu_tier.h
+@@ -0,0 +1,55 @@
++// gpu_tier.h — moe-phone (patch 0019): the device side of the GPU expert tier.
++//
++// The engine keeps two tiers of expert residency (moe-phone research/2026-09-18_gpu_expert_path_design.md §12):
++// the CPU tier (the anon LRU/SLRU cache) and this GPU tier, a pool of slots each holding ONE expert's three
++// slices (gate, up, down). An expert lives in exactly one tier. At decode (one token), every selected expert the
++// GPU tier owns is computed by the device -- its whole FFN, gate, up, SwiGLU, down -- in one dispatch per layer,
++// concurrently with the CPU's MUL_MAT_ID over the rest (ggml-cpu split hooks, patch 0017).
++//
++// Backends:
++//   standin  CPU implementation on its own thread, bit-identical to ggml-cpu's MUL_MAT_ID + swiglu_split rows by
++//            construction (type-traits from_float + vec_dot per row, as mul_mat_id's one_chunk; SwiGLU through a
++//            one-op ggml graph). It exists so the whole engine can be checked for byte-identical text with the tier
++//            ON vs OFF on a laptop, before any OpenCL is linked.
++//   gx       libgx (moe-phone/host/gpu_ffn), OpenCL on the phone's Adreno; bit-exact to ggml-cpu's ARM path (M3).
++//            Not wired yet.
++// Coherence contract (the only protocol verified on the phone): a slot is written only between map_write() and
++// unmap(), and dispatch() never reads a slot that is mapped.
++#pragma once
++
++#include "ggml.h"
++
++#include <cstddef>
++#include <cstdint>
++#include <memory>
++#include <string>
++#include <vector>
++
++namespace bmoe {
++
++struct GpuTierShape {
++    int n_embd = 0;          // expert input / down output width
++    int n_ff = 0;            // expert hidden width
++    size_t slice_bytes[3];   // largest gate, up, down slice across layers (slots are sized for the largest)
++};
++
++class GpuExpertsBackend {
++public:
++    virtual ~GpuExpertsBackend() = default;
++    virtual const char * name() const = 0;
++    // Allocate up to `max_slots` slots; returns how many were actually allocated (0 = unusable).
++    virtual int init(const GpuTierShape & shape, int max_slots) = 0;
++    // Projection p's slice of slot s, writable. p: 0 gate, 1 up, 2 down.
++    virtual void * map_write(int slot, int p) = 0;
++    virtual void unmap(int slot, int p) = 0;
++    // Start computing k experts' FFNs: slots[i] holds expert i's weights, of the given ggml types; x is the fp32
++    // input row (n_embd), shared by all k; out receives k rows of n_embd floats. Returns false if it cannot start.
++    virtual bool dispatch(int layer, ggml_type t_gate, ggml_type t_up, ggml_type t_down, int k, const int * slots,
++                          const float * x, float * out) = 0;
++    // Block until the last dispatch has completed. Returns false if it failed (out is then undefined).
++    virtual bool wait() = 0;
++};
++
++std::unique_ptr<GpuExpertsBackend> make_gpu_backend_standin();
++
++} // namespace bmoe
+--- /dev/null
++++ b/core/src/moe/gpu_tier.cpp
+@@ -0,0 +1,165 @@
++// gpu_tier.cpp — moe-phone (patch 0019): the CPU stand-in backend for the GPU expert tier. See gpu_tier.h.
++//
++// Bit-identity argument (checked end to end by the engine's text-identity acceptance, design §12):
++//   - gate/up/down rows: ggml-cpu's MUL_MAT_ID computes each output row as ONE vec_dot call (nrc = 1) of the
++//     weight row against the activation row quantized by from_float into the type's vec_dot_type
++//     (ggml-cpu.c, ggml_compute_forward_mul_mat_id_one_chunk). The same calls are made here, with the same
++//     quantization of the same fp32 input. The M1 test (host/test_mmid_split.cpp) showed this reproduces
++//     MUL_MAT_ID's rows bit for bit.
++//   - SwiGLU: the graph computes ggml_swiglu_split(gate, up) row by row; the same op, on one row, is run here
++//     through a one-op ggml graph, so the element function is ggml's own.
++//   - down: its input row (the SwiGLU output) is quantized into the down type's vec_dot_type exactly as
++//     MUL_MAT_ID quantizes src1 per slot, then one vec_dot per output row.
++// Nothing here calls MUL_MAT_ID, so the split hooks never recurse.
++#include "gpu_tier.h"
++
++#include "ggml-cpu.h"
++
++#include <condition_variable>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <mutex>
++#include <thread>
++
++namespace bmoe {
++namespace {
++
++class StandinBackend final : public GpuExpertsBackend {
++public:
++    ~StandinBackend() override {
++        {
++            std::lock_guard<std::mutex> lk(mtx_);
++            stop_ = true;
++        }
++        cv_.notify_all();
++        if (worker_.joinable()) worker_.join();
++        for (void * p : slots_) std::free(p);
++        if (gctx_) ggml_free(gctx_);
++    }
++    const char * name() const override { return "standin"; }
++
++    int init(const GpuTierShape & shape, int max_slots) override {
++        shape_ = shape;
++        slot_bytes_ = 0;
++        for (int p = 0; p < 3; ++p) {
++            off_[p] = slot_bytes_;
++            slot_bytes_ += (shape.slice_bytes[p] + 4095) & ~(size_t) 4095;
++        }
++        for (int s = 0; s < max_slots; ++s) {
++            void * m = nullptr;
++            if (posix_memalign(&m, 4096, slot_bytes_) != 0 || !m) break;
++            slots_.push_back(m);
++        }
++        // one-op SwiGLU graph over a single row, reused for every expert
++        ggml_init_params ip = { (size_t) 4 * 1024 * 1024, nullptr, false };
++        gctx_ = ggml_init(ip);
++        if (!gctx_) return 0;
++        g_ = ggml_new_tensor_1d(gctx_, GGML_TYPE_F32, shape.n_ff);
++        u_ = ggml_new_tensor_1d(gctx_, GGML_TYPE_F32, shape.n_ff);
++        h_ = ggml_swiglu_split(gctx_, g_, u_);
++        gf_ = ggml_new_graph(gctx_);
++        ggml_build_forward_expand(gf_, h_);
++        worker_ = std::thread([this] { run(); });
++        return (int) slots_.size();
++    }
++
++    void * map_write(int slot, int p) override { return (char *) slots_[(size_t) slot] + off_[p]; }
++    void unmap(int, int) override {}
++
++    bool dispatch(int layer, ggml_type tg, ggml_type tu, ggml_type td, int k, const int * slots, const float * x,
++                  float * out) override {
++        std::lock_guard<std::mutex> lk(mtx_);
++        if (busy_) return false; // one dispatch in flight at a time
++        job_.layer = layer;
++        job_.t[0] = tg; job_.t[1] = tu; job_.t[2] = td;
++        job_.slots.assign(slots, slots + k);
++        job_.x.assign(x, x + shape_.n_embd);
++        job_.out = out;
++        job_.ok = true;
++        busy_ = true;
++        cv_.notify_all();
++        return true;
++    }
++
++    bool wait() override {
++        std::unique_lock<std::mutex> lk(mtx_);
++        done_cv_.wait(lk, [&] { return !busy_; });
++        return job_.ok;
++    }
++
++private:
++    struct Job {
++        int layer = -1;
++        ggml_type t[3];
++        std::vector<int> slots;
++        std::vector<float> x;
++        float * out = nullptr;
++        bool ok = true;
++    };
++
++    // rows[r] = vec_dot(weight row r, quantized input) for r in [0, n_rows): what MUL_MAT_ID's one_chunk computes.
++    static void rows_dot(ggml_type wt, const void * w, int64_t n_in, int64_t n_rows, const float * in, float * out,
++                         std::vector<char> & q) {
++        const auto * tr = ggml_get_type_traits_cpu(wt);
++        const ggml_type vt = tr->vec_dot_type;
++        const auto * trv = ggml_get_type_traits_cpu(vt);
++        const size_t row_bytes = ggml_row_size(wt, n_in);
++        const void * y = in;
++        if (vt != GGML_TYPE_F32) {
++            q.resize(ggml_row_size(vt, n_in));
++            trv->from_float(in, q.data(), n_in);
++            y = q.data();
++        }
++        for (int64_t r = 0; r < n_rows; ++r)
++            tr->vec_dot((int) n_in, &out[r], 0, (const char *) w + (size_t) r * row_bytes, 0, y, 0, 1);
++    }
++
++    void run() {
++        std::vector<char> q;
++        std::vector<float> gate((size_t) shape_.n_ff), up((size_t) shape_.n_ff);
++        for (;;) {
++            {
++                std::unique_lock<std::mutex> lk(mtx_);
++                cv_.wait(lk, [&] { return stop_ || (busy_ && !running_); });
++                if (stop_) return;
++                running_ = true;
++            }
++            const int n_embd = shape_.n_embd, n_ff = shape_.n_ff;
++            for (size_t i = 0; i < job_.slots.size(); ++i) {
++                const char * base = (const char *) slots_[(size_t) job_.slots[i]];
++                rows_dot(job_.t[0], base + off_[0], n_embd, n_ff, job_.x.data(), gate.data(), q);
++                rows_dot(job_.t[1], base + off_[1], n_embd, n_ff, job_.x.data(), up.data(), q);
++                std::memcpy(g_->data, gate.data(), (size_t) n_ff * sizeof(float));
++                std::memcpy(u_->data, up.data(), (size_t) n_ff * sizeof(float));
++                if (ggml_graph_compute_with_ctx(gctx_, gf_, 1) != GGML_STATUS_SUCCESS) { job_.ok = false; break; }
++                rows_dot(job_.t[2], base + off_[2], n_ff, n_embd, (const float *) h_->data, job_.out + i * (size_t) n_embd, q);
++            }
++            {
++                std::lock_guard<std::mutex> lk(mtx_);
++                running_ = false;
++                busy_ = false;
++            }
++            done_cv_.notify_all();
++        }
++    }
++
++    GpuTierShape shape_;
++    size_t off_[3] = {0, 0, 0};
++    size_t slot_bytes_ = 0;
++    std::vector<void *> slots_;
++    ggml_context * gctx_ = nullptr;
++    ggml_tensor * g_ = nullptr, * u_ = nullptr, * h_ = nullptr;
++    ggml_cgraph * gf_ = nullptr;
++    std::mutex mtx_;
++    std::condition_variable cv_, done_cv_;
++    bool stop_ = false, busy_ = false, running_ = false;
++    Job job_;
++    std::thread worker_;
++};
++
++} // namespace
++
++std::unique_ptr<GpuExpertsBackend> make_gpu_backend_standin() { return std::make_unique<StandinBackend>(); }
++
++} // namespace bmoe

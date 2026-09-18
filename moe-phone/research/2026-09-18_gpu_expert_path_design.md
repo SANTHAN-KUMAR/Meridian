@@ -223,3 +223,27 @@ CPU thread therefore cannot compute from pool memory while the GPU runs. So:
   The stand-in is bit-identical to the main graph by construction (M1 showed mul_mat and mul_mat_id rows
   agree). So the whole engine's text with the tier ON must equal the tier OFF: the M4 plumbing acceptance
   on the laptop, before gx is linked at all.
+
+## 13. M4 result and the policy it exposed (2026-09-19 ~00:30)
+
+**Plumbing: accepted** (claim `gtier_m4_text_identical`, patch 0019). With the CPU stand-in as the device, the
+engine's text is byte-identical with the tier ON and OFF: OLMoE, 96 tokens, the full stack config, and 16,449
+experts computed by the "device" across two runs, with no failure and no fail-loud abort. Patch 0019 also fixes a
+latent 0011 bug:
+- `evict_tail` cleared `cprot_` before `lru_unlink`, so a protected-tail eviction unlinked from the wrong list.
+- It was never reached on the phone (0 protected evictions in every SLRU row), but the tier makes it reachable.
+
+**Policy: not acceptable yet** (claim `gtier_m4_policy_churn`):
+1. **Churn.** 2,498 promotions and 2,350 tier evictions in 96 tokens. Promotion on a plain hit count admits
+   experts no hotter than the ones they evict. On the phone every promotion is a ~2.6 MB copy plus a
+   map/unmap. **Fix:** admission control. Keep a per-entry hit-frequency estimate (decayed counts) and admit
+   only if it exceeds the tier's LRU tail's; otherwise leave the expert in the CPU tier.
+2. **Device overload.** 4.6–6.2 of 8 experts per dispatch went to the device. The GPU measured ~half the
+   CPU's rate, so it would become the layer's critical path; the target share is ~3/8 until M6 measures
+   gx's real rate (variant 0 vs 1). **Fix:** a per-layer cap K on device experts. Owned experts beyond K
+   must still be computed, and their CPU pages are gone, so the CPU reads them from their GPU-tier slot.
+   With one expert per cl_mem (the teammate's recommendation), mapping a slot's buffer READ-only while the
+   GPU reads OTHER buffers is within the verified rules; the data hook points ggml at the mapped slot, and
+   it is unmapped after the op. Cost: one map/unmap per overflow expert, counted.
+3. **Balance.** Pick K per layer from measured timings rather than fixed: the device's per-expert time
+   (gx_stats) against the CPU's per-expert time (compute term / experts), both from telemetry.

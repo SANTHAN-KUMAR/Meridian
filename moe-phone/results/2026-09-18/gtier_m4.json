@@ -1,0 +1,40 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/gtier_m4_laptop",
+ "rows": {
+  "off": {
+   "text_md5": "10c6c8825bc8fc7c67d729f2657e8976",
+   "fatal": false
+  },
+  "t500": {
+   "text_md5": "10c6c8825bc8fc7c67d729f2657e8976",
+   "fatal": false,
+   "slots": 148,
+   "promotions": 2498,
+   "evictions": 2350,
+   "flushes": 0,
+   "gpu_hits": 4454,
+   "dispatches": 1505,
+   "experts_on_device": 6952,
+   "experts_per_dispatch": 4.62,
+   "wait_ms": 1094.4,
+   "failures": 0
+  },
+  "t800h1": {
+   "text_md5": "10c6c8825bc8fc7c67d729f2657e8976",
+   "fatal": false,
+   "slots": 237,
+   "promotions": 3111,
+   "evictions": 2874,
+   "flushes": 0,
+   "gpu_hits": 6386,
+   "dispatches": 1526,
+   "experts_on_device": 9497,
+   "experts_per_dispatch": 6.22,
+   "wait_ms": 1707.9,
+   "failures": 0
+  }
+ },
+ "text_identical": true,
+ "any_fatal": false,
+ "experts_on_device_total": 16449
+}
