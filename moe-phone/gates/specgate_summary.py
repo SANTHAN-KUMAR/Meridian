@@ -56,8 +56,14 @@ def main():
         cells[c] = dict(n=len(rr), **{k + "_median": med(k) for k in (
             "decode_tok_s", "read_MiB_per_token", "stall_ms", "compute_ms", "cache_mgmt_ms", "hit_pct",
             "spec_useful", "spec_integrated", "issued")})
+        # PRECISION is useful / integrated (experts actually read in). The predict-gate line's "issued" counts
+        # CANDIDATES on the gate list, most of which prefetch() drops as already resident or queued, so
+        # useful/issued is NOT precision (corrected 2026-09-18 17:15 after a teammate's cross-check: sel's
+        # unused integrated experts x 2.654 MB / 256 = 11.1 MiB/token, matching the measured 11.9 excess).
+        if cells[c]["spec_useful_median"] is not None and cells[c]["spec_integrated_median"]:
+            cells[c]["precision_useful_over_integrated"] = cells[c]["spec_useful_median"] / cells[c]["spec_integrated_median"]
         if cells[c]["spec_useful_median"] is not None and cells[c]["issued_median"]:
-            cells[c]["precision_useful_over_issued"] = cells[c]["spec_useful_median"] / cells[c]["issued_median"]
+            cells[c]["useful_over_gate_candidates"] = cells[c]["spec_useful_median"] / cells[c]["issued_median"]
     b, s = cells["base"], cells["sel"]
     read_thr = s["read_MiB_per_token_median"] - 0.5 * (s["read_MiB_per_token_median"] - b["read_MiB_per_token_median"])
     stall_thr = b["stall_ms_median"] - 0.8 * (b["stall_ms_median"] - s["stall_ms_median"])
