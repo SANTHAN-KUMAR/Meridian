@@ -47,7 +47,13 @@ run() {
 # so a cell can never be granted more than the phone has, and the budget each row really got is printed
 # by the engine ("moe-cache: ... budget N MiB (auto)") and is what the analysis reads -- not the ceiling.
 for r in $(seq 1 "$REPS"); do
-  for ceil in 5000 6000 7000; do
+  # 2026-09-18 13:45: the phone plateaus at ~5.4 GB free today (a second user profile is running its own
+  # launcher/GMS/keyboard), so ceilings above ~4.3 GB cannot be GRANTED and would all collapse to the same
+  # budget. The campaign therefore measures the curve where it CAN be measured -- 2500 and 3500 MiB plus
+  # whatever the engine grants under a 5000 ceiling -- which calibrates the simulator's hit-rate curve that
+  # the above-5000 projection (gates/cache_projection.py) rests on. The above-5000 cells need a day with
+  # more free memory and are not faked by forcing.
+  for ceil in 2500 3500 5000; do
     run "ceil$ceil" "--cache-ceil-mb $ceil" "$r"
   done
 done

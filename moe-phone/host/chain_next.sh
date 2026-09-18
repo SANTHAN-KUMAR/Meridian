@@ -118,13 +118,13 @@ restore_phone() {
 trap restore_phone EXIT
 
 # --- PHASE A: clock-independent
-if mem_gate 6000; then device_campaign bmoe_hitrate.sh 2 bmoe_hitrate 'bmoe_hitrate_*/'
+if mem_gate 4000; then device_campaign bmoe_hitrate.sh 2 bmoe_hitrate 'bmoe_hitrate_*/'
 else log "SKIPPED bmoe_hitrate: not enough free memory for a 7000 MiB cell"; fi
-if mem_gate 6000; then device_campaign bmoe_slru.sh 3 bmoe_slru 'bmoe_slru_*/'
+if mem_gate 5000; then device_campaign bmoe_slru.sh 3 bmoe_slru 'bmoe_slru_*/'
 else log "SKIPPED bmoe_slru: not enough free memory"; fi
 
 # --- PHASE B: clock-sensitive, each behind a cooldown
-cool_gate 1200; mem_gate 6000 && device_campaign bmoe_arena2.sh 3 bmoe_arena2 'bmoe_arena2_*/'
+cool_gate 1200; mem_gate 5000 && device_campaign bmoe_arena2.sh 3 bmoe_arena2 'bmoe_arena2_*/'
 cool_gate 1200; sh "$HOSTDIR/agg_bandwidth.sh" 3 >> "$LOG" 2>&1; log "agg_bandwidth done"
 cool_gate 1200; sh "$HOSTDIR/matmul_sweep.sh" 2 >> "$LOG" 2>&1; log "matmul_sweep done"
 cool_gate 1200; sh "$HOSTDIR/thread_sweep.sh" 3 >> "$LOG" 2>&1; log "thread_sweep done"
