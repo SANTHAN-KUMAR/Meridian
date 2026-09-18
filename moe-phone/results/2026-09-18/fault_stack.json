@@ -1,0 +1,191 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/bmoe_stack/bmoe_stack_20260918_1728",
+ "arms": {
+  "base": {
+   "rows": [
+    {
+     "file": "base_rep1a.csv",
+     "majflt_per_token": 24.200892857142858,
+     "swap_mib": 376.0,
+     "mem_available_mib": 1283.5,
+     "compute_ms": 92.243
+    },
+    {
+     "file": "base_rep1b.csv",
+     "majflt_per_token": 23.964285714285715,
+     "swap_mib": 375.1,
+     "mem_available_mib": 1364.4,
+     "compute_ms": 104.2295
+    },
+    {
+     "file": "base_rep2a.csv",
+     "majflt_per_token": 23.794642857142858,
+     "swap_mib": 375.8,
+     "mem_available_mib": 1435.2,
+     "compute_ms": 114.275
+    },
+    {
+     "file": "base_rep2b.csv",
+     "majflt_per_token": 20.558035714285715,
+     "swap_mib": 365.8,
+     "mem_available_mib": 1416.6,
+     "compute_ms": 114.2865
+    },
+    {
+     "file": "base_rep3a.csv",
+     "majflt_per_token": 20.848214285714285,
+     "swap_mib": 372.7,
+     "mem_available_mib": 1416.9,
+     "compute_ms": 115.297
+    },
+    {
+     "file": "base_rep3b.csv",
+     "majflt_per_token": 22.388392857142858,
+     "swap_mib": 368.3,
+     "mem_available_mib": 1431.4,
+     "compute_ms": 112.638
+    },
+    {
+     "file": "base_rep4a.csv",
+     "majflt_per_token": 24.129464285714285,
+     "swap_mib": 375.1,
+     "mem_available_mib": 1491.4,
+     "compute_ms": 112.4675
+    },
+    {
+     "file": "base_rep4b.csv",
+     "majflt_per_token": 21.044642857142858,
+     "swap_mib": 366.9,
+     "mem_available_mib": 1485.3,
+     "compute_ms": 112.822
+    },
+    {
+     "file": "base_rep5a.csv",
+     "majflt_per_token": 23.013392857142858,
+     "swap_mib": 373.9,
+     "mem_available_mib": 1373.4,
+     "compute_ms": 117.4245
+    },
+    {
+     "file": "base_rep5b.csv",
+     "majflt_per_token": 20.459821428571427,
+     "swap_mib": 368.0,
+     "mem_available_mib": 1480.1,
+     "compute_ms": 112.4
+    },
+    {
+     "file": "base_rep6a.csv",
+     "majflt_per_token": 23.5,
+     "swap_mib": 376.0,
+     "mem_available_mib": 1410.6,
+     "compute_ms": 112.7295
+    },
+    {
+     "file": "base_rep6b.csv",
+     "majflt_per_token": 21.736607142857142,
+     "swap_mib": 370.0,
+     "mem_available_mib": 1522.1,
+     "compute_ms": 111.8825
+    }
+   ],
+   "n": 12,
+   "majflt_per_token_median": 22.700892857142858,
+   "swap_mib_median": 373.29999999999995,
+   "mem_available_mib_median": 1424.15,
+   "compute_ms_median": 112.68375
+  },
+  "stack": {
+   "rows": [
+    {
+     "file": "stack_rep1a.csv",
+     "majflt_per_token": 26.6875,
+     "swap_mib": 373.2,
+     "mem_available_mib": 1332.1,
+     "compute_ms": 95.37950000000001
+    },
+    {
+     "file": "stack_rep1b.csv",
+     "majflt_per_token": 23.09375,
+     "swap_mib": 374.1,
+     "mem_available_mib": 1390.5,
+     "compute_ms": 94.993
+    },
+    {
+     "file": "stack_rep2a.csv",
+     "majflt_per_token": 23.285714285714285,
+     "swap_mib": 367.3,
+     "mem_available_mib": 1500.7,
+     "compute_ms": 113.47149999999999
+    },
+    {
+     "file": "stack_rep2b.csv",
+     "majflt_per_token": 23.625,
+     "swap_mib": 373.0,
+     "mem_available_mib": 1368.0,
+     "compute_ms": 113.65350000000001
+    },
+    {
+     "file": "stack_rep3a.csv",
+     "majflt_per_token": 23.59375,
+     "swap_mib": 374.5,
+     "mem_available_mib": 1466.3,
+     "compute_ms": 115.6185
+    },
+    {
+     "file": "stack_rep3b.csv",
+     "majflt_per_token": 24.758928571428573,
+     "swap_mib": 372.1,
+     "mem_available_mib": 1450.7,
+     "compute_ms": 116.6945
+    },
+    {
+     "file": "stack_rep4a.csv",
+     "majflt_per_token": 23.910714285714285,
+     "swap_mib": 370.9,
+     "mem_available_mib": 1495.8,
+     "compute_ms": 115.23599999999999
+    },
+    {
+     "file": "stack_rep4b.csv",
+     "majflt_per_token": 20.90625,
+     "swap_mib": 369.0,
+     "mem_available_mib": 1482.4,
+     "compute_ms": 114.05000000000001
+    },
+    {
+     "file": "stack_rep5a.csv",
+     "majflt_per_token": 22.375,
+     "swap_mib": 367.0,
+     "mem_available_mib": 1425.9,
+     "compute_ms": 115.5975
+    },
+    {
+     "file": "stack_rep5b.csv",
+     "majflt_per_token": 21.03125,
+     "swap_mib": 366.4,
+     "mem_available_mib": 1470.8,
+     "compute_ms": 115.52600000000001
+    },
+    {
+     "file": "stack_rep6a.csv",
+     "majflt_per_token": 21.183035714285715,
+     "swap_mib": 369.0,
+     "mem_available_mib": 1477.9,
+     "compute_ms": 116.387
+    },
+    {
+     "file": "stack_rep6b.csv",
+     "majflt_per_token": 28.25,
+     "swap_mib": 375.8,
+     "mem_available_mib": 1394.4,
+     "compute_ms": 125.217
+    }
+   ],
+   "n": 12,
+   "majflt_per_token_median": 23.439732142857142,
+   "swap_mib_median": 371.5,
+   "mem_available_mib_median": 1458.5,
+   "compute_ms_median": 115.381
+  }
+ }
+}

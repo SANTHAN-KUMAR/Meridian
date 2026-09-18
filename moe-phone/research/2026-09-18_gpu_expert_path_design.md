@@ -152,3 +152,41 @@ Each gets a hypothesis, a check that does not need the phone (where one exists),
 | R6 | SLRU cut flash bytes 11.1% and decode did not resolve (`slru_decode_clean`) | bytes are the stall's input | the stall is set by per-layer read latency, not bytes | per-layer stall histogram from the node trace (existing tool); in the stack, SLRU+prefetch DID resolve −10.7 ms |
 | R7 | GPU per-op sweep measured the generic OpenCL path (weights misnamed) | the Adreno MoE kernels were never run | — | rebuild the app's matmul bench with `--wname` (committed 91e877f) when the phone returns |
 | R8 | The OEM performance-mode setting did not lift the caps | the UI toggle may engage a service that `settings put` does not | the Settings UI calls horae/oplus-perf over binder | read which binder call the toggle makes (dumpsys during a manual toggle), when the phone returns |
+
+## 11. Component G — swap-aware cache (from R1; independent of the GPU)
+
+**Finding** (claims `r1_arena_majflt`, `r1_base_majflt`): Android compresses unused anonymous memory into zram
+even with ~1.4 GB available.
+- The engine runs with ~370 MiB of itself swapped and ~21–23 major faults per decode token.
+- The slot arena, which never releases slots, doubles the swap (~770 MiB) and quadruples the faults (~90/token).
+
+The engine's hit counter calls a swapped-out expert a HIT. It is the most expensive case there is: its ~216
+pages (a 884 KB slice) fault back one by one, synchronously, on a compute thread, while the other threads
+wait at the next barrier. A real miss is one ~1.3 ms O_DIRECT read that the engine overlaps with compute.
+
+**Design:**
+1. **Detect.** In `load_layer`, for each selected expert counted as resident, `mincore()` its slice ranges.
+   Anon pages report 0 when swapped out. One syscall per (expert, projection): ~1,150 per token, µs each.
+   Sample-first variant: check the first and last page, full range only if they differ. The cost is
+   measured, not assumed.
+2. **Act.** An expert not fully resident is demoted to a MISS:
+   - `madvise(MADV_DONTNEED)` its slices, which drops the swap entries without swapping in;
+   - then stage the normal O_DIRECT read, which the existing overlap path hides like any miss.
+   - The decision happens before the layer computes, so no thread can be reading the slice.
+3. **Prevent.** Feed the process's own swap (`VmSwap` in `/proc/self/status`) back into the budget through
+   the existing `set_cache_budget`. If VmSwap grows over a window of N tokens, shrink the budget by a step;
+   never grow it past the auto ceiling.
+4. **Telemetry.** Swapped-hits detected per token, bytes re-read because of them, VmSwap per token, budget
+   changes.
+
+**Acceptance (laptop, no phone):** Run OLMoE in a memory cgroup small enough that the kernel swaps the cache
+(`systemd-run -p MemoryMax=<small> -p MemorySwapMax=<large>`; the laptop's swap is zram too). Then:
+- the guard detects swapped hits (counter > 0);
+- the text is byte-identical to the unguarded run and to plain;
+- major faults per token fall.
+
+Speed is judged only on the phone (M6).
+
+**Why before M2:** the GPU pool is pinned memory, so it cannot be swapped. That protects cached experts, but
+it also pushes more of everything else (the dense copy, KV, buffers) into zram. The guard and the budget
+feedback are what keep that from turning into faults elsewhere.

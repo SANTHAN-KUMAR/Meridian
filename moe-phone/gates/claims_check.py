@@ -937,6 +937,15 @@ CLAIMS = [
          text="SENSITIVITY (budget >= 4700, labelled, not the verdict): on Qwen3 mmap'd dense weights make compute 22.5 ms/token WORSE (116 vs 94 ms, SE 2.7, 4 of 4 repeats) and decode 12% slower, even though the anon rows had the smaller caches -- the OLMoE dense-copy saving does not carry over; the default (anon) stays",
          artifact="densemap_sensitivity.json", expected=22.5, tol=0.01,
          value=lambda A: A["dmaps"]["results"]["compute_ms"]["mean_diff"]),
+    # ------------------------- R1 REOPENED: THE ARENA PENALTY IS SWAP (gates/fault_summary.py over bmoe_arena2 15:08 and bmoe_stack 17:28)
+    dict(id="r1_arena_majflt",
+         text="the slot arena's compute penalty coincides with swap: arena rows take a median 89.8 major faults per steady token against 20.7 for base in the same ABBA campaign, with 770 vs 372 MiB of the process in swap and 1089 vs 1476 MiB available -- the arena's never-released slots push ~400 MiB more of the engine into zram, and every touch of a swapped page is a synchronous fault while the other compute threads wait at the next barrier",
+         artifact="fault_arena2.json", expected=89.8, tol=0.1,
+         value=lambda A: round(A["farena"]["arms"]["arena"]["majflt_per_token_median"], 1)),
+    dict(id="r1_base_majflt",
+         text="even the base configuration runs with ~370 MiB of the engine swapped and ~21-23 major faults per decode token (arena campaign base 20.7; stacked campaign base 22.7, stack 23.4): a cached expert that was swapped out costs more than a miss, since its pages fault in one by one, synchronously",
+         artifact="fault_stack.json", expected=22.7, tol=0.1,
+         value=lambda A: round(A["fstack"]["arms"]["base"]["majflt_per_token_median"], 1)),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1185,6 +1194,8 @@ def load_all():
         "omech": load("ovh_mech_summary.json"),
         "dmap": load("densemap_summary.json"),
         "dmaps": load("densemap_sensitivity.json"),
+        "farena": load("fault_arena2.json"),
+        "fstack": load("fault_stack.json"),
     }
 
 

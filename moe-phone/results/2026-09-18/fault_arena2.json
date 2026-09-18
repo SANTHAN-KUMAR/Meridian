@@ -1,0 +1,107 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/bmoe_arena2/bmoe_arena2_20260918_1508",
+ "arms": {
+  "base": {
+   "rows": [
+    {
+     "file": "base_rep1a.csv",
+     "majflt_per_token": 24.0,
+     "swap_mib": 375.1,
+     "mem_available_mib": 1413.8,
+     "compute_ms": 84.5905
+    },
+    {
+     "file": "base_rep1b.csv",
+     "majflt_per_token": 17.933035714285715,
+     "swap_mib": 361.2,
+     "mem_available_mib": 1465.5,
+     "compute_ms": 84.49549999999999
+    },
+    {
+     "file": "base_rep2a.csv",
+     "majflt_per_token": 21.455357142857142,
+     "swap_mib": 374.2,
+     "mem_available_mib": 1421.3,
+     "compute_ms": 88.215
+    },
+    {
+     "file": "base_rep2b.csv",
+     "majflt_per_token": 19.90625,
+     "swap_mib": 370.9,
+     "mem_available_mib": 1493.3,
+     "compute_ms": 85.1515
+    },
+    {
+     "file": "base_rep3a.csv",
+     "majflt_per_token": 19.821428571428573,
+     "swap_mib": 368.2,
+     "mem_available_mib": 1486.4,
+     "compute_ms": 86.4075
+    },
+    {
+     "file": "base_rep3b.csv",
+     "majflt_per_token": 21.785714285714285,
+     "swap_mib": 372.3,
+     "mem_available_mib": 1519.5,
+     "compute_ms": 84.40299999999999
+    }
+   ],
+   "n": 6,
+   "majflt_per_token_median": 20.68080357142857,
+   "swap_mib_median": 371.6,
+   "mem_available_mib_median": 1475.95,
+   "compute_ms_median": 84.87100000000001
+  },
+  "arena": {
+   "rows": [
+    {
+     "file": "arena_rep1a.csv",
+     "majflt_per_token": 75.40625,
+     "swap_mib": 763.5,
+     "mem_available_mib": 1119.5,
+     "compute_ms": 96.399
+    },
+    {
+     "file": "arena_rep1b.csv",
+     "majflt_per_token": 144.57142857142858,
+     "swap_mib": 817.7,
+     "mem_available_mib": 1054.8,
+     "compute_ms": 99.65
+    },
+    {
+     "file": "arena_rep2a.csv",
+     "majflt_per_token": 1138.90625,
+     "swap_mib": 838.2,
+     "mem_available_mib": 1089.4,
+     "compute_ms": 104.9185
+    },
+    {
+     "file": "arena_rep2b.csv",
+     "majflt_per_token": 80.83035714285714,
+     "swap_mib": 695.0,
+     "mem_available_mib": 1087.7,
+     "compute_ms": 93.7165
+    },
+    {
+     "file": "arena_rep3a.csv",
+     "majflt_per_token": 98.70982142857143,
+     "swap_mib": 777.4,
+     "mem_available_mib": 1089.3,
+     "compute_ms": 100.91499999999999
+    },
+    {
+     "file": "arena_rep3b.csv",
+     "majflt_per_token": 71.54017857142857,
+     "swap_mib": 689.9,
+     "mem_available_mib": 1153.5,
+     "compute_ms": 100.596
+    }
+   ],
+   "n": 6,
+   "majflt_per_token_median": 89.77008928571428,
+   "swap_mib_median": 770.45,
+   "mem_available_mib_median": 1089.35,
+   "compute_ms_median": 100.123
+  }
+ }
+}
