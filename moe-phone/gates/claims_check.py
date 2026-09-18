@@ -867,6 +867,27 @@ CLAIMS = [
          text="ungated selective adoption at spec-max 3: 63% of the speculated experts read in are used (1900 of 3026)",
          artifact="specgate_summary.json", expected=0.628, tol=0.001,
          value=lambda A: A["sgate"]["cells"]["sel"]["spec_useful_median"] / A["sgate"]["cells"]["sel"]["spec_integrated_median"]),
+    # ------------------------- STACKED LEVERS, DECISIVE (device/bmoe_stack.sh -> gates/stack_summary.py, 2026-09-18 17:28, patch 0015 engine)
+    dict(id="stack_stall_mgmt_ms",
+         text="the stack (SLRU + predictive prefetch with selective adoption, patches 0011/0012/0015) cuts stall+cache-management by 10.7 ms/token (70.1 -> 59.3; paired SE 1.75, SE/|diff| 0.16, lower in 6 of 6 ABBA repeats) -- the pre-registered primary outcome, decisive",
+         artifact="stack_summary.json", expected=-10.667, tol=0.01,
+         value=lambda A: A["stack"]["results"]["stall_plus_mgmt_ms"]["mean_diff"]),
+    dict(id="stack_decode_gain",
+         text="decode is 4.3% faster (5.48 vs 5.25 tok/s; paired diff 0.275 tok/s, SE/|diff| 0.29, faster in 5 of 6 repeats) -- decisive by the pre-registered rule; rows ran mostly at thermal status 3 while charging, so absolute rates are depressed",
+         artifact="stack_summary.json", expected=1.0427, tol=0.001,
+         value=lambda A: A["stack"]["decode_ratio"]),
+    dict(id="stack_compute_guard",
+         text="compute is unchanged within noise (+1.2 ms, SE 1.4, not resolved), so the guard holds: no compute cost offsets the saving",
+         artifact="stack_summary.json", expected=1.167, tol=0.01,
+         value=lambda A: A["stack"]["results"]["compute_ms"]["mean_diff"]),
+    dict(id="stack_hit",
+         text="hit rate 88.0% vs 85.3% at the same 5000 MiB budget, flash reads +1.0 MiB/token (SLRU's saving and the speculation's extra reads cancel)",
+         artifact="stack_summary.json", expected=2.7, tol=0.01,
+         value=lambda A: A["stack"]["results"]["hit_pct"]["mean_diff"]),
+    dict(id="stack_lossless",
+         text="all 24 rows generated identical text",
+         artifact="stack_summary.json", expected=24, tol=0,
+         value=lambda A: A["stack"]["text_match_ok"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1108,6 +1129,7 @@ def load_all():
         "sdec": load("slru_decode.json"),
         "sadopt": load("specadopt_summary.json"),
         "sgate": load("specgate_summary.json"),
+        "stack": load("stack_summary.json"),
     }
 
 
