@@ -191,6 +191,8 @@ internally consistent and wrong. That is what the property tests are for.
 | `r1_base_majflt` | even the base configuration runs with ~370 MiB of the engine swapped and ~21-23 major faults per decode token (arena campaign base 20.7; stacked campaign base 22.7, stack 23.4): a cached expert that was swapped out costs more than a miss, since its pages fault in one by one, synchronously | `fault_stack.json` | 22.7000 | ok |
 | `swapguard_lossless` | LAPTOP, forced swap (OLMoE in a 2 GB cgroup with zram swap): the swap guard is lossless -- the generated text is byte-identical with the guard off, sampled and full | `swapguard_laptop.json` | 1.0000 | ok |
 | `swapguard_faults` | LAPTOP, forced swap: the full guard removes 96.6% of major faults per token (4943 -> 170) and 36.9% of the compute term (49.1 -> 31.0 ms): the faults were being paid on compute threads. It trades them for flash re-reads (65 -> 166 MiB/token, stall 84 -> 109 ms), so the net is set by the device's fault vs flash costs -- a phone question (M6), not settled here | `swapguard_laptop.json` | 0.9657 | ok |
+| `gtier_m4_text_identical` | LAPTOP, CPU stand-in device: with the GPU expert tier ON the engine's text is byte-identical to tier OFF (OLMoE, 96 tokens, stack config), across 16,449 experts computed by the stand-in in two runs (500 MiB promote-after-2 and 800 MiB promote-after-1), with 0 failures and no fail-loud abort: promotion, release, skip, dispatch at the layer's first expert op, and fill at down are correct | `gtier_m4.json` | 1.0000 | ok |
+| `gtier_m4_policy_churn` | the v1 promotion policy churns and overloads the device: 2498 promotions and 2350 tier evictions in 96 tokens, and 4.62 of 8 experts per dispatch at 500 MiB (6.22 at 800 MiB) -- above the ~3 the GPU's measured rate share supports; admission control and a per-layer cap are required before any phone rate is meaningful (design §13) | `gtier_m4.json` | 4.6200 | ok |
 | `position_drift_median` | across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias | `position_effect.json` | 0.9922 | ok |
 | `hr_pinned_steady_tok_s` | pinned t4/io4 decodes Qwen3-30B-A3B at 5.30 tok/s over tokens 65-256 (ESTIMAND §1 steady state; the 256-token mean the pin2 claims quote is 5.36) | `headroom_sims.json` | 5.3025 | ok |
 | `hr_unpinned_steady_tok_s` | unpinned t4/io4: 4.72 tok/s over tokens 65-256 | `headroom_sims.json` | 4.7219 | ok |
@@ -241,7 +243,8 @@ internally consistent and wrong. That is what the property tests are for.
 | `gx_quant_mismatch_blocks` | 0 of 65,536 crafted near-tie blocks differ from ggml's quantize_row_q8_0/q8_1 (GPU and host paths) | `gx_m3_*/gx_test.json` | 0.0000 | ok |
 | `gx_row_down_diff_bits` | the row-per-work-item variant: 0 of 262,144 down values differ from ggml-cpu ARM | `gx_m3_*/gx_test.json` | 0.0000 | ok |
 | `gx_row_h_diff_bits` | and 0 of 98,304 SwiGLU values differ | `gx_m3_*/gx_test.json` | 0.0000 | ok |
+| `gx_swiglu_mismatches` | SwiGLU on 1,049,088 crafted gate values over the whole float range (including exp's special branch and its half-integer range-reduction points): 0 differ from ggml ARM's swiglu_split | `gx_m3_*/gx_test.json` | 0.0000 | ok |
 | `gx_div_mismatches` | the kernels' correctly rounded division matches IEEE division on 16.8M operand pairs | `gx_m3_*/gx_test.json` | 0.0000 | ok |
 | `roofline_inputs_agree` | the bandwidth constant used here is the one the engine_sim artifact was run with | `engine_sim_OLMoE-1B-7B-0924.json` | 2.8060 | ok |
 
-231 claims checked.
+234 claims checked.

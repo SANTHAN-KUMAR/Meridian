@@ -43,6 +43,7 @@ for c in "$S"/*.bin; do
 done
 qemu-aarch64-static -cpu max "$HERE/out/arm/ggml_ref_arm" --quant "$S/quant_blocks.f32" \
   "$S/quant_blocks.f32.q8_0.arm" "$S/quant_blocks.f32.q8_1.arm"
+qemu-aarch64-static -cpu max "$HERE/out/arm/ggml_ref_arm" --swiglu "$S/swiglu_pairs.f32" "$S/swiglu_pairs.f32.arm"
 
 set +e
 "$HERE/out/host/gx_test" "$S" "$R/gx_test.json" | tee "$R/gx_test.out"

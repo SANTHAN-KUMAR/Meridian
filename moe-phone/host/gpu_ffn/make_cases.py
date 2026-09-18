@@ -117,6 +117,34 @@ def quant_blocks(rng, n):
     return out
 
 
+def swiglu_pairs(rng, n):
+    """Gate values over the whole finite float range, so ggml_v_expf's special branch (|n| > 126, i.e.
+    |gate| above about 87) and its overflow/underflow limits are exercised: log-uniform magnitudes from
+    1e-40 to 1e30, dense coverage of [-200, 200], values straddling +-87.3 and +-103.9 and +-192 ln2
+    (about 133), and exact zeros. Up values: normal. Returns N gates followed by N ups, N = n."""
+    f32 = np.float32
+    g = np.empty(n, f32)
+    q = n // 4
+    g[:q] = (10 ** rng.uniform(-40, 30, q) * rng.choice([-1, 1], q)).astype(f32)
+    g[q:2 * q] = rng.uniform(-200, 200, q).astype(f32)
+    edges = np.array([87.3, 88.7, 103.9, 133.1, 126 * np.log(2), 192 * np.log(2), 1.0, 20.0], np.float64)
+    e = edges[rng.integers(0, len(edges), q)] * rng.choice([-1, 1], q) * (1 + rng.uniform(-1e-3, 1e-3, q))
+    g[2 * q:3 * q] = e.astype(f32)
+    # the last quarter: half normal, half gates where exp's range reduction rounds a half-integer:
+    # -g * log2(e) within a few ulps of k + 0.5, where fused and unfused x*log2e + 1.5*2^23 can differ
+    r = n - 3 * q
+    g[3 * q:3 * q + r // 2] = rng.standard_normal(r // 2).astype(f32) * 4
+    k = rng.integers(-126, 126, r - r // 2) + 0.5
+    t = (-(k / np.log2(np.e))).astype(f32)
+    for _ in range(3):
+        step = rng.integers(-1, 2, t.size)
+        t = np.where(step > 0, np.nextafter(t, f32(np.inf)), np.where(step < 0, np.nextafter(t, f32(-np.inf)), t)).astype(f32)
+    g[3 * q + r // 2:] = t
+    g[rng.integers(0, n, 64)] = 0
+    u = rng.standard_normal(n).astype(f32)
+    return np.concatenate([g, u])
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("out")
@@ -141,6 +169,9 @@ def main():
         write_case(os.path.join(a.out, name), x, ids, ex, dt)
         man.append({"file": name, "source": "random", "k": k, "down_type": ["Q4_0", "Q4_1"][dt], "x": kind,
                     "d_scale": dmag, "ids": ids})
+    sp = swiglu_pairs(rng, 768 * 1366)
+    sp.tofile(os.path.join(a.out, "swiglu_pairs.f32"))
+    man.append({"file": "swiglu_pairs.f32", "source": "crafted SwiGLU operands", "pairs": int(sp.size // 2)})
     qb = quant_blocks(rng, 65536)
     qb.tofile(os.path.join(a.out, "quant_blocks.f32"))
     man.append({"file": "quant_blocks.f32", "source": "crafted quantizer blocks", "blocks": int(qb.shape[0])})

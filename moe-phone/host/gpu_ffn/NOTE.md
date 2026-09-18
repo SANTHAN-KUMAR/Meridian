@@ -94,7 +94,7 @@ For scale, the per-case numbers are in `gx_test.out`:
   reference must be the ARM build.
 
 **Negative controls** (`negative_controls.sh`, CLAUDE.md §9.1). Each run changes one thing in the
-kernel, rebuilds, and reruns the whole test. All 10 are detected (`controls.out`):
+kernel, rebuilds, and reruns the whole test. All are detected (`controls.out`; 16 in the latest run, including the row-variant and exp controls). The original 10:
 - each fused fma unfused (gate/up, down);
 - q4_1 summs with two roundings;
 - a sequential horizontal sum;
@@ -175,9 +175,14 @@ work-groups are 64 work-items.
 - **Speed.** None of it is measured. The kernel's memory pattern (8 work-items per row, 4-byte loads)
   was chosen for exact lane correspondence, not for bandwidth.
 - **The engine path end to end.** That is M4 (logits KL and top-1 on OLMoE).
-- **The remaining SwiGLU vector branch.** gx reproduces ggml's special-case branch for |n| > 126
-  lane by lane. It is exercised only by extreme gate values (|g| ≳ 87), which neither the random nor
-  the real cases are guaranteed to hit. The crafted-block test covers the quantizer, not exp.
+- (Closed 2026-09-18.) SwiGLU is now also tested directly: 1,049,088 crafted gate values over the whole
+  finite float range, against ggml ARM's `swiglu_split`, with 0 differences (claim
+  `gx_swiglu_mismatches`, `results/2026-09-18/gx_m3_222732/`). The values include exp's special branch
+  (|gate| ≳ 87) and the half-integer points of its range reduction.
+  - Two new controls are detected: dropping the special branch, and unfusing the range-reduction
+    fma. 16/16 in total.
+  - The unfused-fma control was undetected until the half-integer gates were added. On ordinary
+    inputs that mutation changes nothing.
 
 ## 5. Integration notes (for the engine side, M4)
 

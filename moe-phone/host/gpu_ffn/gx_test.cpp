@@ -33,6 +33,10 @@ kernel void t_q8(global const float * in, global uchar * out, int with_s) {   //
     for (int i = 0; i < 32; i++) v[i] = in[get_group_id(0) * 32 + i];
     q8_block(v, out + get_group_id(0) * 36, with_s);
 }
+kernel void t_swiglu(global const float * g, global const float * u, global float * h) {
+    const size_t i = get_global_id(0);
+    h[i] = gx_swiglu(g[i], u[i]);
+}
 kernel void t_div(global const float * a, global const float * b, global float * q) {
     const size_t i = get_global_id(0);
     q[i] = cr_div(a[i], b[i]);
@@ -259,6 +263,41 @@ int main(int argc, char ** argv) {
         printf("QUANT blocks=%ld gpu_q8_0_mismatch=%ld gpu_q8_1_mismatch=%ld host_q8_0_mismatch=%ld\n", q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad);
     }
 
+    // ---- SwiGLU (gx_expf + cr_div) on crafted operands over the whole float range, vs ggml ARM's swiglu_split
+    long sw_n = -1, sw_bad = 0;
+    {
+        FILE * fp = fopen((dir + "/swiglu_pairs.f32").c_str(), "rb");
+        FILE * fr = fopen((dir + "/swiglu_pairs.f32.arm").c_str(), "rb");
+        if (fp && fr) {
+            std::vector<float> v, ref;
+            float b[4096];
+            size_t n;
+            while ((n = fread(b, 4, 4096, fp)) > 0) v.insert(v.end(), b, b + n);
+            while ((n = fread(b, 4, 4096, fr)) > 0) ref.insert(ref.end(), b, b + n);
+            const size_t N = v.size() / 2;
+            if (ref.size() == N) {
+                const std::string src = k_src + std::string(k_test_src);
+                const char * sp = src.c_str();
+                cl_program p = clCreateProgramWithSource(ctx, 1, &sp, nullptr, &e);
+                e = clBuildProgram(p, 1, &dev, "-cl-std=CL1.2 -DN_EMBD=2048 -DN_FF=768", nullptr, nullptr);
+                cl_kernel ks = clCreateKernel(p, "t_swiglu", &e);
+                cl_mem bg = clCreateBuffer(ctx, CL_MEM_COPY_HOST_PTR, N * 4, v.data(), &e);
+                cl_mem bu = clCreateBuffer(ctx, CL_MEM_COPY_HOST_PTR, N * 4, v.data() + N, &e);
+                cl_mem bh = clCreateBuffer(ctx, CL_MEM_WRITE_ONLY, N * 4, nullptr, &e);
+                clSetKernelArg(ks, 0, sizeof bg, &bg); clSetKernelArg(ks, 1, sizeof bu, &bu); clSetKernelArg(ks, 2, sizeof bh, &bh);
+                clEnqueueNDRangeKernel(q, ks, 1, nullptr, &N, nullptr, 0, nullptr, nullptr);
+                std::vector<float> h(N);
+                clEnqueueReadBuffer(q, bh, CL_TRUE, 0, N * 4, h.data(), 0, nullptr, nullptr);
+                sw_n = (long) N;
+                for (size_t i = 0; i < N; i++)
+                    if (memcmp(&h[i], &ref[i], 4) && !(h[i] != h[i] && ref[i] != ref[i])) sw_bad++;   // NaN == NaN here
+                clReleaseMemObject(bg); clReleaseMemObject(bu); clReleaseMemObject(bh); clReleaseKernel(ks); clReleaseProgram(p);
+            } else sw_n = -2;
+        }
+        for (FILE * f : {fp, fr}) if (f) fclose(f);
+        printf("SWIGLU n=%ld mismatches=%ld\n", sw_n, sw_bad);
+    }
+
     // ---- cases
     std::vector<std::string> files;
     if (DIR * d = opendir(dir.c_str())) {
@@ -271,8 +310,8 @@ int main(int argc, char ** argv) {
     std::sort(files.begin(), files.end());
     FILE * js = fopen(argc > 2 ? argv[2] : "/dev/null", "w");
     fprintf(js, "{\"device\": \"%s\", \"driver\": \"%s\", \"fp32_denorm\": %d, \"div_n\": %zu, \"div_mismatches\": %zu, "
-                "\"quant_blocks\": %ld, \"gpu_q8_0_mismatch\": %ld, \"gpu_q8_1_mismatch\": %ld, \"host_q8_0_mismatch\": %ld, \"cases\": [\n",
-            name, ver, !!(fpc & CL_FP_DENORM), div_n, div_bad, q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad);
+                "\"quant_blocks\": %ld, \"gpu_q8_0_mismatch\": %ld, \"gpu_q8_1_mismatch\": %ld, \"host_q8_0_mismatch\": %ld, \"swiglu_n\": %ld, \"swiglu_mismatches\": %ld, \"cases\": [\n",
+            name, ver, !!(fpc & CL_FP_DENORM), div_n, div_bad, q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad, sw_n, sw_bad);
     gx_ctx * gv[2] = {nullptr, nullptr};
     // totals per variant (0 = lane-mapped, 1 = row per work-item); cases are counted once
     size_t tot_down[2] = {0, 0}, tot_down_diff[2] = {0, 0}, tot_h[2] = {0, 0}, tot_h_diff[2] = {0, 0};
@@ -339,11 +378,11 @@ int main(int argc, char ** argv) {
     fclose(js);
     const bool exact = missing_arm == 0 && n_cases > 0 && tot_down_diff[0] == 0 && tot_h_diff[0] == 0 && tot_down_diff[1] == 0 &&
                        tot_h_diff[1] == 0 && tot_down[1] == tot_down[0] && div_bad == 0 && gx_errors == 0 &&
-                       q8_blocks > 0 && q8_0_bad == 0 && q8_1_bad == 0 && host_q8_0_bad == 0;
+                       q8_blocks > 0 && q8_0_bad == 0 && q8_1_bad == 0 && host_q8_0_bad == 0 && sw_n > 0 && sw_bad == 0;
     printf("SUMMARY cases=%zu missing_arm_ref=%zu down_diff_bits(v0/v1)=%zu/%zu of %zu h_diff_bits(v0/v1)=%zu/%zu of %zu "
-           "div_mismatches=%zu quant_blocks=%ld q8_mismatch(gpu0/gpu1/host0)=%ld/%ld/%ld gx_errors=%zu -> %s\n",
+           "div_mismatches=%zu quant_blocks=%ld q8_mismatch(gpu0/gpu1/host0)=%ld/%ld/%ld swiglu=%ld/%ld gx_errors=%zu -> %s\n",
            n_cases, missing_arm, tot_down_diff[0], tot_down_diff[1], tot_down[0], tot_h_diff[0], tot_h_diff[1], tot_h[0], div_bad,
-           q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad, gx_errors, exact ? "BIT-EXACT vs ggml-cpu ARM" : "NOT bit-exact");
+           q8_blocks, q8_0_bad, q8_1_bad, host_q8_0_bad, sw_bad, sw_n, gx_errors, exact ? "BIT-EXACT vs ggml-cpu ARM" : "NOT bit-exact");
     for (gx_ctx * g : gv) if (g) gx_free(g);
     return exact ? 0 : 3;
 }

@@ -24,6 +24,8 @@ controls=(
   "q8_round_toward_zero|s.replace('convert_int_rte(v[i] * id)', 'convert_int_rtz(v[i] * id)')"
   "q8_scale_127_over_amax|s.replace('const float id = d != 0.0f ? cr_div(1.0f, d) : 0.0f;', 'const float id = d != 0.0f ? cr_div(127.0f, amax) : 0.0f;')"
   "q8_s_from_fp16_d|s.replace('vstore_half_rte(d * (float) sum, 1', 'vstore_half_rte(vload_half(0, (global const half *) yo) * (float) sum, 1')"
+  "expf_unfused_poly|s.replace('    const float z = fma(x, 0x1.715476p+0f, r);', '    const float z = x * 0x1.715476p+0f + r;')"
+  "expf_special_branch_dropped|s.replace('    if (!(fabs(n) > 126.0f)) return fma(j, k, k);', '    return fma(j, k, k);')"
   "row_unfused_fma|s.replace('acc[p * 4 + 0] = fma((float) (pr.s0 + pr.s1 + pr.s2 + pr.s3), sc, acc[p * 4 + 0]);', 'acc[p * 4 + 0] = (float) (pr.s0 + pr.s1 + pr.s2 + pr.s3) * sc + acc[p * 4 + 0];')"
   "row_sequential_hsum|s.replace('static float hsum8p(const float * l) {\n    return ((l[0] + l[1]) + (l[2] + l[3])) + ((l[4] + l[5]) + (l[6] + l[7]));', 'static float hsum8p(const float * l) {\n    return ((((((l[0] + l[1]) + l[2]) + l[3]) + l[4]) + l[5]) + l[6]) + l[7];')"
   "row_wrong_parity|s.replace('row_block(ag, ib & 1,', 'row_block(ag, (ib >> 1) & 1,')"

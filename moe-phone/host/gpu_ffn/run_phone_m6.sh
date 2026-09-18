@@ -23,13 +23,14 @@ if [ -n "$busy" ]; then echo "phone busy: $busy"; exit 1; fi
 mkdir -p "$R"
 adb shell "mkdir -p $D/cases"
 adb push "$HERE/out/android/gx_test" "$HERE/out/android/gx_pool_test" "$HERE/out/android/gx_bench" "$HERE/out/arm/ggml_ref_arm" "$D/" >/dev/null
-for f in "$CASES"/*.bin "$CASES"/quant_blocks.f32; do adb push "$f" "$D/cases/" >/dev/null; done
+for f in "$CASES"/*.bin "$CASES"/quant_blocks.f32 "$CASES"/swiglu_pairs.f32; do adb push "$f" "$D/cases/" >/dev/null; done
 TG=/data/local/tmp/moe-stream/thermal_gate.sh
 adb shell "if [ -f $TG ]; then . $TG; quiesce; mem_ready 2000 60; thermal_state; else echo NO_THERMAL_GATE; fi" > "$R/state_before.txt" 2>&1 || true
 E="cd $D && LD_LIBRARY_PATH=/vendor/lib64"
 # 1. references natively, then correctness
 adb shell "$E; for c in cases/*.bin; do ./ggml_ref_arm \$c \$c.arm.out 4 || echo REF_FAIL \$c; done; \
-  ./ggml_ref_arm --quant cases/quant_blocks.f32 cases/quant_blocks.f32.q8_0.arm cases/quant_blocks.f32.q8_1.arm" > "$R/ref.out" 2>&1
+  ./ggml_ref_arm --quant cases/quant_blocks.f32 cases/quant_blocks.f32.q8_0.arm cases/quant_blocks.f32.q8_1.arm; \
+  ./ggml_ref_arm --swiglu cases/swiglu_pairs.f32 cases/swiglu_pairs.f32.arm" > "$R/ref.out" 2>&1
 adb shell "$E; ./gx_test cases gx_test.json" | tee "$R/gx_test.out"
 adb pull "$D/gx_test.json" "$R/" >/dev/null
 adb shell "$E; ./gx_pool_test cases" | tee "$R/pool_test.out"

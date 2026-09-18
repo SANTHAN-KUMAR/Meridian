@@ -6,6 +6,7 @@
 // accumulation order, reported for scale only).
 //   ggml_ref <case.bin> <out.bin> [threads]
 //   ggml_ref --quant <blocks.f32> <out_q8_0.bin> <out_q8_1.bin>   ggml-cpu's own from_float for Q8_0 / Q8_1
+//   ggml_ref --swiglu <pairs.f32> <out.f32>   ggml_swiglu_split over N gates then N ups (N a multiple of 768)
 #include "ggml.h"
 #include "ggml-cpu.h"
 
@@ -40,8 +41,38 @@ static int quant_mode(int argc, char ** argv) {
     return 0;
 }
 
+static int swiglu_mode(int argc, char ** argv) {
+    if (argc != 4) { fprintf(stderr, "usage: ggml_ref --swiglu pairs.f32 out.f32\n"); return 2; }
+    FILE * f = fopen(argv[2], "rb");
+    if (!f) { perror(argv[2]); return 1; }
+    std::vector<float> v;
+    float b[4096];
+    size_t n;
+    while ((n = fread(b, 4, 4096, f)) > 0) v.insert(v.end(), b, b + n);
+    fclose(f);
+    const int64_t N = (int64_t) v.size() / 2, row = 768;   // rows of 768 like ffn_moe_gate: the vector path covers all
+    if (N == 0 || N % row) { fprintf(stderr, "need 2*N floats, N a multiple of 768\n"); return 1; }
+    ggml_init_params ip = {(size_t) N * 4 * 3 + 16u * 1024 * 1024, nullptr, false};
+    ggml_context * c = ggml_init(ip);
+    ggml_tensor * g = ggml_new_tensor_2d(c, GGML_TYPE_F32, row, N / row);
+    ggml_tensor * u = ggml_new_tensor_2d(c, GGML_TYPE_F32, row, N / row);
+    memcpy(g->data, v.data(), N * 4);
+    memcpy(u->data, v.data() + N, N * 4);
+    ggml_tensor * h = ggml_swiglu_split(c, g, u);
+    ggml_cgraph * gf = ggml_new_graph(c);
+    ggml_build_forward_expand(gf, h);
+    if (ggml_graph_compute_with_ctx(c, gf, 2) != GGML_STATUS_SUCCESS) return 1;
+    FILE * o = fopen(argv[3], "wb");
+    if (!o) { perror(argv[3]); return 1; }
+    fwrite(h->data, 4, N, o);
+    fclose(o);
+    ggml_free(c);
+    return 0;
+}
+
 int main(int argc, char ** argv) {
     if (argc > 1 && !strcmp(argv[1], "--quant")) return quant_mode(argc, argv);
+    if (argc > 1 && !strcmp(argv[1], "--swiglu")) return swiglu_mode(argc, argv);
     if (argc < 3) { fprintf(stderr, "usage: ggml_ref case.bin out.bin [threads]\n"); return 2; }
     const int nth = argc > 3 ? atoi(argv[3]) : 2;
     FILE * f = fopen(argv[1], "rb");

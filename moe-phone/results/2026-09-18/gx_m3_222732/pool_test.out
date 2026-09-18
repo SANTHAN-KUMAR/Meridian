@@ -1,0 +1,13 @@
+POOL per_block=1 blocks=48/48 block_bytes=2752512 :: max_mem_alloc=2053734400 global_mem=8214937600
+ALLOC per_block=1 ops=20000 invariant_violations=0 capacity_new=48 capacity_after=48
+POOLCASES per_block=1 cases=7 down_values=94208 diff_bits=0
+CONCURRENT per_block=1 case=qwen3_L00.bin dispatches=200 io_map_write_unmap=87 io_errors=0 diff_bits=0
+NEGCTRL per_block=1 dispatch_while_mapped: saw_old=1 saw_new=0 (neither=0) | after_unmap_saw_new=1
+STATS per_block=1 dispatches=209 errors=0 maps=142 unmaps=142 map_errors=0 bytes_mapped=387514368 map_ms_mean=0.1757 unmap_ms_mean=0.2287 slots_live=0 alloc_fail=6860
+POOL per_block=4 blocks=12/12 block_bytes=11010048 :: max_mem_alloc=2053734400 global_mem=8214937600
+ALLOC per_block=4 ops=20000 invariant_violations=0 capacity_new=48 capacity_after=48
+POOLCASES per_block=4 cases=7 down_values=94208 diff_bits=0
+CONCURRENT per_block=4 case=qwen3_L00.bin dispatches=200 io_map_write_unmap=95 io_errors=0 diff_bits=0
+NEGCTRL per_block=4 dispatch_while_mapped: saw_old=1 saw_new=0 (neither=0) | after_unmap_saw_new=1
+STATS per_block=4 dispatches=209 errors=0 maps=150 unmaps=150 map_errors=0 bytes_mapped=409534464 map_ms_mean=0.1971 unmap_ms_mean=0.2319 slots_live=0 alloc_fail=6531
+POOL_TEST PASS (0 failures)
