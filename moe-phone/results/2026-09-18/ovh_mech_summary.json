@@ -1,0 +1,97 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/bmoe_ovh_mech/bmoe_ovh_mech_20260918_2021",
+ "per_rep": {
+  "plain": [
+   {
+    "instructions:u": 858367647.25,
+    "cpu-cycles:u": 226229868.0703125,
+    "raw-dtlb-walk:u": 11947.8828125,
+    "raw-l2d-cache-refill:u": 941482.515625,
+    "steady_wall_ms": 26.988500000000002
+   },
+   {
+    "instructions:u": 1114039297.125,
+    "cpu-cycles:u": 283004565.0859375,
+    "raw-dtlb-walk:u": 11602.4375,
+    "raw-l2d-cache-refill:u": 950296.0390625,
+    "steady_wall_ms": 27.7875
+   }
+  ],
+  "stream": [
+   {
+    "instructions:u": 1133631970.71875,
+    "cpu-cycles:u": 285129977.515625,
+    "raw-dtlb-walk:u": 14501.90625,
+    "raw-l2d-cache-refill:u": 896798.4140625,
+    "steady_wall_ms": 46.914500000000004
+   },
+   {
+    "instructions:u": 1540455315.1015625,
+    "cpu-cycles:u": 377906821.65625,
+    "raw-dtlb-walk:u": 13183.0546875,
+    "raw-l2d-cache-refill:u": 854736.375,
+    "steady_wall_ms": 51.209
+   }
+  ],
+  "streammap": [
+   {
+    "instructions:u": 1214831231.0234375,
+    "cpu-cycles:u": 309618445.828125,
+    "raw-dtlb-walk:u": 12403.546875,
+    "raw-l2d-cache-refill:u": 958797.3828125,
+    "steady_wall_ms": 38.0015
+   },
+   {
+    "instructions:u": 1324676735.125,
+    "cpu-cycles:u": 335129858.359375,
+    "raw-dtlb-walk:u": 13820.4609375,
+    "raw-l2d-cache-refill:u": 909082.921875,
+    "steady_wall_ms": 32.88
+   }
+  ]
+ },
+ "per_token": {
+  "plain": {
+   "instructions:u": 986203472.1875,
+   "cpu-cycles:u": 254617216.578125,
+   "raw-dtlb-walk:u": 11775.16015625,
+   "raw-l2d-cache-refill:u": 945889.27734375,
+   "steady_wall_ms": 27.388,
+   "IPC": 3.873278820031795
+  },
+  "stream": {
+   "instructions:u": 1337043642.9101562,
+   "cpu-cycles:u": 331518399.5859375,
+   "raw-dtlb-walk:u": 13842.48046875,
+   "raw-l2d-cache-refill:u": 875767.39453125,
+   "steady_wall_ms": 49.06175,
+   "IPC": 4.033090303826598
+  },
+  "streammap": {
+   "instructions:u": 1269753983.0742188,
+   "cpu-cycles:u": 322374152.09375,
+   "raw-dtlb-walk:u": 13112.00390625,
+   "raw-l2d-cache-refill:u": 933940.15234375,
+   "steady_wall_ms": 35.44075,
+   "IPC": 3.938758659239405
+  }
+ },
+ "ratio_vs_plain": {
+  "stream": {
+   "instructions:u": 1.355748261506783,
+   "cpu-cycles:u": 1.3020266423508586,
+   "raw-dtlb-walk:u": 1.1755662160911426,
+   "raw-l2d-cache-refill:u": 0.925866711366666,
+   "steady_wall_ms": 1.791359354461808,
+   "IPC": 1.0412599999174579
+  },
+  "streammap": {
+   "instructions:u": 1.2875172506316317,
+   "cpu-cycles:u": 1.266112937790422,
+   "raw-dtlb-walk:u": 1.1135308337433043,
+   "raw-l2d-cache-refill:u": 0.9873673110730723,
+   "steady_wall_ms": 1.294024755367314,
+   "IPC": 1.0169055320440556
+  }
+ }
+}

@@ -919,6 +919,15 @@ CLAIMS = [
          text="plain and stream generated identical text in all 12 rows",
          artifact="overhead_summary.json", expected=12, tol=0,
          value=lambda A: A["ovh"]["text_match_ok"]),
+    # ------------------------- OVERHEAD MECHANISM (device/bmoe_ovh_mech.sh -> gates/ovh_mech_summary.py, 2026-09-18 20:21)
+    dict(id="ovhmech_dense_copy_ms",
+         text="per steady decode token on fully-cached OLMoE, holding the dense weights as an anon COPY (the engine default) costs 13.6 ms more than leaving them mmap'd (49.1 vs 35.4 ms), with similar instruction counts: the copy's cost is waiting or kernel time, not arithmetic (2 repeats, differenced -n 160 minus -n 32)",
+         artifact="ovh_mech_summary.json", expected=13.62, tol=0.05,
+         value=lambda A: A["omech"]["per_token"]["stream"]["steady_wall_ms"] - A["omech"]["per_token"]["streammap"]["steady_wall_ms"]),
+    dict(id="ovhmech_extra_instructions",
+         text="with dense weights mmap'd, the engine still executes 1.29x the user-space instructions of plain llama.cpp per token (1270M vs 986M) at the same IPC, with data-TLB walks only 1.11x and L2 refills 0.99x: the remaining ~8 ms is extra WORK (hook and bookkeeping), not memory layout",
+         artifact="ovh_mech_summary.json", expected=1.2875, tol=0.005,
+         value=lambda A: A["omech"]["ratio_vs_plain"]["streammap"]["instructions:u"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1164,6 +1173,7 @@ def load_all():
         "dsim": load("draft_accept_sim.json"),
         "cores": load("cores_summary.json"),
         "ovh": load("overhead_summary.json"),
+        "omech": load("ovh_mech_summary.json"),
     }
 
 

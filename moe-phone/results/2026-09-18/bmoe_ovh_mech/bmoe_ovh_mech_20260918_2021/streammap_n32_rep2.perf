@@ -1,0 +1,9 @@
+Performance counter statistics:
+
+#          count  event_name               # count / runtime
+  99,311,556,759  instructions:u           # 5.333 G/sec  
+  24,689,809,011  cpu-cycles:u             # 1.325757 GHz 
+       3,540,540  raw-dtlb-walk:u          # 190.115 K/sec
+      31,852,642  raw-l2d-cache-refill:u   # 1.710 M/sec  
+
+Total test time: 9.061880 seconds.

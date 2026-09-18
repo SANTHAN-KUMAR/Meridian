@@ -1,0 +1,6 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the fieldWrite a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field<|im_end
+
+generation: 32 tokens, 0.041 s/token (24.113 tok/s)
+compute: 87.9% CPU occupancy (0.1459 cpu-s/token over 4 threads), 0.16 major faults/token
+prefill: 51 tokens, 1.962 s (26.0 tok/s) | model load 3.075 s | TTFT 5.036 s
+mode: mmap. Expert streaming is OFF on a MoE model (olmoe), so this run is a baseline, not this engine: add --moe-stream --overlap to stream the routed experts from flash.
