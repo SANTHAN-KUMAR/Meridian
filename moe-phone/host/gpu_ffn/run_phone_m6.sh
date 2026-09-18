@@ -57,6 +57,9 @@ else
   exit 3
 fi
 # 2. timing (capped clocks logged by the gate before and after)
-adb shell "$E; ./gx_bench --iters 300" | tee "$R/bench.out"
+# GX_BENCH_ARGS: override the bench's arguments (e.g. fewer variants / k to save battery); recorded in BUILD
+BA=${GX_BENCH_ARGS:---iters 300}
+echo "bench args: $BA" >> "$R/BUILD"
+adb shell "$E; ./gx_bench $BA" | tee "$R/bench.out"
 adb shell "if [ -f $TG ]; then . $TG; thermal_state; fi" > "$R/state_after.txt" 2>&1 || true
 echo "results in $R"
