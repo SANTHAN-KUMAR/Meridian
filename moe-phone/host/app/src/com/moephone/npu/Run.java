@@ -23,7 +23,8 @@ public class Run extends Activity {
                         // llama-bench inside this process: the only place the HTP session opens
                         String[] ba = getIntent().getStringExtra("bench").split("~~");
                         File bo = new File(getFilesDir(), "bench.txt");
-                        String res = Probe.runBench(lib, bo.getAbsolutePath(), ba);
+                        String res = Probe.runBench(lib, bo.getAbsolutePath(), ba,
+                                                    getIntent().getStringExtra("env"));
                         FileOutputStream fb = new FileOutputStream(out);
                         fb.write((res + "\nEXIT=bench\n").getBytes());
                         fb.close();

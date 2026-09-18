@@ -1,0 +1,102 @@
+{
+ "target": "Qwen3-30B-A3B-Q4_0.gguf",
+ "cell": "ceil5000",
+ "goal_tok_s": 10.0,
+ "active_bytes_per_token": 1839971456.0,
+ "measured_decode_tok_s": 6.199,
+ "measured_ms_per_token": 161.3163413453783,
+ "goal_ms_per_token": 100.0,
+ "engine_source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-17/bmoe_cache.json",
+ "bandwidth_source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/device_bandwidth.json",
+ "terms_ms": {
+  "compute_residual": 93.0,
+  "cache_mgmt": 20.0,
+  "stall": 48.316341345378305
+ },
+ "devices": [
+  {
+   "device_arm": "olmoe_cpu",
+   "effective_GB_s": 31.010457306240003,
+   "floor_ms": 59.333902684168294,
+   "compute_overhead_ms": 33.666097315831706,
+   "cache_mgmt_ms": 20.0,
+   "stall_ms": 48.316341345378305,
+   "efficiency_floor_over_measured": 0.3678108627391592,
+   "overhead_now_ms": 101.98243866121001,
+   "overhead_budget_ms": 40.666097315831706,
+   "goal_below_floor": false,
+   "required_cut_fraction": 0.6012441176178753,
+   "tok_s_per_ms_saved": 0.03842760099999999,
+   "terms_ranked_by_size_ms": [
+    [
+     "stall",
+     48.316341345378305
+    ],
+    [
+     "compute_overhead",
+     33.666097315831706
+    ],
+    [
+     "cache_mgmt",
+     20.0
+    ]
+   ]
+  },
+  {
+   "device_arm": "olmoe_gpu",
+   "effective_GB_s": 34.853201481599996,
+   "floor_ms": 52.79203567486831,
+   "compute_overhead_ms": 40.20796432513169,
+   "cache_mgmt_ms": 20.0,
+   "stall_ms": 48.316341345378305,
+   "efficiency_floor_over_measured": 0.3272578291485086,
+   "overhead_now_ms": 108.52430567050999,
+   "overhead_budget_ms": 47.20796432513169,
+   "goal_below_floor": false,
+   "required_cut_fraction": 0.5650010010802602,
+   "tok_s_per_ms_saved": 0.03842760099999999,
+   "terms_ranked_by_size_ms": [
+    [
+     "stall",
+     48.316341345378305
+    ],
+    [
+     "compute_overhead",
+     40.20796432513169
+    ],
+    [
+     "cache_mgmt",
+     20.0
+    ]
+   ]
+  },
+  {
+   "device_arm": "olmoe_htp",
+   "effective_GB_s": 28.405620737280003,
+   "floor_ms": 64.77490750924485,
+   "compute_overhead_ms": 28.225092490755145,
+   "cache_mgmt_ms": 20.0,
+   "stall_ms": 48.316341345378305,
+   "efficiency_floor_over_measured": 0.4015396516498088,
+   "overhead_now_ms": 96.54143383613345,
+   "overhead_budget_ms": 35.225092490755145,
+   "goal_below_floor": false,
+   "required_cut_fraction": 0.6351297977348755,
+   "tok_s_per_ms_saved": 0.03842760099999999,
+   "terms_ranked_by_size_ms": [
+    [
+     "stall",
+     48.316341345378305
+    ],
+    [
+     "compute_overhead",
+     28.225092490755145
+    ],
+    [
+     "cache_mgmt",
+     20.0
+    ]
+   ]
+  }
+ ]
+}

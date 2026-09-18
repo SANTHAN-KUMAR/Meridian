@@ -82,16 +82,28 @@ device_campaign() {  # script reps results_subdir dir_glob
   [ -n "$d" ] && { mkdir -p "$R/$sub"; adb pull "$d" "$R/$sub" >/dev/null 2>&1; log "$script pulled from $d"; }
 }
 
-# 1. the balanced expert-order A/B: two earlier campaigns disagreed and both were position-confounded
+# Both app packages get the build that can set environment variables in-process, which is what the NPU
+# tuning sweep needs; npu2 holds the OLMoE copy, bmoe3 holds Qwen3 and the per-op benchmark.
+log "installing apps"
+adb install -r "$HOME/moework/npu-apk2/npu2_env.apk" >> "$LOG" 2>&1
+adb install -r "$HOME/moework/npu-apk3/bmoe3.apk"    >> "$LOG" 2>&1
+
+# 1. FIRST, because it is the open question about a conclusion already drawn: the NPU came last at
+#    decode in the committed rows, but those ran the backend's defaults, and GGML_HEXAGON_OPPOLL=0
+#    means the host waits on an interrupt for every DSP batch. Decode is dozens of tiny round-trips per
+#    token. The same rows put the NPU FIRST at prefill by 2.1x, so the silicon is not the issue.
+log "npu_tuning start"
+sh "$HOSTDIR/npu_tuning.sh" 2 >> "$LOG" 2>&1
+log "npu_tuning done"
+
+# 2. the balanced expert-order A/B: two earlier campaigns disagreed and both were position-confounded
 device_campaign bmoe_order3.sh 3 bmoe_order3 'bmoe_order3_*/'
-# 2. the slot arena at the current operating point: it cut cache management 34 ms -> 2 ms and still lost
+# 3. the slot arena at the current operating point: it cut cache management 34 ms -> 2 ms and still lost
 device_campaign bmoe_arena2.sh 3 bmoe_arena2 'bmoe_arena2_*/'
-# 3. the ZRAM cache, now capped below what took the phone down
+# 4. the ZRAM cache, now capped below what took the phone down
 device_campaign bmoe_zram.sh 3 bmoe_zram 'bmoe_zram_*/'
 
-# 4. host-driven: per-op device truth, then whether two devices add bandwidth
-log "install app + matmul sweep"
-adb install -r "$HOME/moework/npu-apk3/bmoe3.apk" >> "$LOG" 2>&1
+# 5. host-driven: per-op device truth, then whether two devices add bandwidth, then the CPU questions
 sh "$HOSTDIR/matmul_sweep.sh" 2 >> "$LOG" 2>&1
 log "matmul sweep done"
 sh "$HOSTDIR/agg_bandwidth.sh" 3 >> "$LOG" 2>&1

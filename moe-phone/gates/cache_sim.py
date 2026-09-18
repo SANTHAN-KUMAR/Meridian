@@ -191,6 +191,142 @@ def lru_hits_events(ev, cap_total, scope="per_layer", replay="atomic"):
     return hits
 
 
+def cycle_hits_global(ev, cap_total, num_experts, policy="cycle", eval_from=0):
+    """Eviction policies for a GLOBAL cache that exploit the one thing about this access pattern that
+    needs no prediction: the LAYER ORDER IS FIXED.
+
+    A decode token walks layers 0..L-1 in order, every token, forever. So standing at layer l, an entry
+    belonging to layer j will not be touched again for
+
+        d(j) = (j - l) mod L      layers,    with d(l) = 0 meaning "just used, next use is L layers away"
+
+    and that quantity is known exactly, not predicted. Global LRU ignores it, and in doing so picks
+    close to the WORST victim available: the least recently used entry is the one from the layer touched
+    longest ago, which in a cyclic scan is the layer about to be touched NEXT. This is the classic
+    LRU-on-a-cyclic-scan pathology, and our engine's cache is exactly that shape.
+
+      policy="cycle"      evict from the layer whose next visit is furthest away -- i.e. the layer just
+                          completed -- breaking ties by least-recently-used inside that layer. Uses no
+                          information the engine does not already have at eviction time.
+      policy="cyclefreq"  the same, but scored by EXPECTED next use rather than layer distance alone:
+                          an expert is only re-read when its layer both comes round AND selects it, so
+                              score = d(j) + L / p_hat(e)
+                          with p_hat estimated online from the stream seen so far (Laplace-smoothed).
+                          An unpopular expert one layer ahead is then correctly ranked as a worse keep
+                          than a popular expert in the layer just finished.
+
+    Both are online and deployable: no future routing, no draft model, no second pass. Belady remains
+    the bound; these are attempts to get closer to it than recency does.
+    """
+    T, L, k = ev.shape
+    # "freq" drops the cyclic term entirely (score = L/p_hat), which is the control that says how much
+    # of cyclefreq's gain is the cycle and how much is just popularity.
+    if policy not in ("cycle", "cyclefreq", "freq"):
+        raise ValueError(f"policy must be 'cycle', 'cyclefreq' or 'freq', got {policy!r}")
+    buckets = [OrderedDict() for _ in range(L)]   # layer -> its resident keys, LRU order
+    n_res = 0
+    freq = {}
+    seen_events = 0
+    hits = seen = 0
+    for t in range(T):
+        for l in range(L):
+            counting = t >= eval_from
+            keys = ev[t, l, :].tolist()
+            b = buckets[l]
+            miss = []
+            for key in keys:
+                if counting:
+                    seen += 1
+                freq[key] = freq.get(key, 0) + 1
+                if key in b:
+                    if counting:
+                        hits += 1
+                    b.move_to_end(key)
+                else:
+                    miss.append(key)
+            seen_events += 1
+            for key in miss:
+                while n_res >= cap_total:
+                    # choose the victim layer: furthest next visit, i.e. largest (j - l) mod L
+                    victim_layer, victim_key, best = -1, None, None
+                    for j in range(L):
+                        if not buckets[j]:
+                            continue
+                        d = (j - l) % L
+                        if policy == "cycle":
+                            score = (d, )
+                            cand = next(iter(buckets[j]))          # LRU within the layer
+                        else:
+                            # least likely to come back soonest inside this layer
+                            cand = min(buckets[j], key=lambda e: freq.get(e, 0))
+                            p = (freq.get(cand, 0) + 1.0) / (seen_events + 2.0)
+                            score = ((d if policy == "cyclefreq" else 0.0) + L / p, )
+                        if best is None or score > best:
+                            best, victim_layer, victim_key = score, j, cand
+                    if victim_key is None:
+                        break
+                    del buckets[victim_layer][victim_key]
+                    n_res -= 1
+                if n_res < cap_total:
+                    b[key] = None
+                    n_res += 1
+    return hits, seen
+
+
+def slru_hits_global(ev, cap_total, protected_frac=0.8, eval_from=0):
+    """Segmented LRU on the GLOBAL cache: the O(1) way to be frequency-aware.
+
+    Exact frequency scoring (cycle_hits_global's "freq") needs a scan over candidates at every
+    eviction, which would land on the very cache-management term this project is trying to shrink
+    (20 ms/token, gates/decode_budget.py). SLRU gets most of the same signal for the same cost as LRU:
+
+      probation  entries seen once. Evictions come from here, LRU order.
+      protected  entries promoted on their SECOND hit. When it overflows, its LRU tail demotes to
+                 probation rather than being dropped.
+
+    So a one-off expert cannot push out one that keeps coming back, and every operation is O(1) --
+    two linked lists and a flag per entry, which is what the engine already maintains for its LRU.
+
+    `protected_frac` is a structural parameter, not a fitted one; Karedla et al. (1994) use 60-80% and
+    the caller is expected to report a sweep rather than a chosen value.
+    """
+    T, L, k = ev.shape
+    n_prot_max = int(round(protected_frac * cap_total))
+    prot = OrderedDict()
+    prob = OrderedDict()
+    hits = seen = 0
+    for t in range(T):
+        counting = t >= eval_from
+        for l in range(L):
+            keys = ev[t, l, :].tolist()
+            miss = []
+            for key in keys:
+                if counting:
+                    seen += 1
+                if key in prot:
+                    if counting:
+                        hits += 1
+                    prot.move_to_end(key)
+                elif key in prob:
+                    if counting:
+                        hits += 1
+                    del prob[key]                       # second sighting: promote
+                    prot[key] = None
+                    while len(prot) > n_prot_max:       # demote the protected tail
+                        dk, _ = prot.popitem(last=False)
+                        prob[dk] = None
+                else:
+                    miss.append(key)
+            for key in miss:
+                while len(prot) + len(prob) >= cap_total:
+                    if prob:
+                        prob.popitem(last=False)
+                    else:
+                        prot.popitem(last=False)
+                prob[key] = None
+    return hits, seen
+
+
 def belady_hits_scoped(ev, cap_total, scope="per_layer"):
     """Belady's MIN under the same scope. Per-layer, each layer's subsequence is
     solved independently, which is exactly right: with private quotas the layers

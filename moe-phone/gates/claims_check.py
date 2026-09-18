@@ -674,9 +674,17 @@ CLAIMS = [
          artifact="app_engine.json", expected=49.975, tol=0.01,
          value=lambda A: next(x["decode_tok_s_median"] for x in A["app18"]["arms"] if x["arm"] == "olmoe_gpu")),
     dict(id="inapp_olmoe_htp_tok_s",
-         text="the same model on the Hexagon NPU: 40.73 tok/s -- the NPU is the SLOWEST of the three on this workload, not the fastest",
+         text="the same model on the Hexagon NPU: 40.73 tok/s at token generation -- last of the three, but only at batch-1 decode and only in the backend's DEFAULT configuration (GGML_HEXAGON_OPPOLL=0, HOSTBUF=0, one DSP session); at prefill the same rows put it first by 2.1x",
          artifact="app_engine.json", expected=40.73, tol=0.01,
          value=lambda A: next(x["decode_tok_s_median"] for x in A["app18"]["arms"] if x["arm"] == "olmoe_htp")),
+    dict(id="inapp_olmoe_htp_prefill",
+         text="the same NPU rows reach 284.07 tok/s at prefill, 2.1x the Adreno's 135.33 and 14x the CPU's 20.36: the device is compute-strong and the decode gap is a latency effect, not a bandwidth one",
+         artifact="app_engine.json", expected=284.07, tol=0.01,
+         value=lambda A: next(x["prefill_tok_s_median"] for x in A["app18"]["arms"] if x["arm"] == "olmoe_htp")),
+    dict(id="inapp_olmoe_gpu_prefill",
+         text="the Adreno's prefill on the same model and campaign: 135.33 tok/s",
+         artifact="app_engine.json", expected=135.33, tol=0.01,
+         value=lambda A: next(x["prefill_tok_s_median"] for x in A["app18"]["arms"] if x["arm"] == "olmoe_gpu")),
     dict(id="device_ceiling_qwen3_cpu",
          text="the CPU's measured weight-byte throughput (31.01 GB/s) puts a ceiling of 16.85 tok/s on Qwen3-30B-A3B, so the 10 tok/s goal needs 59% of what the CPU alone can deliver",
          artifact="device_bandwidth.json", expected=16.8538, tol=0.01,
@@ -716,6 +724,27 @@ CLAIMS = [
          text="intra-layer reordering can buy at most 17.2% of a token: 0.58 ms of resident-expert compute per layer (wall time, at the CPU's measured 31.01 GB/s) against 1.17 ms of miss reads (at the measured 2.806 GB/s bulk flash rate)",
          artifact="order_cover.json", expected=0.1716, tol=0.002,
          value=lambda A: A["ocover"]["per_token"]["max_saving_fraction_of_decode"]),
+    # ------------------------- EVICTION POLICY (gates/evict_sim.py, 2026-09-18)
+    dict(id="evict_slru80_hit",
+         text="segmented LRU (protected 80%) on the global expert cache at the phone's 30.7% cache fraction: 88.32% hit against LRU's 86.90%, removing 10.8% of the miss traffic and closing 18% of the LRU-to-Belady gap -- O(1), so it costs what LRU costs",
+         artifact="evict_policies_qwen3.json", expected=0.8832, tol=0.0005,
+         value=lambda A: next(r["slru80_hit"] for r in A["evict"]["rows"]
+                              if abs(r["cache_fraction"] - 0.307) < 1e-9)),
+    dict(id="evict_slru80_miss_reduction",
+         text="that is 10.8% less flash traffic per token at the same cache size",
+         artifact="evict_policies_qwen3.json", expected=0.1077, tol=0.001,
+         value=lambda A: next(r["slru80_miss_reduction_vs_lru"] for r in A["evict"]["rows"]
+                              if abs(r["cache_fraction"] - 0.307) < 1e-9)),
+    dict(id="evict_freq_is_worse",
+         text="online frequency eviction is WORSE than LRU on the same trace -- 83.89% against 86.90%, i.e. 23% MORE miss traffic -- which is the same verdict gates/expert_policy.py reached per-layer on a different model: stale popularity pollutes the cache",
+         artifact="evict_policies_qwen3.json", expected=0.8389, tol=0.0005,
+         value=lambda A: next(r["freq_hit"] for r in A["evict"]["rows"]
+                              if abs(r["cache_fraction"] - 0.307) < 1e-9)),
+    dict(id="evict_cycle_is_nothing",
+         text="exploiting the fixed layer order in eviction is worth nothing measurable (86.99% against 86.90%): an entry's next use is dominated by when its layer next SELECTS it, which is many tokens away, not by the at-most-one-token distance to its layer's next visit",
+         artifact="evict_policies_qwen3.json", expected=0.8699, tol=0.0005,
+         value=lambda A: next(r["cycle_hit"] for r in A["evict"]["rows"]
+                              if abs(r["cache_fraction"] - 0.307) < 1e-9)),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -945,6 +974,7 @@ def load_all():
         "border2": load("bmoe_order2.json"),
         "ocover": load("order_cover.json"),
         "posfx": load("position_effect.json"),
+        "evict": load("evict_policies_qwen3.json"),
     }
 
 
