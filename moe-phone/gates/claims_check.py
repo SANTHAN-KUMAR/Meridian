@@ -833,6 +833,23 @@ CLAIMS = [
          text="from 33 C up, 97.3% of 482 samples had the prime cores capped at or below 2.48 of 3.80 GHz, and 84.7% of samples at framework thermal status 0 were capped: the governor acts on skin temperature long before the framework reports throttling",
          artifact="cap_vs_temp.json", expected=0.973, tol=0.001,
          value=lambda A: A["capt"]["from33C_frac_cap6_le_2_48GHz"]),
+    # ------------------------- PATCH 0012 SELECTIVE ADOPTION ON THE PHONE (device/bmoe_specadopt.sh -> gates/specadopt_summary.py, 2026-09-18 16:01)
+    dict(id="specadopt_useful_ratio",
+         text="with --spec-adopt-selective the predictor's speculation is used 2.24x as often (1786 vs 799 speculated experts useful per 256-token run, 7.0 vs 3.1 per token); manipulation check passed (>=928 entries adopted per run)",
+         artifact="specadopt_summary.json", expected=2.235, tol=0.001,
+         value=lambda A: A["sadopt"]["useful_ratio_predsel_over_predpf"]),
+    dict(id="specadopt_stall_ms",
+         text="the overlap stall falls to 36 ms/token (median) from 45 ms with no prefetch and 45 ms with today's prefetch",
+         artifact="specadopt_summary.json", expected=36.0, tol=0.0,
+         value=lambda A: A["sadopt"]["cells"]["predsel"]["stall_ms_median"]),
+    dict(id="specadopt_extra_read",
+         text="but no refuted guess is ever cancelled (0 per run: each has started reading by the time its layer loads), so flash traffic is 10.9 MiB/token ABOVE no-prefetch (130.7 vs 119.8) and cache management rises to 24 ms (adoption waits)",
+         artifact="specadopt_summary.json", expected=10.92, tol=0.01,
+         value=lambda A: A["sadopt"]["read_delta_predsel_vs_base"]),
+    dict(id="specadopt_verdict",
+         text="net decode median 6.29 vs 6.10 (base) vs 5.89 (today's prefetch), best in 2 of 3 repeats: no rate effect resolved at n=3 (rows at thermal status 2); all 9 rows produced identical text",
+         artifact="specadopt_summary.json", expected=2, tol=0,
+         value=lambda A: A["sadopt"]["predsel_best_in_repeats"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1071,6 +1088,7 @@ def load_all():
         "arena2": load("arena2_summary.json"),
         "capt": load("cap_vs_temp.json"),
         "sdec": load("slru_decode.json"),
+        "sadopt": load("specadopt_summary.json"),
     }
 
 

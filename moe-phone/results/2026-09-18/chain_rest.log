@@ -10,3 +10,5 @@
 2026-09-18T16:01:33+05:30 [rest2] 0012 pushed: 031ff05000c1e5b4
 2026-09-18T16:01:33+05:30 [rest2] cool_gate waited 0s, status 1
 2026-09-18T16:01:33+05:30 [rest2] bmoe_specadopt.sh start
+2026-09-18T16:19:39+05:30 [rest2] bmoe_specadopt.sh pulled /data/local/tmp/moe-stream/bmoe_specadopt_20260918_1601/
+2026-09-18T16:20:39+05:30 [rest2] cool_gate waited 60s, status 1
