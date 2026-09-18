@@ -50,6 +50,15 @@ adb push "$R/qwen3_gtier_prior.txt" "$DEV/bmoe_gtier.sh" "$DEV/thermal_gate.sh" 
 A 'chmod 755 /data/local/tmp/moe-stream/bmoe-i8mm-0019gx/bmoe-cli'
 log "gx engine pushed: $(A 'sha256sum /data/local/tmp/moe-stream/bmoe-i8mm-0019gx/bmoe-cli' | cut -c1-16)"
 SD=$(campaign smoke | tail -1)
+# LATENCY GATE (added 2026-09-18 23:15, before M6 run 2 exists): the tier can only help if the device finishes its k
+# experts within the time the CPU spends on the other 8-k. From the measured decomposition, the CPU's expert matmuls
+# take ~1 ms per layer for 8 experts (~50% of ~92 ms compute / 48 layers), so k=3 on the device must return
+# (dispatch -> wait, host time) within ~0.6 ms. A person/agent reads M6 run 2's bench and writes GTIER_GO or
+# GTIER_NOGO (with the numbers) into $R; the A/B runs only on GO. Waits up to 60 min, then treats silence as NOGO.
+gw=0
+while [ ! -f "$R/GTIER_GO" ] && [ ! -f "$R/GTIER_NOGO" ] && [ $gw -lt 3600 ]; do sleep 30; gw=$((gw+30)); done
+[ -f "$R/GTIER_GO" ] || { log "latency gate: NOGO (${gw}s) :: $(cat "$R/GTIER_NOGO" 2>/dev/null | tr '\n' ' ')"; ok_gate=0; }
+[ -f "$R/GTIER_GO" ] && { log "latency gate: GO :: $(cat "$R/GTIER_GO" | tr '\n' ' ')"; ok_gate=1; }
 ok=1
 grep -q "text_match.*DIFFERS" "$SD/log.txt" && ok=0
 grep -q "FATAL" "$SD"/*.err 2>/dev/null && ok=0
@@ -57,7 +66,7 @@ grep -qE "dispatches [1-9]" "$SD/stack_reps1.err" || ok=0
 grep -qE "warm start filled [1-9]" "$SD/stack_reps1.err" || ok=0
 grep -q "^exit=0" "$SD/log.txt" || ok=0
 log "smoke gate ok=$ok :: $(grep -hE 'warm start|gpu-tier: backend gx slots' "$SD/stack_reps1.err" | cut -c1-300 | tr '\n' ' ') :: $(grep text_match "$SD/log.txt" | tr '\n' ' ')"
-if [ "$ok" = 1 ]; then
+if [ "$ok" = 1 ] && [ "${ok_gate:-0}" = 1 ]; then
   wait_phone_idle
   s=$(A 'dumpsys thermalservice' | awk -F': ' '/^Thermal Status/{print $2; exit}' | tr -d '\r'); t=0
   while [ "${s:-9}" -gt 1 ] && [ $t -lt 900 ]; do sleep 30; t=$((t+30)); s=$(A 'dumpsys thermalservice' | awk -F': ' '/^Thermal Status/{print $2; exit}' | tr -d '\r'); done
@@ -65,7 +74,7 @@ if [ "$ok" = 1 ]; then
   AD=$(campaign ab | tail -1)
   log "A/B done: $AD"
 else
-  log "SMOKE FAILED: A/B not run"
+  log "A/B not run (smoke ok=$ok, latency gate=${ok_gate:-0})"
 fi
 A 'am force-stop com.moephone.bmoe3; svc power stayon false; settings put system screen_off_timeout 60000; dumpsys deviceidle enable' >/dev/null 2>&1
 log "phone restored"; touch "$R/CHAIN_NIGHT_DONE"
