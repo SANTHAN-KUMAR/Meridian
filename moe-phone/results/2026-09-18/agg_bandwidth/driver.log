@@ -1,0 +1,18 @@
+2026-09-18T16:20:41+05:30 START reps=3 n_gen=64 pkg=com.moephone.npu2
+2026-09-18T16:20:41+05:30 model warmed into page cache
+2026-09-18T16:21:10+05:30 solo solo_cpu_rep1: tg64 |         50.24
+2026-09-18T16:22:01+05:30 solo solo_gpu_rep1: tg64 |         52.77
+2026-09-18T16:22:37+05:30 solo solo_htp_rep1: tg64 |         43.29
+2026-09-18T16:23:25+05:30 pair pair_cpu_with_gpu_cpu_rep1+pair_cpu_with_gpu_gpu_rep1: tg64 |         39.71 | tg64 |         48.47
+2026-09-18T16:24:05+05:30 pair pair_cpu_with_htp_cpu_rep1+pair_cpu_with_htp_htp_rep1: tg64 |         41.35 | tg64 |         42.51
+2026-09-18T16:24:38+05:30 solo solo_cpu_rep2: tg64 |         44.97
+2026-09-18T16:25:14+05:30 solo solo_gpu_rep2: tg64 |         50.19
+2026-09-18T16:25:44+05:30 solo solo_htp_rep2: tg64 |         42.98
+2026-09-18T16:26:34+05:30 pair pair_cpu_with_gpu_cpu_rep2+pair_cpu_with_gpu_gpu_rep2: tg64 |         38.14 | tg64 |         46.16
+2026-09-18T16:27:15+05:30 pair pair_cpu_with_htp_cpu_rep2+pair_cpu_with_htp_htp_rep2: tg64 |         40.75 | tg64 |         42.53
+2026-09-18T16:27:55+05:30 solo solo_cpu_rep3: tg64 |          7.27
+2026-09-18T16:28:26+05:30 solo solo_gpu_rep3: tg64 |         50.06
+2026-09-18T16:28:56+05:30 solo solo_htp_rep3: tg64 |         43.44
+2026-09-18T16:29:46+05:30 pair pair_cpu_with_gpu_cpu_rep3+pair_cpu_with_gpu_gpu_rep3: tg64 |         38.21 | tg64 |         48.57
+2026-09-18T16:30:30+05:30 pair pair_cpu_with_htp_cpu_rep3+pair_cpu_with_htp_htp_rep3: tg64 |         40.39 | tg64 |         34.45
+2026-09-18T16:30:30+05:30 DONE

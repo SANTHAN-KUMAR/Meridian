@@ -1,0 +1,10 @@
+ggml_opencl: selected platform: 'QUALCOMM Snapdragon(TM)'
+
+ggml_opencl: device: 'QUALCOMM Adreno(TM) 829 (OpenCL 3.0 Adreno(TM) 829)'
+ggml_opencl: default device: 'QUALCOMM Adreno(TM) 829 (OpenCL 3.0 Adreno(TM) 829)'
+| model                          |       size |     params | backend    | ngl | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | --: | ------: | --------------: | -------------------: |
+| olmoe A1.7B Q4_0               |   3.66 GiB |     6.92 B | OpenCL     |   0 |       4 |            tg64 |         38.14 ± 0.00 |
+
+build: 9f31776 (1)
+exit=0

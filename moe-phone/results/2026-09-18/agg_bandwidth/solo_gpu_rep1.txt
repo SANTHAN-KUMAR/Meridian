@@ -1,0 +1,8 @@
+| model                          |       size |     params | backend    | ngl | threads | dev          |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | --: | ------: | ------------ | --------------: | -------------------: |
+| olmoe A1.7B Q4_0               |   3.66 GiB |     6.92 B | OpenCL,HTP |  99 |       4 | GPUOpenCL    |            tg64 |         52.77 ± 0.00 |
+
+build: 1248fd8 (49)
+MB
+ggml-hex: HTP0 new session : session-id 0 domain-id 3 uri file:///libggml-htp-v81.so?htp_iface_skel_handle_invoke&_modver=1.0&_dom=cdsp&_session=0 handle 0xb4000072bd508600
+ggml-hex: HTP0 op batching: n-bufs 16 n-tensors 7168 n-ops 1024 vmem 3355443200
