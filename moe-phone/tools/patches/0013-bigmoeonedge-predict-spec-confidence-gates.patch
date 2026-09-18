@@ -1,0 +1,254 @@
+# moe-phone patch for github.com/Helldez/BigMoeOnEdge @ 74ba18f, applied AFTER 0001-0012 (engine files only; no llama.cpp change).
+# --predict-spec-rank R / --predict-spec-margin M (both default off): confidence gates on what --predict-prefetch speculates.
+# Only removes experts from the speculation list; lossless. See 0013-NOTE.md.
+diff --git a/cli/main.cpp b/cli/main.cpp
+index 65e9a3e..e275640 100644
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -532,6 +532,10 @@ static void print_usage(const char * argv0) {
+         "                          0 = retention only, the prediction spends no flash at all)\n"
+         "      --spec-adopt-selective  keep speculative reads the router confirms instead of\n"
+         "                          cancelling and re-reading them (moe-phone; lossless)\n"
++        "      --predict-spec-rank R   speculate only predicted misses of predicted rank < R\n"
++        "                          (0 = off; moe-phone)\n"
++        "      --predict-spec-margin M speculate only if (score - top-k boundary)/sd >= M\n"
++        "                          (< 0 = off; moe-phone)\n"
+         "      --list-archs        print supported MoE architectures and exit\n"
+         "\n"
+         "  Env overrides (flag wins): BMOE_CACHE_MB, BMOE_IO_THREADS, BMOE_PROGRESS, BMOE_OVERLAP, BMOE_PREFETCH, "
+@@ -802,6 +806,10 @@ extern "C" int bmoe_main(int argc, char ** argv) {
+             cfg.moe.predict_spec_max = std::atoi(next("--predict-spec-max"));
+         else if (a == "--spec-adopt-selective")
+             cfg.moe.spec_adopt_selective = true;
++        else if (a == "--predict-spec-rank")
++            cfg.moe.predict_spec_rank = std::atoi(next("--predict-spec-rank"));
++        else if (a == "--predict-spec-margin")
++            cfg.moe.predict_spec_margin = (float) std::atof(next("--predict-spec-margin"));
+         else if (a == "--list-archs") {
+             std::printf("supported MoE architectures:\n");
+             for (int k = 0; k < n_moe_recipes(); ++k)
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+index acd8aad..d247e40 100644
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -280,6 +280,23 @@ struct MoeStreamConfig {
+     // run. Off by default so it is an A/B lever; excludes route_ahead (which adopts everything).
+     bool spec_adopt_selective = false;
+ 
++    // moe-phone (patch 0013): CONFIDENCE GATES on what --predict-prefetch speculates. Measured on the
++    // 15R with 0012 (results/2026-09-18/specadopt_summary.json): selective adoption made 7.0 useful
++    // speculative experts/token and cut the stall 45 -> 36 ms, but read 130.7 vs 119.8 MiB/token,
++    // and not one refuted guess could be cancelled (every one had started reading by its layer's
++    // load). So the refuted bytes are paid at ISSUE time, and the only place to stop paying them is
++    // the issue decision. Both gates only remove experts from the speculation list; nothing that is
++    // computed changes (lossless, like the prefetch itself). Defaults keep 0012 behaviour exactly.
++    //   predict_spec_rank R  (0 = off): speculate a predicted miss only if its PREDICTED rank among
++    //                        the top-k is < R (rank 0 = the highest predicted score).
++    //   predict_spec_margin M (< 0 = off): speculate only if (score - boundary) / sd >= M, where
++    //                        boundary is the score of the first predicted expert OUTSIDE the top-k
++    //                        and sd the standard deviation of that layer's predicted scores over all
++    //                        experts. A small margin means the expert sits at the top-k edge, where
++    //                        the stale input is most likely to have reordered it.
++    int predict_spec_rank = 0;
++    float predict_spec_margin = -1.0f;
++
+     // ── route-ahead: commit to the prediction (lossy; opt-in; experimental) ───────────
+     // With N > 0, decode routing at MoE layer L is REPLACED by the ranking layer L's own gate
+     // matrix produced on the hidden state N layers earlier in the same forward pass — the
+diff --git a/core/src/config.cpp b/core/src/config.cpp
+index e9998ae..dd83d7d 100644
+--- a/core/src/config.cpp
++++ b/core/src/config.cpp
+@@ -196,6 +196,13 @@ ValidationResult validate(const RunConfig & cfg) {
+             return fail("moe.spec_adopt_selective needs a guessing predictor to adopt from "
+                         "(predict_prefetch or prefetch_layers > 0)");
+         }
++        if ((m.predict_spec_rank != 0 || m.predict_spec_margin >= 0.0f) && !m.predict_prefetch) {
++            return fail("moe.predict_spec_rank / predict_spec_margin gate --predict-prefetch; "
++                        "they do nothing without it");
++        }
++        if (m.predict_spec_rank < 0 || m.predict_spec_rank > 8) {
++            return fail("moe.predict_spec_rank must be in [0, 8] (0 = off)");
++        }
+         if (m.spec_adopt_selective && m.route_ahead > 0) {
+             return fail("moe.spec_adopt_selective and moe.route_ahead are exclusive: route-ahead "
+                         "already adopts every speculative read, because its routing is committed");
+diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
+index 696f584..82d0fd3 100644
+--- a/core/src/engine/session.cpp
++++ b/core/src/engine/session.cpp
+@@ -742,6 +742,7 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
+     im.hook->set_expert_substitute(cfg.moe.substitute_lambda);
+     im.hook->set_predict_log(cfg.moe.predict_log);
+     im.hook->set_predict_prefetch(cfg.moe.predict_prefetch, cfg.moe.predict_spec_max);
++    im.hook->set_predict_gate(cfg.moe.predict_spec_rank, cfg.moe.predict_spec_margin); // moe-phone 0013
+     im.hook->set_route_ahead(cfg.moe.route_ahead);
+ 
+     llama_context_params cparams = llama_context_default_params();
+diff --git a/core/src/moe/router_hook.cpp b/core/src/moe/router_hook.cpp
+index f0ec178..3e1936b 100644
+--- a/core/src/moe/router_hook.cpp
++++ b/core/src/moe/router_hook.cpp
+@@ -321,6 +321,11 @@ void RouterHook::set_predict_prefetch(bool on, int spec_max) {
+     if (!on) predict_worker_stop();
+ }
+ 
++void RouterHook::set_predict_gate(int rank, float margin) {
++    pred_spec_rank_ = rank > 0 ? rank : 0;
++    pred_spec_margin_ = margin;
++}
++
+ void RouterHook::set_route_ahead(int n) {
+     route_ahead_ = n > 0 ? n : 0;
+     const int nl = n_layer_ > 0 ? n_layer_ : 0;
+@@ -344,6 +349,12 @@ void RouterHook::set_route_ahead(int n) {
+ 
+ RouterHook::~RouterHook() {
+     predict_worker_stop();
++    if (predict_prefetch_ && (pred_spec_rank_ > 0 || pred_spec_margin_ >= 0.0f))
++        std::fprintf(stderr, "bmoe: predict-gate: rank<%d margin>=%.2f | predicted misses %lld, cut by rank %lld, "
++                             "by margin %lld, by spec-max %lld, issued %lld\n",
++                     pred_spec_rank_, (double) pred_spec_margin_, gate_misses_.load(), gate_cut_rank_.load(),
++                     gate_cut_margin_.load(), gate_cut_cap_.load(),
++                     gate_misses_.load() - gate_cut_rank_.load() - gate_cut_margin_.load() - gate_cut_cap_.load());
+ }
+ 
+ void RouterHook::predict_worker_stop() {
+@@ -454,7 +465,13 @@ void RouterHook::predict_worker_main() {
+                         r.spec.push_back(r.ids[(size_t) k]);
+             }
+         } else {
+-            build_spec_lists(scores, job.nu, job.drop_frac, job.spec_max, job.resident, r.spec, r.keep);
++            GateCounts gc;
++            build_spec_lists(scores, job.nu, job.drop_frac, job.spec_max, job.resident, r.spec, r.keep,
++                             job.spec_rank, job.spec_margin, &gc);
++            gate_misses_.fetch_add(gc.misses);
++            gate_cut_rank_.fetch_add(gc.cut_rank);
++            gate_cut_margin_.fetch_add(gc.cut_margin);
++            gate_cut_cap_.fetch_add(gc.cut_cap);
+         }
+         r.ready = true;
+         std::lock_guard<std::mutex> lk(pred_mtx_);
+@@ -1049,12 +1066,30 @@ void RouterHook::build_spec_lists(const std::vector<float> & scores,
+                                   int spec_max,
+                                   const std::vector<uint8_t> & resident,
+                                   std::vector<int32_t> & spec,
+-                                  std::vector<int32_t> & keep) {
++                                  std::vector<int32_t> & keep,
++                                  int spec_rank,
++                                  float spec_margin,
++                                  GateCounts * gc) {
+     spec.clear();
+     keep.clear();
+     std::vector<int32_t> pred;
+-    rank_top_k(scores, nu, pred);
++    // moe-phone 0013: with the margin gate on, rank one past the top-k to get the boundary score
++    // (the best expert the prediction leaves OUT). The top-nu ranking itself is unchanged.
++    const bool use_margin = spec_margin >= 0.0f && nu < (int) scores.size();
++    rank_top_k(scores, use_margin ? nu + 1 : nu, pred);
+     if ((int) pred.size() < nu) return;
++    float boundary = 0.0f, sd = 0.0f;
++    if (use_margin && (int) pred.size() > nu) {
++        boundary = scores[(size_t) pred[(size_t) nu]];
++        double s1 = 0.0, s2 = 0.0;
++        for (float v : scores) {
++            s1 += v;
++            s2 += (double) v * v;
++        }
++        const double n = (double) scores.size(), mean = s1 / n, var = s2 / n - mean * mean;
++        sd = var > 0.0 ? (float) std::sqrt(var) : 0.0f;
++    }
++    pred.resize((size_t) nu);
+ 
+     float w[predict_max_k];
+     float mx = scores[(size_t) pred[0]];
+@@ -1069,10 +1104,24 @@ void RouterHook::build_spec_lists(const std::vector<float> & scores,
+     for (int k = 0; k < nu; ++k) {
+         if (k != 0 && drop_frac > 0.0f && !(sum > 0.0f && w[k] / sum >= thr)) continue;
+         const int32_t e = pred[k];
+-        if (e >= 0 && (size_t) e < resident.size() && resident[(size_t) e] != route_miss)
++        if (e >= 0 && (size_t) e < resident.size() && resident[(size_t) e] != route_miss) {
+             keep.push_back(e);
+-        else if ((int) spec.size() < spec_max)
++            continue;
++        }
++        // A predicted miss. The gates below only ever REMOVE it from the issue list.
++        if (gc) ++gc->misses;
++        if (spec_rank > 0 && k >= spec_rank) {
++            if (gc) ++gc->cut_rank;
++            continue;
++        }
++        if (use_margin && sd > 0.0f && (scores[(size_t) e] - boundary) / sd < spec_margin) {
++            if (gc) ++gc->cut_margin;
++            continue;
++        }
++        if ((int) spec.size() < spec_max)
+             spec.push_back(e);
++        else if (gc)
++            ++gc->cut_cap;
+     }
+ }
+ 
+@@ -1135,6 +1184,8 @@ void RouterHook::predict_at_topk(ggml_tensor * t, int il, int nu, int nt) {
+         pred_job_.nu = nu;
+         pred_job_.drop_frac = drop_frac_;
+         pred_job_.spec_max = pred_spec_max_;
++        pred_job_.spec_rank = pred_spec_rank_;     // moe-phone 0013
++        pred_job_.spec_margin = pred_spec_margin_; // moe-phone 0013
+         pred_job_.gate = wn;
+         pred_job_.row = pred_row_;
+         pred_job_.resident = pred_res_;
+diff --git a/core/src/moe/router_hook.h b/core/src/moe/router_hook.h
+index 7d20cf6..65e31b0 100644
+--- a/core/src/moe/router_hook.h
++++ b/core/src/moe/router_hook.h
+@@ -136,6 +136,9 @@ public:
+     // spec_max: how many predicted misses a layer may speculate (0 = retention only). Retention of
+     // predicted residents happens at every value — it costs zero bytes.
+     void set_predict_prefetch(bool on, int spec_max = 2);
++    // moe-phone 0013: confidence gates on the speculation list (see MoeStreamConfig). rank 0 and
++    // margin < 0 are off, which leaves build_spec_lists exactly as before.
++    void set_predict_gate(int rank, float margin);
+ 
+     // ── route-ahead: commit to the stale-gate prediction (lossy; see MoeStreamConfig) ─
+     // With n > 0, the expert selection of MoE layer L is REPLACED, during decode, by the ranking
+@@ -326,6 +329,11 @@ private:
+     std::vector<int32_t> spec_ids_;  // scratch: the filtered prediction handed to prefetch()
+     std::vector<uint8_t> pred_res_;  // scratch: residency of the prediction being filtered
+     int pred_spec_max_ = 2;          // speculated predicted misses per layer (0 = retention only)
++    int pred_spec_rank_ = 0;         // moe-phone 0013: speculate only predicted rank < this (0 = off)
++    float pred_spec_margin_ = -1.0f; // moe-phone 0013: min (score - boundary)/sd (< 0 = off)
++    // moe-phone 0013 counters, written by the prediction worker: predicted misses considered for
++    // speculation, and how many each gate removed (a miss failing both counts under rank).
++    std::atomic<long long> gate_misses_{0}, gate_cut_rank_{0}, gate_cut_margin_{0}, gate_cut_cap_{0};
+ 
+     // ── the prefetch's own prediction path (no barrier, GEMV off the eval thread) ─────
+     //
+@@ -353,6 +361,8 @@ private:
+         bool commit = false; // route-ahead: rank for commitment instead of building spec lists
+         float drop_frac = 0.0f;
+         int spec_max = 2;
++        int spec_rank = 0;          // moe-phone 0013
++        float spec_margin = -1.0f;  // moe-phone 0013
+         const ggml_tensor * gate = nullptr; // layer nl's gate matrix, snapshotted with the job
+         std::vector<float> row;             // the gate-input row, copied on the eval thread
+         std::vector<uint8_t> resident;      // residency bitmap of layer nl, snapshotted on the eval thread
+@@ -440,13 +450,17 @@ private:
+         const std::vector<int32_t> & pred, const int32_t * actual, int k, PredictorStats & layer, PredictorStats & agg);
+     // From a full score vector: the top-nu ranking, softmax-filtered against the drop threshold,
+     // split into misses to speculate (capped) and residents to retain.
++    struct GateCounts { long long misses = 0, cut_rank = 0, cut_margin = 0, cut_cap = 0; }; // moe-phone 0013
+     static void build_spec_lists(const std::vector<float> & scores,
+                                  int nu,
+                                  float drop_frac,
+                                  int spec_max,
+                                  const std::vector<uint8_t> & resident,
+                                  std::vector<int32_t> & spec,
+-                                 std::vector<int32_t> & keep);
++                                 std::vector<int32_t> & keep,
++                                 int spec_rank = 0,
++                                 float spec_margin = -1.0f,
++                                 GateCounts * gc = nullptr);
+     void predict_at_logits(ggml_tensor * logits, int il);
+     void score_layer(int il, const int32_t * actual, int nu);
+     void predict_at_topk(ggml_tensor * t, int il, int nu, int nt); // watchdog + job submission
