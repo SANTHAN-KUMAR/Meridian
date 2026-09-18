@@ -184,10 +184,10 @@ int main(int argc, char ** argv) {
                 if (gx_dispatch(g, 0, it & 1, 8, use, x.data(), out.data()) || gx_wait(g)) { printf("BENCH status=warmup_error\n"); return 1; }
             }
         }
-        struct Cell { int dt, k; std::vector<double> t, td; long it = 0; };
+        struct Cell { int dt, k; std::vector<double> t, td, t1, tg, t2; long it = 0; };
         std::vector<Cell> cells;
         for (int dt : downs)
-            for (int k : ks) cells.push_back(Cell{dt, k, {}, {}});
+            for (int k : ks) cells.push_back(Cell{dt, k, {}, {}, {}, {}, {}});
         const int per_round = 10, rounds = (iters + per_round - 1) / per_round;
         for (int r = 0; r < rounds; r++)
             for (size_t ci = 0; ci < cells.size(); ci++) {
@@ -204,17 +204,22 @@ int main(int argc, char ** argv) {
                     gx_last_timing(g, &dn, &hn);
                     c.t.push_back(dtm);
                     c.td.push_back(dn / 1e6);
+                    uint64_t k1 = 0, gp = 0, k2 = 0;
+                    gx_last_timing_split(g, &k1, &gp, &k2);
+                    c.t1.push_back(k1 / 1e6); c.tg.push_back(gp / 1e6); c.t2.push_back(k2 / 1e6);
                 }
             }
         for (Cell & c : cells) {
             std::sort(c.t.begin(), c.t.end());
             std::sort(c.td.begin(), c.td.end());
+            for (auto * v : {&c.t1, &c.tg, &c.t2}) std::sort(v->begin(), v->end());
             const double med = c.t[c.t.size() / 2];
             const double bytes = (double) c.k * (2 * GU + DN[c.dt]);
             printf("BENCH spin=%d variant=%d down=%s k=%d n=%zu median_ms=%.4f p10_ms=%.4f p90_ms=%.4f GBps_at_median=%.2f "
-                   "device_median_ms=%.4f device_p90_ms=%.4f\n", spin, variant, c.dt ? "Q4_1" : "Q4_0", c.k, c.t.size(), med,
-                   c.t[c.t.size() / 10], c.t[c.t.size() * 9 / 10], bytes / (med / 1e3) / 1e9, c.td[c.td.size() / 2],
-                   c.td[c.td.size() * 9 / 10]);
+                   "device_median_ms=%.4f device_p90_ms=%.4f k1_median_ms=%.4f gap_median_ms=%.4f k2_median_ms=%.4f\n", spin, variant,
+                   c.dt ? "Q4_1" : "Q4_0", c.k, c.t.size(), med, c.t[c.t.size() / 10], c.t[c.t.size() * 9 / 10],
+                   bytes / (med / 1e3) / 1e9, c.td[c.td.size() / 2], c.td[c.td.size() * 9 / 10], c.t1[c.t1.size() / 2],
+                   c.tg[c.tg.size() / 2], c.t2[c.t2.size() / 2]);
         }
         fflush(stdout);
         const gx_stats st = gx_get_stats(g);

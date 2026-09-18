@@ -142,6 +142,9 @@ uint32_t gx_last_risk_mask(const gx_ctx * g);
  * end from OpenCL profiling events (0 unless gx_params.profile), host_ns = gx_dispatch entry to gx_wait
  * return. Returns 0, or -1 if no dispatch has completed. */
 int  gx_last_timing(const gx_ctx * g, uint64_t * device_ns, uint64_t * host_ns);
+/* The same dispatch's device time split (profile = 1): kernel 1 (gate, up, SwiGLU, Q8 of h), the gap between the
+ * kernels, kernel 2 (down). Returns 0, or -1 if no dispatch has completed. */
+int  gx_last_timing_split(const gx_ctx * g, uint64_t * k1_ns, uint64_t * gap_ns, uint64_t * k2_ns);
 
 /* Counters for telemetry (CLAUDE.md §6.3). */
 typedef struct gx_stats {

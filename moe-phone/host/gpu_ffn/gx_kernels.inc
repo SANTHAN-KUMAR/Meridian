@@ -271,7 +271,7 @@ kernel void gx_gate_up_row(global const uchar * w0, global const uchar * w1, glo
     const int row = get_group_id(0) * 64 + t;
     for (int i = t; i < NBX; i += 64) {
         ldx[i] = h2f(((global const ushort *) (xq + i * YB0))[0]);
-        for (int b = 0; b < 32; b++) lx[i * 32 + b] = (char) xq[i * YB0 + 2 + b];
+        { global const char * src = (global const char *) (xq + i * YB0 + 2); vstore16(vload16(0, src), 0, lx + i * 32); vstore16(vload16(1, src), 1, lx + i * 32); }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     global const uchar * W = pick(s, w0, w1, w2, w3, w4, w5, w6, w7);
@@ -312,7 +312,7 @@ kernel void gx_down_row(global const uchar * w0, global const uchar * w1, global
     for (int i = t; i < NBH; i += 64) {
         ld[i] = h2f(((global const ushort *) (Y + i * YB1))[0]);
         ls[i] = h2f(((global const ushort *) (Y + i * YB1))[1]);
-        for (int b = 0; b < 32; b++) ly[i * 32 + b] = (char) Y[i * YB1 + 4 + b];
+        { global const char * src = (global const char *) (Y + i * YB1 + 4); vstore16(vload16(0, src), 0, ly + i * 32); vstore16(vload16(1, src), 1, ly + i * 32); }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     const int qb = dt == DT_Q4_1 ? QB1 : QB0, qo = dt == DT_Q4_1 ? 4 : 2, bias = dt == DT_Q4_1 ? 0 : 8;
@@ -372,7 +372,7 @@ kernel void gx_gate_up_soa(global const uchar * w0, global const uchar * w1, glo
     if (t == 0) lrisk = 0;
     for (int i = t; i < NBX; i += 64) {
         ldx[i] = h2f(((global const ushort *) (xq + i * YB0))[0]);
-        for (int b = 0; b < 32; b++) lx[i * 32 + b] = (char) xq[i * YB0 + 2 + b];
+        { global const char * src = (global const char *) (xq + i * YB0 + 2); vstore16(vload16(0, src), 0, lx + i * 32); vstore16(vload16(1, src), 1, lx + i * 32); }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     global const uchar * W = pick(s, w0, w1, w2, w3, w4, w5, w6, w7);
@@ -411,7 +411,7 @@ kernel void gx_down_soa(global const uchar * w0, global const uchar * w1, global
     for (int i = t; i < NBH; i += 64) {
         ld[i] = h2f(((global const ushort *) (Y + i * YB1))[0]);
         ls[i] = h2f(((global const ushort *) (Y + i * YB1))[1]);
-        for (int b = 0; b < 32; b++) ly[i * 32 + b] = (char) Y[i * YB1 + 4 + b];
+        { global const char * src = (global const char *) (Y + i * YB1 + 4); vstore16(vload16(0, src), 0, ly + i * 32); vstore16(vload16(1, src), 1, ly + i * 32); }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     const int bias = dt == DT_Q4_1 ? 0 : 8;
@@ -459,7 +459,7 @@ kernel void gx_gate_up_tiled(global const uchar * w0, global const uchar * w1, g
     if (t == 0) lrisk = 0;
     for (int i = t; i < NBX; i += 64) {
         ldx[i] = h2f(((global const ushort *) (xq + i * YB0))[0]);
-        for (int b = 0; b < 32; b++) lx[i * 32 + b] = (char) xq[i * YB0 + 2 + b];
+        { global const char * src = (global const char *) (xq + i * YB0 + 2); vstore16(vload16(0, src), 0, lx + i * 32); vstore16(vload16(1, src), 1, lx + i * 32); }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     global const uchar * W = pick(s, w0, w1, w2, w3, w4, w5, w6, w7);
@@ -498,7 +498,7 @@ kernel void gx_down_tiled(global const uchar * w0, global const uchar * w1, glob
     for (int i = t; i < NBH; i += 64) {
         ld[i] = h2f(((global const ushort *) (Y + i * YB1))[0]);
         ls[i] = h2f(((global const ushort *) (Y + i * YB1))[1]);
-        for (int b = 0; b < 32; b++) ly[i * 32 + b] = (char) Y[i * YB1 + 4 + b];
+        { global const char * src = (global const char *) (Y + i * YB1 + 4); vstore16(vload16(0, src), 0, ly + i * 32); vstore16(vload16(1, src), 1, ly + i * 32); }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     const int bias = dt == DT_Q4_1 ? 0 : 8;

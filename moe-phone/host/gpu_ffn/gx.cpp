@@ -155,7 +155,7 @@ struct gx_ctx {
     std::map<std::pair<cl_mem, size_t>, int> slot_dtype;      // variant 2: down type each slot was repacked with
     // timing of the pending / last dispatch
     cl_event ev_first = nullptr, ev_last = nullptr;
-    uint64_t t_dispatch = 0, last_device_ns = 0, last_host_ns = 0;
+    uint64_t t_dispatch = 0, last_device_ns = 0, last_host_ns = 0, last_k1_ns = 0, last_gap_ns = 0, last_k2_ns = 0;
     bool have_last = false;
 };
 
@@ -332,11 +332,18 @@ extern "C" int gx_wait(gx_ctx * g) {
     const uint64_t t1 = now_ns();
     g->pending = false;
     uint64_t dev_ns = 0;
+    uint64_t k1_ns = 0, gap_ns = 0, k2_ns = 0;
     if (g->ev_first && g->ev_last && e == CL_SUCCESS) {
-        cl_ulong a = 0, b = 0;
+        cl_ulong a = 0, a1 = 0, b0 = 0, b = 0;   // kernel 1 start/end, kernel 2 start/end
         if (p_clGetEventProfilingInfo(g->ev_first, CL_PROFILING_COMMAND_START, sizeof a, &a, nullptr) == CL_SUCCESS &&
-            p_clGetEventProfilingInfo(g->ev_last, CL_PROFILING_COMMAND_END, sizeof b, &b, nullptr) == CL_SUCCESS && b >= a)
+            p_clGetEventProfilingInfo(g->ev_first, CL_PROFILING_COMMAND_END, sizeof a1, &a1, nullptr) == CL_SUCCESS &&
+            p_clGetEventProfilingInfo(g->ev_last, CL_PROFILING_COMMAND_START, sizeof b0, &b0, nullptr) == CL_SUCCESS &&
+            p_clGetEventProfilingInfo(g->ev_last, CL_PROFILING_COMMAND_END, sizeof b, &b, nullptr) == CL_SUCCESS && b >= a) {
             dev_ns = b - a;
+            k1_ns = a1 >= a ? a1 - a : 0;
+            gap_ns = b0 >= a1 ? b0 - a1 : 0;
+            k2_ns = b >= b0 ? b - b0 : 0;
+        }
     }
     for (cl_event * ev : {&g->ev_first, &g->ev_last, &g->ev_read})
         if (*ev) { p_clReleaseEvent(*ev); *ev = nullptr; }
@@ -350,6 +357,7 @@ extern "C" int gx_wait(gx_ctx * g) {
     g->last_risk = mask;
     if (mask) { g->st.risk_dispatches++; g->st.risk_slots += (uint64_t) __builtin_popcount(mask); }
     g->last_device_ns = dev_ns;
+    g->last_k1_ns = k1_ns; g->last_gap_ns = gap_ns; g->last_k2_ns = k2_ns;
     g->last_host_ns = t1 - g->t_dispatch;
     g->have_last = true;
     g->st.timed_dispatches++;
@@ -576,5 +584,14 @@ extern "C" int gx_unpack_expert(const gx_ctx * g, const gx_slot * s, const void 
     if (dst_gate) unpack_matrix(base, (uint8_t *) dst_gate, nf, ne / 32, 0, tl);
     if (dst_up) unpack_matrix(base + (s->off_up - s->off_gate), (uint8_t *) dst_up, nf, ne / 32, 0, tl);
     if (dst_down) unpack_matrix(base + (s->off_down - s->off_gate), (uint8_t *) dst_down, ne, nf / 32, down_type == GX_DOWN_Q4_1, tl);
+    return 0;
+}
+
+extern "C" int gx_last_timing_split(const gx_ctx * g, uint64_t * k1_ns, uint64_t * gap_ns, uint64_t * k2_ns) {
+    std::lock_guard<std::mutex> lk(const_cast<gx_ctx *>(g)->mu);
+    if (!g->have_last) return -1;
+    if (k1_ns) *k1_ns = g->last_k1_ns;
+    if (gap_ns) *gap_ns = g->last_gap_ns;
+    if (k2_ns) *k2_ns = g->last_k2_ns;
     return 0;
 }
