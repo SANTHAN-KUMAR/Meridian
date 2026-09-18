@@ -1,0 +1,9 @@
+2026-09-18T22:51:41+05:30 0019 pushed: cb3e1f3a8df8a720
+2026-09-18T22:52:07+05:30 smoke: bmoe: swap-guard: on (mode 2) Okay, the user just saidbmoe: swap-guard: checks 2347 swapped-hits 0 (re-read) guard 72.130 ms total bmoe: swap-guard: checks 2347 swapped-hits 0 (re-read) guard 72.130 ms total generation: 8 tokens, 0.231 s/token (4.334 tok/s) 
+2026-09-18T22:52:07+05:30 cool_gate waited 0s, status 0; bmoe_swapguard.sh start
+2026-09-18T22:53:33+05:30 FATAL: phone busy: [bmoe-cli]
+2026-09-18T22:55:18+05:30 0019 pushed: cb3e1f3a8df8a720
+2026-09-18T22:55:44+05:30 smoke: bmoe: swap-guard: on (mode 1) Okay, the user just saidbmoe: swap-guard: checks 2373 swapped-hits 0 (re-read) guard 32.578 ms total bmoe: swap-guard: checks 2373 swapped-hits 0 (re-read) guard 32.578 ms total generation: 8 tokens, 0.218 s/token (4.598 tok/s) 
+2026-09-18T22:55:44+05:30 cool_gate waited 0s, status 0; bmoe_swapguard.sh start
+2026-09-18T23:42:57+05:30 pulled /data/local/tmp/moe-stream/bmoe_swapguard_20260918_2255/
+2026-09-18T23:42:59+05:30 phone restored

@@ -1,0 +1,191 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18/bmoe_swapguard/bmoe_swapguard_20260918_2255",
+ "arms": {
+  "base": {
+   "rows": [
+    {
+     "file": "base_rep1a.csv",
+     "majflt_per_token": 62.46875,
+     "swap_mib": 373.9,
+     "mem_available_mib": 1505.8,
+     "compute_ms": 82.8395
+    },
+    {
+     "file": "base_rep1b.csv",
+     "majflt_per_token": 70.26785714285714,
+     "swap_mib": 374.5,
+     "mem_available_mib": 1549.4,
+     "compute_ms": 82.37950000000001
+    },
+    {
+     "file": "base_rep2a.csv",
+     "majflt_per_token": 44.379464285714285,
+     "swap_mib": 375.6,
+     "mem_available_mib": 1298.9,
+     "compute_ms": 92.63149999999999
+    },
+    {
+     "file": "base_rep2b.csv",
+     "majflt_per_token": 23.598214285714285,
+     "swap_mib": 374.5,
+     "mem_available_mib": 1347.8,
+     "compute_ms": 90.1405
+    },
+    {
+     "file": "base_rep3a.csv",
+     "majflt_per_token": 23.285714285714285,
+     "swap_mib": 372.0,
+     "mem_available_mib": 1412.4,
+     "compute_ms": 86.75049999999999
+    },
+    {
+     "file": "base_rep3b.csv",
+     "majflt_per_token": 24.941964285714285,
+     "swap_mib": 374.6,
+     "mem_available_mib": 1459.1,
+     "compute_ms": 89.1265
+    },
+    {
+     "file": "base_rep4a.csv",
+     "majflt_per_token": 24.464285714285715,
+     "swap_mib": 375.3,
+     "mem_available_mib": 1279.5,
+     "compute_ms": 87.399
+    },
+    {
+     "file": "base_rep4b.csv",
+     "majflt_per_token": 26.714285714285715,
+     "swap_mib": 376.2,
+     "mem_available_mib": 1245.1,
+     "compute_ms": 92.73599999999999
+    },
+    {
+     "file": "base_rep5a.csv",
+     "majflt_per_token": 22.535714285714285,
+     "swap_mib": 372.1,
+     "mem_available_mib": 1404.7,
+     "compute_ms": 88.2635
+    },
+    {
+     "file": "base_rep5b.csv",
+     "majflt_per_token": 27.870535714285715,
+     "swap_mib": 371.7,
+     "mem_available_mib": 1403.8,
+     "compute_ms": 89.312
+    },
+    {
+     "file": "base_rep6a.csv",
+     "majflt_per_token": 27.995535714285715,
+     "swap_mib": 374.8,
+     "mem_available_mib": 1432.5,
+     "compute_ms": 92.149
+    },
+    {
+     "file": "base_rep6b.csv",
+     "majflt_per_token": 29.196428571428573,
+     "swap_mib": 371.0,
+     "mem_available_mib": 1450.2,
+     "compute_ms": 88.088
+    }
+   ],
+   "n": 12,
+   "majflt_per_token_median": 27.292410714285715,
+   "swap_mib_median": 374.5,
+   "mem_available_mib_median": 1408.5500000000002,
+   "compute_ms_median": 88.695
+  },
+  "stack": {
+   "rows": [
+    {
+     "file": "stack_rep1a.csv",
+     "majflt_per_token": 23.174107142857142,
+     "swap_mib": 373.8,
+     "mem_available_mib": 1505.1,
+     "compute_ms": 82.20500000000001
+    },
+    {
+     "file": "stack_rep1b.csv",
+     "majflt_per_token": 21.821428571428573,
+     "swap_mib": 374.2,
+     "mem_available_mib": 1541.3,
+     "compute_ms": 86.62049999999999
+    },
+    {
+     "file": "stack_rep2a.csv",
+     "majflt_per_token": 22.446428571428573,
+     "swap_mib": 373.8,
+     "mem_available_mib": 1434.2,
+     "compute_ms": 92.759
+    },
+    {
+     "file": "stack_rep2b.csv",
+     "majflt_per_token": 23.392857142857142,
+     "swap_mib": 373.5,
+     "mem_available_mib": 1409.4,
+     "compute_ms": 88.6625
+    },
+    {
+     "file": "stack_rep3a.csv",
+     "majflt_per_token": 23.991071428571427,
+     "swap_mib": 373.5,
+     "mem_available_mib": 1465.1,
+     "compute_ms": 90.3235
+    },
+    {
+     "file": "stack_rep3b.csv",
+     "majflt_per_token": 23.96875,
+     "swap_mib": 373.1,
+     "mem_available_mib": 1303.9,
+     "compute_ms": 88.6135
+    },
+    {
+     "file": "stack_rep4a.csv",
+     "majflt_per_token": 25.169642857142858,
+     "swap_mib": 375.2,
+     "mem_available_mib": 1443.3,
+     "compute_ms": 89.0355
+    },
+    {
+     "file": "stack_rep4b.csv",
+     "majflt_per_token": 24.276785714285715,
+     "swap_mib": 374.0,
+     "mem_available_mib": 1349.0,
+     "compute_ms": 89.50450000000001
+    },
+    {
+     "file": "stack_rep5a.csv",
+     "majflt_per_token": 23.022321428571427,
+     "swap_mib": 373.2,
+     "mem_available_mib": 1423.6,
+     "compute_ms": 89.465
+    },
+    {
+     "file": "stack_rep5b.csv",
+     "majflt_per_token": 22.745535714285715,
+     "swap_mib": 373.7,
+     "mem_available_mib": 1421.7,
+     "compute_ms": 90.9105
+    },
+    {
+     "file": "stack_rep6a.csv",
+     "majflt_per_token": 22.955357142857142,
+     "swap_mib": 373.0,
+     "mem_available_mib": 1438.4,
+     "compute_ms": 89.956
+    },
+    {
+     "file": "stack_rep6b.csv",
+     "majflt_per_token": 22.8125,
+     "swap_mib": 375.0,
+     "mem_available_mib": 1373.4,
+     "compute_ms": 92.7805
+    }
+   ],
+   "n": 12,
+   "majflt_per_token_median": 23.098214285714285,
+   "swap_mib_median": 373.75,
+   "mem_available_mib_median": 1428.9,
+   "compute_ms_median": 89.48475
+  }
+ }
+}

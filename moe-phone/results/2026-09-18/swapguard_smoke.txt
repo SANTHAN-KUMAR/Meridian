@@ -1,0 +1,4 @@
+bmoe: swap-guard: on (mode 1)
+Okay, the user just saidbmoe: swap-guard: checks 2373 swapped-hits 0 (re-read) guard 32.578 ms total
+bmoe: swap-guard: checks 2373 swapped-hits 0 (re-read) guard 32.578 ms total
+generation: 8 tokens, 0.218 s/token (4.598 tok/s)

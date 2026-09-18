@@ -976,6 +976,11 @@ CLAIMS = [
          text="the per-layer cap holds the device near its rate share: 2.84 experts per dispatch at cap 3 (no budget), against 4.32 with the cap at 8",
          artifact="gtier_policy.json", expected=2.84, tol=0.005,
          value=lambda A: A["gpol"]["rows"]["k3"]["experts_per_dispatch"]),
+    # ------------------------- SWAP GUARD ON THE PHONE (device/bmoe_swapguard.sh, mode 1; gates/stack_summary.py + fault_summary.py)
+    dict(id="swapguard_phone_mgmt",
+         text="on the phone (Qwen3, stack config, ABBA x6, 23/24 rows kept, text identical in 24/24), the sampled swap guard costs +2.3 ms/token of cache management (decisive, 6/6) and saves 2.6 ms/token of stall (decisive, 5/6); compute +2.3 ms and decode -1.6% are not resolved: no net gain at the phone's mild swap level (~25 major faults/token, lowered 15% by the guard in every repeat). The guard stays off by default",
+         artifact="swapguard_summary.json", expected=2.333, tol=0.01,
+         value=lambda A: A["sgp"]["results"]["mgmt_ms"]["mean_diff"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1289,6 +1294,7 @@ def load_all():
         "sgl": load("swapguard_laptop.json"),
         "gm4": load("gtier_m4.json"),
         "gpol": load("gtier_policy.json"),
+        "sgp": load("swapguard_summary.json"),
     }
 
 
