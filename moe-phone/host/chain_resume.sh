@@ -113,6 +113,14 @@ log "thread_sweep done"
 sh "$HOSTDIR/app_vs_shell.sh" 3 >> "$LOG" 2>&1
 log "app_vs_shell done"
 
+# 6. the two questions an ON-DEVICE TASK AGENT turns on, which none of the rows above answer:
+#    prefill against prompt length (an agent pays a screen's worth of context per step, and every
+#    prefill number we have came from a 26-token prompt), and whether the engine can stay alive while
+#    the app it would be driving is in the foreground.
+device_campaign bmoe_prefill.sh 2 bmoe_prefill 'bmoe_prefill_*/'
+sh "$HOSTDIR/coresidency.sh" 2 >> "$LOG" 2>&1
+log "coresidency done"
+
 stop_campaigns
 adb shell 'cd /data/local/tmp/moe-stream && echo "chain_resume: bmoe_mem $(date)" >> phone_queue.log && (setsid nohup sh bmoe_mem.sh 3 > bmoe_mem_nohup.log 2>&1 < /dev/null &)' >/dev/null 2>&1
 log "bmoe_mem launched"
