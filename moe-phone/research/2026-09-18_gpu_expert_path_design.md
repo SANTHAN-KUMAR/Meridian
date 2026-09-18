@@ -1,0 +1,138 @@
+# GPU expert path — engineering design (2026-09-18)
+
+Status: **design, no code yet.** Nothing here is a measured claim unless it cites a claim id from
+`gates/claims_check.py`. The phone is resting: every milestone below up to M5 is verified on the laptop.
+M6 is the first phone step, and it waits until the user releases the phone.
+
+## 1. Goal and the budget it has to meet
+
+The target is Qwen3-30B-A3B, unmodified, at 10 tok/s: **100 ms per token**. The measured terms today:
+
+| term | now | source |
+|---|---|---|
+| compute: dense part (0.82 GB/token) + experts (1.02 GB/token) | ~92 ms at status-1 caps | `densemap_sensitivity_compute` (anon rows), `gguf_active_qwen_olmoe.json` |
+| stall + cache management (stack) | ~55–60 ms | `stack_stall_mgmt_ms` |
+| stall saving from I/O lanes on cpu0,1,6,7 | −12.3 ms | `cores_3c_stall` |
+
+The one lever that moves compute on this phone is **putting a second device on the expert matmuls,
+concurrently with the CPU**:
+- The GPU zero-copy benchmark measured CPU 22.5 + GPU 13.0 = 35.5 GB/s, 1.54× the CPU alone, with proven
+  overlap, zero-copy reads and correct results (teammate commit 35c4c16).
+- Applied to the expert bytes only (1.02 GB/token), rate-proportional splitting takes the expert matmuls
+  from ~44 ms to ~29 ms: **about −15 ms/token**, before sync costs.
+- A faster GPU kernel raises that. Moving the dense attention matmuls to the GPU as well is the
+  extension (§8).
+
+Projection, not a measurement: 92 − 15 compute + 45 stall/mgmt ≈ 122 ms, about 8.2 tok/s with experts only.
+About 9–10 tok/s needs a GPU kernel at CPU speed and/or attention on the GPU. The design has to make
+both extensions cheap.
+
+## 2. Architecture in one paragraph
+
+Per MoE layer and decode token, the router selects 8 experts. The engine splits them into two sets:
+- **G:** experts whose three projections are already resident in GPU-visible memory. The GPU computes
+  their whole FFN (gate, up, SwiGLU, down) in ONE dispatch.
+- **C:** the rest, including every miss still being read. The CPU computes them through ggml's normal
+  `MUL_MAT_ID`, which has been told to skip G.
+
+When the CPU finishes the layer's down projection, one thread waits for the GPU and writes G's down
+outputs into the `MUL_MAT_ID` destination rows. Every op after that (expert weighting, sum) is untouched
+ggml. Cost: one GPU dispatch and one wait per layer, i.e. 48 per token.
+
+## 3. Components and ownership
+
+| # | component | owner | where |
+|---|---|---|---|
+| A | **GPU-visible expert pool**: fixed-size blocks allocated with `CL_MEM_ALLOC_HOST_PTR` and mapped once (persistent CPU pointer). Slots are handed out like the slot arena (patch 0008). O_DIRECT reads go straight into a slot. | me | engine `expert_stream_source`, new `gpu_pool.{h,cpp}` |
+| B | **ggml-cpu hooks** (fork patch): `mmid_begin` (thread 0, before the row-grouping barrier; returns a per-expert skip mask), a skip test in the expert loop, and `mmid_end` (thread 0, after its own chunks; waits for the GPU and fills G's dst rows) | me | `ggml-cpu.c`, `ggml-cpu.h` |
+| C | **Fused expert-FFN OpenCL kernel + C API** (no ggml dependency): `gx_init`, `gx_dispatch(layer, k, slots[], x, out)`, `gx_wait`; native on-flash layout (Q4_0 gate/up, Q4_1 down) | teammate | `moe-phone/host/gpu_ffn/` → linked into the engine |
+| D | **Assignment policy**: which selected experts go to G. Resident ones only, count proportional to measured rates (≈3 of 8 at 13 vs 23 GB/s), `--gpu-experts K|auto`, 0 = off | me | engine |
+| E | **Telemetry**: per token, experts on the GPU, dispatch→ready latency, wait time charged to the CPU, GPU bytes; one shutdown summary line | me | engine CSV + stderr |
+| F | **Correctness harness** (laptop) | me + teammate | `gates/`, `host/` |
+
+## 4. Data flow for one layer (decode, n_tokens = 1)
+
+1. **Routing node (existing hook).** `ffn_moe_topk-<il>` is observed and `load_layer` stages misses as
+   today.
+2. **Gate `MUL_MAT_ID`, `mmid_begin` on thread 0.**
+   - Read ids. For each selected expert that is resident in the pool, including its gate/up/down slots,
+     pick up to K for G.
+   - Call `gx_dispatch` with x = src1 (the normalised hidden state, fp32, 2048 floats) and the G slots.
+     It returns immediately.
+   - Set skip bits for G.
+   - This happens before the existing barrier, so every thread sees the mask.
+3. **Gate and up `MUL_MAT_ID`.** Threads skip G's experts. G's rows in dst are left unwritten; the
+   engine zero-fills them in `mmid_begin` so no NaN can propagate.
+4. **SwiGLU (ggml GLU op).** Runs over all 8 slots. G's slots compute on zeros, which is harmless:
+   down skips them.
+5. **Down `MUL_MAT_ID`.** Threads skip G. On thread 0, `mmid_end` calls `gx_wait` and copies G's 2048-float
+   outputs into dst rows `(slot id, token 0)`. Those rows are disjoint from every row a CPU thread
+   writes, so no barrier is needed.
+6. **Weighting and sum:** unchanged ggml ops read a complete dst.
+
+Prefill (n_tokens > 1) keeps the CPU path. `mmid_begin` returns an empty set.
+
+## 5. Why a block pool, not the current per-layer reservation
+
+The LRU cache reserves one virtual buffer per (layer, projection) sized for all 128 experts, and rebinds
+`tensor->data` to it (`expert_stream_source.cpp:185-207`). Three facts rule that layout out for the GPU:
+1. **Zero-copy.** The teammate's benchmark found `CL_MEM_USE_HOST_PTR` on ordinary memory is **not**
+   zero-copy on Adreno (copy-speed sync, stale data without it). Only `CL_MEM_ALLOC_HOST_PTR`
+   allocations are.
+2. **Size.** A GPU allocation cannot reserve 128 × slice per layer, which is the model's full 16 GB of
+   expert bytes.
+3. **The data hook already exists.** The slot arena already addresses experts through
+   `ggml_cpu_set_expert_data_hook`, so ggml reads a slot wherever it lives.
+
+**Known risk carried in:** the slot arena measured compute +14 ms/token on the phone (`arena2_compute_delta_ms`),
+cause unresolved. The OLMoE counters point at page faults (48–76 major faults/token in the engine vs 0.4
+plain, `ovhmech_*` rows). Anonymous slots can be compressed into zram; GPU-mapped memory is normally pinned,
+so a GPU-visible pool may REMOVE that penalty rather than inherit it. M6's first phone check measures
+exactly this before anything else.
+
+## 6. Numerics (what "lossless" means here)
+
+The model is unmodified: the same weights, the same operations, the same routing. The GPU's float rounding
+differs from the CPU's:
+- ggml-cpu quantizes the activation to Q8_0/Q8_1 before an integer dot.
+- The GPU kernel may not, and its exp in SiLU differs.
+
+So bit-identical output is **not** promised. It is a stretch goal for component C: mirror ggml's
+activation quantization and block order. Fidelity is verified, not assumed:
+- On the laptop (OLMoE, and Qwen3 layer slices, never the whole model): per-layer max relative error of the
+  FFN output vs the CPU path.
+- Top-1 agreement and mean KL of the final logits over a fixed prompt set.
+- Pre-stated acceptance: mean KL < 1e-4 and top-1 agreement ≥ 99.5%. Those are the ranges at which
+  llama.cpp's own CPU and GPU backends are treated as equivalent. If the result is worse, it is a defect,
+  not a tradeoff.
+
+## 7. Milestones and acceptance tests
+
+Each one ships with a test whose expected value is fixed by construction, not by the result (CLAUDE.md §9.1).
+
+| M | deliverable | acceptance (laptop unless stated) |
+|---|---|---|
+| M1 | Hooks B, plus a **CPU stand-in for the GPU** that computes G's FFN with ggml-cpu's own routines | A `MUL_MAT_ID` graph with and without the hooks, stand-in on: dst must be **bit-identical**. This proves the plumbing: skip mask, row mapping, end-fill, thread safety, over 1000 random id sets, k = 0..8 |
+| M2 | Pool A (OpenCL `ALLOC_HOST_PTR` blocks, persistent map) behind the existing arena interface, with an anon fallback | The engine on OLMoE with the pool: text identical to the non-pool arena and to plain LRU, 128 tokens |
+| M3 | Kernel C and its API | vs ggml-cpu on random and real Qwen3 expert slices: max relative error reported; within the §6 bound. A laptop OpenCL functional run only (the NVIDIA driver copies, so no speed claim) |
+| M4 | Policy D, telemetry E, and C wired into `mmid_begin`/`mmid_end` | OLMoE end to end on the laptop: logits KL and top-1 vs CPU-only within §6. Counters: G per token equals K when enough experts are resident |
+| M5 | Failure paths: GPU init fails → CPU-only with a counted warning; a dispatch or wait error → that layer falls back to the CPU and it is counted (CLAUDE.md §6.3); `--gpu-experts 0` is byte-identical to today | Fault injection on the laptop: forced init and dispatch failures produce correct text plus a nonzero fallback counter |
+| M6 | Phone (when released): pool pinning and arena-penalty check, then per-dispatch latency, then the pre-registered A/B (K = 0 vs auto; primary compute ms/token; guard: CPU caps and stall) | Pre-registered before the run, as for every campaign |
+
+## 8. Extensions that the design keeps open
+
+- **Attention on the GPU:** the same pool plus a dense GEMV dispatch at the attention matmuls; `--attn-device`
+  exists (patch 0009) but crosses ggml backends 192 times per token. A direct dispatch avoids that.
+- **Faster GPU kernel:** ggml-opencl's Adreno MoE kernels need a transposed layout (trans4). A layout
+  conversion at read time can be evaluated once M3 gives a baseline.
+- **Better split:** assign by measured per-layer GPU latency instead of a fixed K.
+
+## 9. Risks, each with how it is detected
+
+| risk | detection |
+|---|---|
+| Per-layer dispatch and wait latency eats the saving (48 per token) | M6 per-dispatch latency; telemetry E charges the CPU's wait to the token |
+| GPU heat lowers the CPU clock caps (shared skin-temperature budget) | M6 logs both CPU caps every second; the A/B's guard |
+| Pool memory is pinned and counts against LMK differently | M6 logs MemAvailable and swap; the budget auto-sizer must see the pool |
+| Driver limits (max single allocation, total mappable) | Queried at init, logged; the pool sizes its blocks from them |
+| Numerics exceed §6 | M3/M4 acceptance fails loudly; no speed number is reported from a failing build |
