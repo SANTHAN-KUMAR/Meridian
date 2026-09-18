@@ -1,0 +1,43 @@
+{
+ "source": "results/2026-09-16/traces_Qwen3-30B-A3B-q4_0-llamacpp.npz",
+ "tokens": 32768,
+ "train_tokens": 16384,
+ "cap": 3,
+ "rows": [
+  {
+   "tier_mib": 500,
+   "slots": 190,
+   "coverage": 0.20416736602783203,
+   "owned_per_layer": 1.6333389282226562,
+   "device_per_layer_capped": 1.5505917867024739
+  },
+  {
+   "tier_mib": 1000,
+   "slots": 380,
+   "coverage": 0.3187726338704427,
+   "owned_per_layer": 2.5501810709635415,
+   "device_per_layer_capped": 2.190293629964193
+  },
+  {
+   "tier_mib": 1500,
+   "slots": 571,
+   "coverage": 0.4138908386230469,
+   "owned_per_layer": 3.311126708984375,
+   "device_per_layer_capped": 2.5371971130371094
+  },
+  {
+   "tier_mib": 2000,
+   "slots": 761,
+   "coverage": 0.49056259791056317,
+   "owned_per_layer": 3.9245007832845054,
+   "device_per_layer_capped": 2.724384307861328
+  },
+  {
+   "tier_mib": 2500,
+   "slots": 952,
+   "coverage": 0.5556637446085612,
+   "owned_per_layer": 4.445309956868489,
+   "device_per_layer_capped": 2.8216985066731772
+  }
+ ]
+}
