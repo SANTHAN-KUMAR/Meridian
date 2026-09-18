@@ -39,12 +39,20 @@ run() {
   g=$(thermal_wait 30)
   mr=$(mem_ready 6500 120)
   echo "=== $tag $(date +%H:%M:%S) memavail=$(awk '/MemAvailable/{print $2}' /proc/meminfo) $mr BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
-  # sample memory while the run happens; the engine's own budget figure does not include arena slots
-  ( while :; do awk '/MemAvailable|SwapFree/{printf "%s ", $2}' /proc/meminfo; echo; sleep 2; done > "$O/$tag.mem" ) &
-  sampler=$!
-  ( cd $H/bmoe-i8mm-order2 && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" )
-  e=$?
-  kill $sampler 2>/dev/null
+  # Sample memory while the run happens (the engine's own budget figure does not include arena slots).
+  # The ENGINE runs in the background and the sampler loop in the foreground until it exits, so nothing is
+  # ever killed. The first version backgrounded the sampler and killed it after each row; under the phone's
+  # mksh, killing one background subshell makes the NEXT row's background job take the whole script down
+  # (SIGTERM to the process group, exit 143) -- which is why both earlier attempts at this campaign died
+  # right after their first row. Reproduced in isolation (killtest2.sh: row 1 survives, row 2 dies) and
+  # fixed pattern verified over four rows (killtest3.sh) before this was run.
+  ( cd $H/bmoe-i8mm-order2 && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" ) &
+  eng=$!
+  : > "$O/$tag.mem"
+  while kill -0 $eng 2>/dev/null; do
+    awk '/MemAvailable|SwapFree/{printf "%s ", $2}' /proc/meminfo >> "$O/$tag.mem"; echo >> "$O/$tag.mem"; sleep 2
+  done
+  wait $eng; e=$?
   mem_min=$(awk '{print $1}' "$O/$tag.mem" | sort -n | head -1)
   swap_min=$(awk '{print $2}' "$O/$tag.mem" | sort -n | head -1)
   echo "exit=$e AFTER $(thermal_state) memavail_min=$mem_min swapfree_min=$swap_min $(grep -hE 'generation:|moe-stream:|moe-cache:|slot-arena' "$O/$tag.out" "$O/$tag.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
