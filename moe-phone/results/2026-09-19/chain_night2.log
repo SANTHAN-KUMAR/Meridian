@@ -11,3 +11,6 @@
 2026-09-19T01:31:55+05:30 kgsl smoke ok=1 :: generation: 64 tokens, 0.183 s/token (5.477 tok/s) generation: 64 tokens, 0.156 s/token (6.409 tok/s) bmoe: slot-arena: slots 5408 reused 24497 blocks 169 (kgsl), kgsl 4605 MiB bmoe: slot-arena: slots 5408 reused 24497 blocks 169 (kgsl), kgsl 4605 MiB 
 2026-09-19T01:31:55+05:30 kgsl A/B start
 2026-09-19T01:32:54+05:30 [night3] start: waiting for the kgsl A/B
+2026-09-19T01:36:16+05:30 [night3] start (0022 engine): waiting for the kgsl A/B
+2026-09-19T02:08:28+05:30 [night3] kgsl A/B ended without DONE (/data/local/tmp/moe-stream/bmoe_kgsl_ab_20260919_0131/)
+2026-09-19T02:08:29+05:30 [night3] kgsl A/B pulled: /run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/bmoe_kgsl/bmoe_kgsl_ab_20260919_0131

@@ -39,6 +39,10 @@
 # 1.06 host / 0.72 device ms, k=1 0.58 / 0.27 ms; spin removes ~0.3 ms of host time per dispatch. Binary bmoe-i8mm-0021
 # (engine fix: repacked layouts for every variant >= 2; libgx HEAD refuses unrepacked slots). Smoke gate adds:
 # risk-recomputed experts <= 1% of device experts (checked by host/chain_night2.sh).
+# CHOICE REVISED 2026-09-19 02:12 (before any tier A/B row): GT_VARIANT=1, GT_SPIN=1, GT_BIN=bmoe-i8mm-0022 (libgx 58b13dd,
+# unrolled float4 accumulators, bit-exact). M6 run 5 (gx_m6_020545), k=3 spin, down Q4_0, host / device ms: v0 1.07/0.72,
+# v1 0.92/0.70, v3 1.00/0.64. v1 has the lowest host time (what the CPU waits on) and keeps the native layout (no repack on
+# promotion, no unpack on overflow). The A/B rule above is unchanged.
 #   GT_BIN=... GT_VARIANT=... sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
 set -u
 MODE=${1:-smoke}
