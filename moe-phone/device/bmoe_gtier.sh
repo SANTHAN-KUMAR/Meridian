@@ -52,6 +52,12 @@
 # 40 ms/token of host time, against compute +56..+120 ms/token. At cap 8 every owned expert is dispatched to the device
 # during decode. Only prefill still read-maps. Laptop: overflow 644 -> 116. The same A/B rule, keep rule and outcomes
 # apply; binary bmoe-i8mm-0023 = 0022 + host-time counters (overflow map / unmap / promotion ms), gx still at 58b13dd.
+# REVISION 2026-09-19 04:55 (before any row of the rerun): tonight's A/B (bmoe_gtier_ab_20260919_0235) ran with
+# wakefulness=Dozing (unplugged; stayon holds only when plugged), and SoC autosuspend made rows bimodal in both arms, so it
+# was not resolved. From now on awake() runs before each row: if the phone is not Awake it wakes it; if the keyguard is
+# showing it swipes and types the unlock PIN; screen_off_timeout is 30 min (a row takes <= 10 min). KEEP RULE ADDITION:
+# a row counts only if thermal_state shows wake=Awake both BEFORE and AFTER it (gates/stack_summary.py --require-awake).
+# At the end the screen is locked (KEYCODE_SLEEP) and the timeout restored by the host chain.
 #   GT_BIN=... GT_VARIANT=... GT_CAP=... sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
 set -u
 MODE=${1:-smoke}
@@ -69,12 +75,22 @@ echo "gtier $MODE $(date +%H:%M:%S)" > $H/.phone_busy
 trap 'rm -f $H/.phone_busy' EXIT
 echo "stack_flags=[$TIER] binary=$GT_BIN md5=$(md5sum $H/$GT_BIN/bmoe-cli | cut -d' ' -f1)" >> "$O/log.txt"
 batt() { dumpsys battery | grep -m1 ' level:' | tr -dc 0-9; }
+PIN=${GT_PIN:-}
+awake() {
+  settings put system screen_off_timeout 1800000
+  dumpsys power | grep -q 'mWakefulness=Awake' || { input keyevent KEYCODE_WAKEUP; sleep 1; }
+  if [ -n "$PIN" ] && dumpsys window | grep -q 'isKeyguardShowing=true'; then
+    input swipe 540 1900 540 700 200; sleep 1; input text "$PIN"; input keyevent 66; sleep 2
+  fi
+}
+trap 'rm -f $H/.phone_busy; input keyevent KEYCODE_SLEEP' EXIT
 run() {  # arm extra tag n
   tag=$1_rep$3
   b=$(batt); if [ "${b:-0}" -lt 25 ]; then echo "STOP battery ${b}% before $tag" | tee -a "$O/log.txt"; return 1; fi
-  g=$(thermal_wait 30); mr=$(mem_ready 6500 120)
+  g=$(thermal_wait 30); mr=$(mem_ready 6500 120); awake
   foreign=$(ps -A -o ARGS | grep -E "llama-bench|bmoe-cli|zcbench|gx_|com\.moephone" | grep -v grep | tr " " "_" | tr "\n" "," )
-  echo "=== $tag $(date +%H:%M:%S) batt=${b}% $mr foreign=[${foreign}] BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
+  ws=$(dumpsys power | grep -m1 'mWakefulness=' | cut -d= -f2)
+  echo "=== $tag $(date +%H:%M:%S) batt=${b}% wake_start=${ws} $mr foreign=[${foreign}] BEFORE $g" | tr '\n' ' ' | tee -a "$O/log.txt"; echo | tee -a "$O/log.txt"
   ( cd $H/$GT_BIN && LD_LIBRARY_PATH=. ./bmoe-cli -m $M $BASE -n $4 $2 --csv "$O/$tag.csv" -p "$P" > "$O/$tag.out" 2> "$O/$tag.err" )
   echo "exit=$? AFTER $(thermal_state) $(grep -hE 'generation:|moe-stream:|moe-cache:|moe-overlap|gpu-tier:|FATAL' "$O/$tag.out" "$O/$tag.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
 }

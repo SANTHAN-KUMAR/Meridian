@@ -34,9 +34,20 @@ def main():
     # PRE-REGISTERED ALTERNATIVE for campaigns whose arms differ in budget BY DESIGN (device/bmoe_gtier.sh: the GPU tier
     # takes its MiB out of the CPU cache): keep = exit 0 and foreign=[], whatever the granted budget.
     ap.add_argument("--any-budget-prereg", action="store_true")
+    # PRE-REGISTERED 2026-09-19 04:55 for runs after the Dozing confound (device/bmoe_gtier.sh REVISION): a row is kept only
+    # if the phone was Awake when the engine started (wake_start=Awake) and when it exited (AFTER wake=Awake)
+    ap.add_argument("--require-awake", action="store_true")
     a = ap.parse_args()
     log = open(os.path.join(a.root, "log.txt")).read()
     foreign = dict(re.findall(r"=== (\w+) \S+ .*?foreign=\[([^\]]*)\]", log))
+    wake_start = dict(re.findall(r"=== (\w+) \S+ .*?wake_start=(\S+)", log))
+    # the AFTER state of each row: the exit line that follows its === line
+    wake_end, cur = {}, None
+    for line in log.splitlines():
+        m = re.match(r"=== (\w+) ", line)
+        if m: cur = m.group(1)
+        m = re.match(r"exit=\S+ AFTER wake=(\S+)", line)
+        if m and cur: wake_end[cur] = m.group(1)
     rows = []
     for f in sorted(glob.glob(os.path.join(a.root, "*.out"))):
         tag = os.path.basename(f)[:-4]
@@ -63,7 +74,9 @@ def main():
             budget_ok = r["budget_MiB"] == 5000
         else:
             budget_ok = (r["budget_MiB"] or 0) >= a.min_budget
-        r["kept"] = r["decode_tok_s"] is not None and r["foreign"] == "" and budget_ok
+        r["wake_start"], r["wake_end"] = wake_start.get(tag), wake_end.get(tag)
+        awake_ok = (not a.require_awake) or (r["wake_start"] == "Awake" and r["wake_end"] == "Awake")
+        r["kept"] = r["decode_tok_s"] is not None and r["foreign"] == "" and budget_ok and awake_ok
         rows.append(r)
     kept = [r for r in rows if r["kept"]]
     reps = sorted({r["rep"] for r in rows})
@@ -90,7 +103,7 @@ def main():
     res = {k: paired(k) for k in ("stall_plus_mgmt_ms", "compute_ms", "decode_tok_s", "read_MiB_per_token",
                                   "hit_pct", "stall_ms", "mgmt_ms")}
     dec = res["decode_tok_s"]
-    out = dict(source=os.path.abspath(a.root), keep_rule=("exit 0 + foreign=[], any budget (pre-registered: budgets differ by design)" if a.any_budget_prereg else
+    out = dict(source=os.path.abspath(a.root), require_awake=a.require_awake, keep_rule=("exit 0 + foreign=[], any budget (pre-registered: budgets differ by design)" if a.any_budget_prereg else
                           "budget == 5000 (pre-registered)" if a.min_budget is None else f"SENSITIVITY: budget >= {a.min_budget}"), stack_flags=re.search(r"stack_flags=\[([^\]]*)\]", log).group(1),
                rows=rows, n_rows=len(rows), n_kept=len(kept),
                n_stall_missing=sum(1 for r in rows if r.get("stall_missing")), results=res,

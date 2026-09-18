@@ -1,0 +1,1 @@
+Cap-8 smoke under the Doze confound (wake=Dozing): text identical 2/2; a correctness check only, no timing reading. Mechanism counters: overflow experts CPU-computed from the tier 258; host ms: overflow map 7.4 unmap 14.7 promotion 12.6
