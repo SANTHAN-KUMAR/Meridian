@@ -16,3 +16,10 @@ nothing here is a claim of this project until it is measured on the 15R and ente
 | `2026-09-17_compute_memo.md` | what cuts the ~100 ms/token CPU compute residual | instrument first (barrier ledger + counters); the frequency cap is an OEM governor, not thermal |
 | `2026-09-17_io_memo.md` | what removes the I/O stall and cache-management terms losslessly | a pre-committed never-decommitted slot arena; a split-phase (`gate|up` then `down`) expert read |
 | `2026-09-17_bytes_memo.md` | what cuts bytes/token or yields >1 token per fetch without training | MTP-head checkpoints with the verify on the GPU; KL-instrument dynamic top-k |
+
+## 2026-09-18 — analysis memos (not literature)
+
+| file | what it is |
+|---|---|
+| `2026-09-18_why_levers_flip.md` | why the speed levers came back neutral: A/B power, self-cancelling prefetch, arena regression |
+| `2026-09-18_ceiling_handoff.md` | **handoff and execution plan**: the 10 tok/s ceiling is capped-clock arithmetic, not I/O; two lossless compute levers, a best case near 8 tok/s, and the five decision experiments. Numbers from `gates/ceiling_ledger.py` -> `results/2026-09-18/ceiling_ledger.json` |

@@ -1,0 +1,178 @@
+{
+ "generated": "2026-09-18T19:16:16+0530",
+ "code_version": "d0f5973",
+ "steady_skip_tokens": 64,
+ "node_ledger": {
+  "n_tokens": 64,
+  "nodes_per_token": 3030.0,
+  "categories": {
+   "small_ops": {
+    "calls_per_token": 2549.0,
+    "mean_sum_ms": 42.49771174999995,
+    "median_sum_ms": 13.980754499999998,
+    "tail_ms": 28.516957249999955
+   },
+   "dense_matmul": {
+    "calls_per_token": 240.0,
+    "mean_sum_ms": 30.137953015625,
+    "median_sum_ms": 23.358743999999998,
+    "tail_ms": 6.779209015625003
+   },
+   "flash_attn": {
+    "calls_per_token": 48.0,
+    "mean_sum_ms": 12.90488259375,
+    "median_sum_ms": 3.967488,
+    "tail_ms": 8.93739459375
+   },
+   "moe_weights_get_rows": {
+    "calls_per_token": 48.0,
+    "mean_sum_ms": 20.458784703125,
+    "median_sum_ms": 14.21124,
+    "tail_ms": 6.247544703125001
+   },
+   "expert_matmul": {
+    "calls_per_token": 144.0,
+    "mean_sum_ms": 101.18089740625001,
+    "median_sum_ms": 73.0788,
+    "tail_ms": 28.10209740625001
+   },
+   "output_head": {
+    "calls_per_token": 1.0,
+    "mean_sum_ms": 8.249961734375,
+    "median_sum_ms": 7.834427,
+    "tail_ms": 0.4155347343750009
+   }
+  },
+  "total_mean_sum_ms": 215.43019120312496,
+  "total_median_sum_ms": 136.4314535,
+  "median_us": {
+   "Qcur": 166.9535,
+   "Vcur": 34.401,
+   "Kcur": 65.365,
+   "ffn_moe_gate": 774.4535,
+   "ffn_moe_up": 450.7295,
+   "ffn_moe_down": 297.292
+  },
+  "median_GB_s": {
+   "Qcur": 28.262911529258147,
+   "Vcur": 17.14554809453213,
+   "Kcur": 9.023544710471967,
+   "ffn_moe_gate": 9.13920332208454,
+   "ffn_moe_up": 15.703183394918682,
+   "ffn_moe_down": 26.453184074916244
+  },
+  "expert_arith_ms_gate_as_up": 57.540048,
+  "up_vs_down_per_byte_ratio": 1.6845746120163192,
+  "expert_ms_if_gate_up_ran_at_down_rate": 39.9560448,
+  "majflt": {
+   "per_token": 647.71875,
+   "faulting_nodes_per_token": 9.953125,
+   "ms_per_token_in_faulting_nodes": 3.27505278125
+  }
+ },
+ "trace_runs": {
+  "layers": {
+   "caps_before": "cap0=3033600 cap6=3436800",
+   "tok_s": 6.795,
+   "compute_residual_ms": 79.0,
+   "mgmt_ms": 20.0
+  },
+  "nodes": {
+   "caps_before": "cap0=3033600 cap6=3436800",
+   "tok_s": 5.029,
+   "compute_residual_ms": 133.0,
+   "mgmt_ms": 20.0
+  },
+  "plain": {
+   "caps_before": "cap0=3033600 cap6=3436800",
+   "tok_s": 7.246,
+   "compute_residual_ms": 77.0,
+   "mgmt_ms": 20.0
+  }
+ },
+ "capped_floor": {
+  "olmoe_cpu_t4_tok_s": [
+   50.860068,
+   24.161756,
+   23.738248
+  ],
+  "olmoe_gpu_all_tok_s": [
+   47.071861,
+   46.642205,
+   46.123576
+  ],
+  "cpu_max_over_min": 2.1425367196433367,
+  "gpu_max_over_min": 1.0205596591209667,
+  "throttled_cpu_effective_GB_s": 16.70303642202547,
+  "qwen3_ms_per_token_at_throttled_cpu_rate": 110.15790240232731,
+  "qwen3_ms_per_token_at_gpu_rate": 56.56426369318397,
+  "note": "the OLMoE-derived rate embeds that model's own graph overhead and larger matrices; README of results/2026-09-18 says it is optimistic for Qwen3"
+ },
+ "capped_terms": {
+  "base": {
+   "compute_ms": 120.83333333333333,
+   "stall_ms": 47.583333333333336,
+   "mgmt_ms": 22.5,
+   "decode_tok_s": 5.251083333333334
+  },
+  "stack": {
+   "compute_ms": 123.81818181818181,
+   "stall_ms": 34.63636363636363,
+   "mgmt_ms": 24.636363636363637,
+   "decode_tok_s": 5.475090909090909
+  },
+  "compute_ms_allowed_at_10_tok_s_with_stack_io": 40.727272727272734,
+  "compute_cut_needed_fraction": 0.6710719530102789
+ },
+ "projection": {
+  "io_ms_stack": 59.272727272727266,
+  "compute_ms_stack": 123.81818181818181,
+  "compute_ms_perfect_6_thread_scaling": 82.54545454545455,
+  "gate_up_saving_ms_at_trace_clock": 17.584003199999998,
+  "best_case_ms_per_token_width_plus_gate_up": 124.23417861818182,
+  "best_case_tok_s_width_plus_gate_up": 8.049314698440392,
+  "io_ms_allowed_at_10_tok_s_after_both": 35.03854865454545,
+  "note": "every entry is a best case: perfect 4->6 scaling and the whole up/down gap recovered"
+ },
+ "clock_state": {
+  "n_samples": 2223,
+  "span_s": 5592,
+  "first_sample": {
+   "p0_max": 2265600,
+   "p6_max": 1651200,
+   "thermal_status": 0,
+   "batt_decideg": 355
+  },
+  "p0_max_median_kHz": 1900800,
+  "p6_max_median_kHz": 1651200,
+  "frac_p6_at_or_below_1651200": 0.9604138551506972,
+  "frac_p0_at_or_below_2265600": 0.9613135402609086,
+  "p0_levels_kHz": [
+   1401600,
+   1555200,
+   1747200,
+   1900800,
+   2188800,
+   2265600,
+   2361600,
+   2476800,
+   2707200,
+   2841600,
+   3033600,
+   3129600
+  ],
+  "p6_levels_kHz": [
+   1248000,
+   1651200,
+   1862400,
+   2112000,
+   2688000,
+   2995200,
+   3091200,
+   3244800,
+   3436800,
+   3532800,
+   3648000
+  ]
+ }
+}
