@@ -190,3 +190,36 @@ Speed is judged only on the phone (M6).
 **Why before M2:** the GPU pool is pinned memory, so it cannot be swapped. That protects cached experts, but
 it also pushes more of everything else (the dense copy, KV, buffers) into zram. The guard and the budget
 feedback are what keep that from turning into faults elsewhere.
+
+## 12. Revision after M3 and the coherence facts (2026-09-18 ~23:30)
+
+**M3 is done and bit-exact** (teammate, 0225f99). gx reproduces ggml-cpu's ARM arithmetic exactly: 0 of 262,144
+down outputs differ, across both down types and real Qwen3 slices, and all 10 negative controls are
+detected. The GPU split is therefore verified by **byte-identical text**, like every CPU-side change. §6's
+KL tolerance is no longer needed; it stays only as a fallback if the device's arithmetic (denormals, fma)
+turns out to differ at M6.
+
+**Two tiers, not one shared pool.** The only phone-verified coherence protocol is map(WRITE_INVALIDATE) →
+write → unmap → kernel, with nothing mapped during a dispatch (teammate's answers from `zcbench.out`). A
+CPU thread therefore cannot compute from pool memory while the GPU runs. So:
+- **CPU tier:** today's anonymous cache, unchanged. The CPU computes only experts resident here.
+- **GPU tier:** a pool of slots in `ALLOC_HOST_PTR` blocks, each slot holding one expert's three slices,
+  4096-aligned. It is filled by **promotion**: when an expert becomes hot in the CPU tier (SLRU's
+  protected segment), it is copied into a free slot (map, memcpy, unmap) and **released from the CPU
+  tier**, so nothing is held twice. A full pool evicts its LRU slot, which leaves both tiers and is
+  re-read from flash when next needed.
+- **Per layer, decode only:** every selected expert that the GPU tier owns goes to G. There is no fixed K.
+  The pool's size sets the GPU's expected share, and telemetry (GPU wait charged to the CPU vs the CPU's
+  own layer time) is what tunes it.
+- **Prefill / multi-token batches:** v1 flushes the GPU tier before any multi-token batch. Its experts
+  become misses and are re-read. That is correct and simple, and it is counted. v2 maps pool slots
+  READ-only for the CPU while no dispatch runs.
+- **All OpenCL stays inside libgx** (requested pool API: slot alloc/free/map_write/unmap on gx's
+  context). The engine sees an abstract `GpuExperts` interface with two implementations:
+  - **libgx** (the phone);
+  - **a CPU stand-in** that runs the same per-expert FFN as a small ggml graph (mul_mat, swiglu_split,
+    mul_mat; plain MUL_MAT, so the split hooks never recurse) on its own thread.
+
+  The stand-in is bit-identical to the main graph by construction (M1 showed mul_mat and mul_mat_id rows
+  agree). So the whole engine's text with the tier ON must equal the tier OFF: the M4 plumbing acceptance
+  on the laptop, before gx is linked at all.
