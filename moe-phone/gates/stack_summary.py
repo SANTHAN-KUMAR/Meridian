@@ -28,6 +28,9 @@ def num(pat, text, cast=float):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("root"); ap.add_argument("--out", required=True)
+    # SENSITIVITY ONLY: the pre-registered keep rule is budget == 5000 MiB (the default here). --min-budget relaxes it,
+    # and any output produced with it is a labelled sensitivity analysis, never the pre-registered verdict.
+    ap.add_argument("--min-budget", type=int, default=None)
     a = ap.parse_args()
     log = open(os.path.join(a.root, "log.txt")).read()
     foreign = dict(re.findall(r"=== (\w+) \S+ .*?foreign=\[([^\]]*)\]", log))
@@ -51,7 +54,8 @@ def main():
             r["stall_ms"] = 0.0  # a run without the overlap line reports no stall term; counted, not hidden
             r["stall_missing"] = True
         r["stall_plus_mgmt_ms"] = (r["stall_ms"] or 0.0) + (r["mgmt_ms"] or 0.0) if r["mgmt_ms"] is not None else None
-        r["kept"] = (r["decode_tok_s"] is not None and r["budget_MiB"] == 5000 and r["foreign"] == "")
+        r["kept"] = (r["decode_tok_s"] is not None and r["foreign"] == "" and
+                     (r["budget_MiB"] == 5000 if a.min_budget is None else (r["budget_MiB"] or 0) >= a.min_budget))
         rows.append(r)
     kept = [r for r in rows if r["kept"]]
     reps = sorted({r["rep"] for r in rows})
@@ -78,7 +82,7 @@ def main():
     res = {k: paired(k) for k in ("stall_plus_mgmt_ms", "compute_ms", "decode_tok_s", "read_MiB_per_token",
                                   "hit_pct", "stall_ms", "mgmt_ms")}
     dec = res["decode_tok_s"]
-    out = dict(source=os.path.abspath(a.root), stack_flags=re.search(r"stack_flags=\[([^\]]*)\]", log).group(1),
+    out = dict(source=os.path.abspath(a.root), keep_rule=("budget == 5000 (pre-registered)" if a.min_budget is None else f"SENSITIVITY: budget >= {a.min_budget}"), stack_flags=re.search(r"stack_flags=\[([^\]]*)\]", log).group(1),
                rows=rows, n_rows=len(rows), n_kept=len(kept),
                n_stall_missing=sum(1 for r in rows if r.get("stall_missing")), results=res,
                decode_ratio=(dec["stack_mean"] / dec["base_mean"]) if "stack_mean" in dec else None,

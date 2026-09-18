@@ -1,0 +1,6 @@
+=== plain 20:55:18 BEFORE quiesce: stopped=76 cpu_busy_of_800=27 top3=top:6.0,system_server:3.0,com.oplus.pantanal.ums:track:2.0,
+wake=Awake status=0 cap0=3321600 cap6=3801600 hw0=3321600 hw6=3801600 shell_front_mC=30998 gate=ok waited=30
+exit=0 generation: 160 tokens, 0.026 s/token (37.901 tok/s)
+=== streammap 20:55:45 BEFORE quiesce: stopped=76 cpu_busy_of_800=248 top3=[kswapd0]:45.0,system_server:25.0,com.google.android.providers.media.module:19.0,
+wake=Awake status=0 cap0=3321600 cap6=3801600 hw0=3321600 hw6=3801600 shell_front_mC=32759 gate=ok waited=10
+exit=0 generation: 160 tokens, 0.037 s/token (26.773 tok/s)

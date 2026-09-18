@@ -928,6 +928,15 @@ CLAIMS = [
          text="with dense weights mmap'd, the engine still executes 1.29x the user-space instructions of plain llama.cpp per token (1270M vs 986M) at the same IPC, with data-TLB walks only 1.11x and L2 refills 0.99x: the remaining ~8 ms is extra WORK (hook and bookkeeping), not memory layout",
          artifact="ovh_mech_summary.json", expected=1.2875, tol=0.005,
          value=lambda A: A["omech"]["ratio_vs_plain"]["streammap"]["instructions:u"]),
+    # ------------------------- DENSE WEIGHTS mmap vs anon ON QWEN3 (device/bmoe_densemap.sh, 2026-09-18 20:56)
+    dict(id="densemap_prereg_unresolved",
+         text="by its pre-registered keep rule (granted budget exactly 5000 MiB) the Qwen3 dense-mmap A/B keeps only 1 usable repeat -- 6 of the 8 anon rows were granted 4725-4988 MiB because the anon copy itself uses memory -- so the pre-registered verdict is 'insufficient repeats'",
+         artifact="densemap_summary.json", expected=1, tol=0,
+         value=lambda A: A["dmap"]["results"]["compute_ms"]["n_repeats"]),
+    dict(id="densemap_sensitivity_compute",
+         text="SENSITIVITY (budget >= 4700, labelled, not the verdict): on Qwen3 mmap'd dense weights make compute 22.5 ms/token WORSE (116 vs 94 ms, SE 2.7, 4 of 4 repeats) and decode 12% slower, even though the anon rows had the smaller caches -- the OLMoE dense-copy saving does not carry over; the default (anon) stays",
+         artifact="densemap_sensitivity.json", expected=22.5, tol=0.01,
+         value=lambda A: A["dmaps"]["results"]["compute_ms"]["mean_diff"]),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1174,6 +1183,8 @@ def load_all():
         "cores": load("cores_summary.json"),
         "ovh": load("overhead_summary.json"),
         "omech": load("ovh_mech_summary.json"),
+        "dmap": load("densemap_summary.json"),
+        "dmaps": load("densemap_sensitivity.json"),
     }
 
 

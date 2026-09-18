@@ -1,0 +1,18 @@
+Cmdline: /system/bin/simpleperf record -e cpu-cycles:u -f 2000 -o /data/local/tmp/moe-stream/bmoe_profile_20260918_2054/streammap.data ./bmoe-cli -m /data/local/tmp/moe-stream/olmoe-1b-7b-0924-q4_0.gguf --chatml -n 160 --ubatch 512 -t 4 --cpu-mask f0 --moe-stream --cache-mb 4500 --force-cache --overlap --io-threads 4 --io-cpu-mask 0f --dense-weights mmap -p Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field
+Arch: arm64
+Event: cpu-cycles:u (type 0, config 0)
+Samples: 51642
+Event count: 57382424284
+
+Overhead  Shared Object                                             Symbol
+57.26%    /data/local/tmp/moe-stream/bmoe-i8mm-0016/libggml-cpu.so  ggml_vec_dot_q4_0_q8_0
+24.00%    /data/local/tmp/moe-stream/bmoe-i8mm-0016/libggml-cpu.so  ggml_graph_compute_thread
+6.24%     /data/local/tmp/moe-stream/bmoe-i8mm-0016/libggml-cpu.so  ggml_vec_dot_q6_K_q8_K
+2.52%     /data/local/tmp/moe-stream/bmoe-i8mm-0016/libggml-cpu.so  ggml_compute_forward_mul_mat_id
+2.20%     /data/local/tmp/moe-stream/bmoe-i8mm-0016/libggml-cpu.so  ggml_graph_compute_secondary_thread
+1.86%     /data/local/tmp/moe-stream/bmoe-i8mm-0016/libggml-cpu.so  ggml_compute_forward_mul_mat
+1.40%     /data/local/tmp/moe-stream/bmoe-i8mm-0016/libggml-cpu.so  ggml_compute_forward_flash_attn_ext_f16_one_chunk(ggml_compute_params const*, ggml_tensor*, int, int, long, long, float*, long)
+0.70%     /data/local/tmp/moe-stream/bmoe-i8mm-0016/libggml-cpu.so  ggml_vec_dot_f16
+0.60%     /apex/com.android.runtime/lib64/bionic/libc.so            __memmove_aarch64_nt
+0.44%     /data/local/tmp/moe-stream/bmoe-i8mm-0016/libggml-cpu.so  ggml_vec_dot_f32
+0.42%     /data/local/tmp/moe-stream/bmoe-i8mm-0016/libggml-cpu.so  ggml_compute_forward_mul
