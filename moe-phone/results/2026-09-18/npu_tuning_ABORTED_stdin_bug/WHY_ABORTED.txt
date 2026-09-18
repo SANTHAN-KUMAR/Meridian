@@ -1,0 +1,1 @@
+note: driver walked one arm per repeat because adb inside a 'while read' pipeline consumed the arm list; fixed by de-pipelining the loop

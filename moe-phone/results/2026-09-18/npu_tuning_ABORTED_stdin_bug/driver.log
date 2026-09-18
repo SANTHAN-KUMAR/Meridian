@@ -1,0 +1,8 @@
+2026-09-18T09:40:50+05:30 START reps=2 n_gen=128 pkg=com.moephone.npu2
+2026-09-18T09:41:11+05:30 htp_default_rep1 [HTP0] env='' :: pp64 |       326.96 tg128 |         44.01 
+2026-09-18T09:41:53+05:30 htp_oppoll_rep2 [HTP0] env='GGML_HEXAGON_OPPOLL=1' :: pp64 |       320.74 tg128 |         44.52 
+2026-09-18T09:41:58+05:30 START reps=2 n_gen=128 pkg=com.moephone.npu2
+2026-09-18T09:42:13+05:30 DONE
+2026-09-18T09:42:14+05:30 htp_default_rep1 [HTP0] env='' :: pp64 |       327.44 tg128 |         43.70 
+2026-09-18T09:42:55+05:30 htp_oppoll_rep2 [HTP0] env='GGML_HEXAGON_OPPOLL=1' :: pp64 |        336.26 tg128 |         43.87 
+2026-09-18T09:43:15+05:30 DONE

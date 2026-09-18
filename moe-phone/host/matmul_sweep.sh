@@ -47,21 +47,24 @@ ffn_down|--k 768 --n 2048 --experts 128 --ids 8 --type q4_1 --copies 2
 run_one() {  # tag  args
   local tag=$1 args=$2 i=0
   local jargs=$(echo "mmb $args --iters $ITERS" | sed 's/ /~~/g')
-  adb shell "run-as $PKG sh -c 'rm -f files/out.txt files/bench.txt'" >/dev/null 2>&1
-  adb shell "input keyevent KEYCODE_WAKEUP; am start -n $PKG/com.moephone.npu.Run --es bench '$jargs'" >/dev/null 2>&1
+  adb shell "run-as $PKG sh -c 'rm -f files/out.txt files/bench.txt'" >/dev/null 2>&1 </dev/null
+  adb shell "input keyevent KEYCODE_WAKEUP; am start -n $PKG/com.moephone.npu.Run --es bench '$jargs'" >/dev/null 2>&1 </dev/null
   while [ $i -lt 60 ]; do
     sleep 5
-    if adb shell "run-as $PKG sh -c 'grep -c EXIT= files/out.txt 2>/dev/null'" 2>/dev/null | tr -d '\r' | grep -qv '^0$'; then break; fi
+    if adb shell "run-as $PKG sh -c 'grep -c EXIT= files/out.txt 2>/dev/null'" 2>/dev/null </dev/null | tr -d '\r' | grep -qv '^0$'; then break; fi
     i=$((i + 1))
   done
-  adb shell "run-as $PKG sh -c 'cat files/bench.txt'" > "$R/$tag.txt" 2>/dev/null
-  adb shell "run-as $PKG sh -c 'cat files/out.txt'"   > "$R/$tag.runner.txt" 2>/dev/null
+  adb shell "run-as $PKG sh -c 'cat files/bench.txt'" > "$R/$tag.txt" 2>/dev/null </dev/null
+  adb shell "run-as $PKG sh -c 'cat files/out.txt'"   > "$R/$tag.runner.txt" 2>/dev/null </dev/null
   log "$tag :: $(grep -o 'RESULT .*' "$R/$tag.txt" | tail -1)"
 }
 
 log "START reps=$REPS iters=$ITERS pkg=$PKG"
+# for-loop over an array, not a pipeline: see the note in npu_tuning.sh about adb eating a loop's stdin.
+mapfile -t SHAPE_LIST < <(printf '%s\n' "$SHAPES" | grep '|')
 for rep in $(seq 1 "$REPS"); do
-  echo "$SHAPES" | while IFS='|' read -r name args; do
+  for line in "${SHAPE_LIST[@]}"; do
+    name=${line%%|*}; args=${line#*|}
     [ -z "$name" ] && continue
     # device order rotated per repeat so a thermal drift cannot line up with one device
     case $((rep % 3)) in

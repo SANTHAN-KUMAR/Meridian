@@ -48,16 +48,16 @@ run_one() {  # tag  device  env
   local tag=$1 dev=$2 env=$3 i=0
   local devargs="-ngl~~99~~-dev~~$dev"
   [ "$dev" = "CPU" ] && devargs="-ngl~~0"
-  adb shell "run-as $PKG sh -c 'rm -f files/out.txt files/bench.txt'" >/dev/null 2>&1
-  adb shell "input keyevent KEYCODE_WAKEUP; am start -n $PKG/com.moephone.npu.Run --es env '$env' --es bench '-m~~$M~~-p~~64~~-n~~$N~~-r~~2~~-t~~4~~$devargs'" >/dev/null 2>&1
+  adb shell "run-as $PKG sh -c 'rm -f files/out.txt files/bench.txt'" >/dev/null 2>&1 </dev/null
+  adb shell "input keyevent KEYCODE_WAKEUP; am start -n $PKG/com.moephone.npu.Run --es env '$env' --es bench '-m~~$M~~-p~~64~~-n~~$N~~-r~~2~~-t~~4~~$devargs'" >/dev/null 2>&1 </dev/null
   while [ $i -lt 60 ]; do
     sleep 5
-    if adb shell "run-as $PKG sh -c 'grep -c EXIT= files/out.txt 2>/dev/null'" 2>/dev/null | tr -d '\r' | grep -qv '^0$'; then break; fi
+    if adb shell "run-as $PKG sh -c 'grep -c EXIT= files/out.txt 2>/dev/null'" 2>/dev/null </dev/null | tr -d '\r' | grep -qv '^0$'; then break; fi
     i=$((i + 1))
   done
-  adb shell "run-as $PKG sh -c 'cat files/bench.txt'" > "$R/$tag.txt" 2>/dev/null
-  adb shell "run-as $PKG sh -c 'cat files/out.txt'"   > "$R/$tag.runner.txt" 2>/dev/null
-  adb shell '. /data/local/tmp/moe-stream/thermal_gate.sh; thermal_state' > "$R/$tag.state.txt" 2>/dev/null
+  adb shell "run-as $PKG sh -c 'cat files/bench.txt'" > "$R/$tag.txt" 2>/dev/null </dev/null
+  adb shell "run-as $PKG sh -c 'cat files/out.txt'"   > "$R/$tag.runner.txt" 2>/dev/null </dev/null
+  adb shell '. /data/local/tmp/moe-stream/thermal_gate.sh; thermal_state' > "$R/$tag.state.txt" 2>/dev/null </dev/null
   log "$tag [$dev] env='$env' :: $(grep -oE '(pp|tg)[0-9]+ *\| *[0-9.]+' "$R/$tag.txt" | tr '\n' ' ')"
 }
 
@@ -72,13 +72,20 @@ gpu|GPUOpenCL|
 cpu|CPU|
 "
 
+# NOTE: the arm list is walked with a for-loop over an array, NOT a `... | while read` pipeline. Inside
+# such a pipeline every `adb shell` inherits the loop's stdin and swallows the remaining lines, so the
+# campaign silently runs one arm per repeat and then reports DONE. That happened on the first attempt
+# (results/2026-09-18/npu_tuning/driver.log, 09:41): two arms, then DONE.
 log "START reps=$REPS n_gen=$N pkg=$PKG"
+mapfile -t ARM_LIST < <(printf '%s\n' "$ARMS" | grep '|')
+n=${#ARM_LIST[@]}
+log "arms: $n"
 for rep in $(seq 1 "$REPS"); do
   # rotate which arm leads, so a thermal ramp does not always land on the same one
-  n=$(echo "$ARMS" | grep -c '|')
   shift_by=$(( (rep - 1) % n ))
-  echo "$ARMS" | grep '|' | awk -v s="$shift_by" '{a[NR]=$0} END {for (i=1;i<=NR;i++) print a[((i-1+s)%NR)+1]}' | \
-  while IFS='|' read -r name dev env; do
+  for idx in $(seq 0 $((n - 1))); do
+    line=${ARM_LIST[$(( (idx + shift_by) % n ))]}
+    name=${line%%|*}; rest=${line#*|}; dev=${rest%%|*}; env=${rest#*|}
     [ -z "$name" ] && continue
     run_one "${name}_rep${rep}" "$dev" "$env"
     sleep 20
