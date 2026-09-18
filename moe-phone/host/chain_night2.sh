@@ -1,64 +1,73 @@
 #!/bin/bash
-# chain_night2.sh — the queue as re-ordered at 02:10 on 2026-09-18, after the attention A/B was stopped.
-#
-# WHY IT WAS RE-ORDERED. Two things happened:
-#   * the A/B's GPU arm crashed at model load (SIGSEGV in ggml_backend_opencl_buffer_type_get_alignment:
-#     our --attn-device path used a device's buffer type without initialising its backend first) and each
-#     crash costs the driver 25 minutes of polling, so the campaign was stopped after its first repeat.
-#     Its HTP row is kept: 3.82 tok/s against the same-campaign CPU row's 4.59, a 17% LOSS, with the
-#     engine's own split showing compute 0.102 -> 0.177 s/token, i.e. the cost of splitting the graph
-#     across a backend boundary 192 times per token rather than any slowness in the DSP's arithmetic.
-#   * decomposing the best measured cell against the hardware floor (gates/decode_budget.py) showed the
-#     largest single addressable term is the 48.3 ms/token stall, and that it is almost exactly the
-#     UNHIDDEN read time -- because ggml consumes a layer's experts in ascending expert id, so a layer
-#     blocks on its lowest-id miss while its other seven resident experts wait their turn.
-# Patch 0010 (--expert-resident-first) reorders that consumption. It is pure scheduling, verified
-# lossless on the laptop (identical text), and it is therefore the first thing that runs here.
-#
-# Order: expert order -> ZRAM cache -> aggregate bandwidth. The matmul sweep and the thread/app-vs-shell
-# chains are already waiting on the markers this touches.
+# chain_night2.sh — overnight 2026-09-19, phone order (battery-limited; the phone is unplugged):
+#   1. wait for the shared lock (the gx session's M6 run 3)
+#   2. pinprobe (~1 min; pre-registered in host/pinned_arena/pinprobe.cpp)
+#   3. the gx session's window: wait up to 10 min for its lock to appear (memprobe + variant-3 bench), then until it
+#      clears (at most 90 min)
+#   4. only on pinprobe VERDICT BUILD: device/bmoe_kgsl.sh smoke; gate (identical text, "(kgsl)", no FATAL); then ab
+#   5. restore the phone
+# The GPU-tier A/B (bmoe_gtier.sh) is launched separately, once the variant-3 bench says which kernel to use.
 set -u
-export ANDROID_SERIAL=192.168.0.65:5555
-R="/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-18"
-HOSTDIR="$(cd "$(dirname "$0")" && pwd)"
-LOG="$R/chain_night2.log"
-log() { echo "$(date -Iseconds) $*" >> "$LOG"; }
-
-stop_campaigns() {
-  for pat in 'sh bmoe_mem\.sh' 'sh bmoe_zram\.sh' 'sh bmoe_order\.sh' 'bmoe-cli'; do
-    pids=$(adb shell "ps -A -o PID,ARGS" | awk -v p="$pat" '$0 ~ p && $0 !~ /awk/ {print $1}')
-    [ -n "$pids" ] && { log "stopping [$pat]: $pids"; adb shell "kill $pids" >/dev/null 2>&1; sleep 10; }
-  done
-}
-
-# run a device-side campaign, wait for its DONE, pull it
-device_campaign() {  # script  reps  results_subdir  dir_glob
-  local script=$1 reps=$2 sub=$3 glob=$4
-  stop_campaigns
-  log "$script start"
-  adb shell "cd /data/local/tmp/moe-stream && echo 'chain_night2: $script \$(date)' >> phone_queue.log && (setsid nohup sh $script $reps > ${script%.sh}_nohup.log 2>&1 < /dev/null &)" >/dev/null 2>&1
-  sleep 60
+export ANDROID_SERIAL=${ANDROID_SERIAL:-192.168.0.65:5555}
+MP="/run/media/santhankumar/New Volume/identifying-variation/moe-phone"
+R="$MP/results/2026-09-19"; mkdir -p "$R/bmoe_kgsl" "$R/pinprobe"
+SP=/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/2d806460-912e-4de7-a437-dc77597a5bb6/scratchpad
+H=/data/local/tmp/moe-stream
+LOG="$R/chain_night2.log"; log() { echo "$(date -Iseconds) $*" | tee -a "$LOG"; }
+A() { adb shell "$@" </dev/null; }
+reconnect() { adb shell 'echo up' </dev/null >/dev/null 2>&1 || adb connect "$ANDROID_SERIAL" >/dev/null 2>&1; }
+lock() { A "cat $H/.phone_busy 2>/dev/null" | tr -d '\r'; }
+restore() { A 'svc power stayon false; settings put system screen_off_timeout 60000; dumpsys deviceidle enable' >/dev/null 2>&1; log "phone restored"; }
+finish() { restore; touch "$R/CHAIN_NIGHT2_DONE"; exit "${1:-0}"; }
+campaign() {  # script mode
+  local d
+  A "cd $H && (setsid nohup sh $1 $2 > ${1%.sh}_$2_nohup.log 2>&1 < /dev/null &)" >/dev/null 2>&1
+  sleep 45
   while :; do
-    d=$(adb shell "ls -d /data/local/tmp/moe-stream/$glob 2>/dev/null | tail -1" | tr -d '\r')
-    if [ -n "$d" ] && adb shell "[ -f ${d}DONE ]"; then break; fi
-    running=$(adb shell "ps -A -o PID,ARGS" | awk -v p="sh $script" '$0 ~ p && $0 !~ /awk/ {print $1}')
-    if [ -z "$running" ]; then log "$script exited without DONE (dir '$d')"; break; fi
-    sleep 120
+    reconnect
+    d=$(A "ls -d $H/${1%.sh}_${2}_*/ | tail -1" | tr -d '\r')
+    [ -n "$d" ] && A "[ -f ${d}DONE ]" && break
+    [ -n "$d" ] && A "[ -f ${d}REFUSED ]" && { log "REFUSED: $(A "cat ${d}REFUSED")"; break; }
+    [ -z "$(A 'ps -A -o ARGS' | grep "sh $1" | grep -v grep)" ] && { log "$1 $2 exited without DONE ($d)"; break; }
+    sleep 45
   done
-  d=$(adb shell "ls -d /data/local/tmp/moe-stream/$glob 2>/dev/null | tail -1" | tr -d '\r')
-  mkdir -p "$R/$sub"
-  adb pull "$d" "$R/$sub" >/dev/null 2>&1
-  log "$script pulled from $d"
+  adb pull "$d" "$R/${1%.sh}" >/dev/null 2>&1 </dev/null; log "pulled $d"
+  LAST="$R/${1%.sh}/$(basename "$d")"
 }
-
-log "START"
-device_campaign bmoe_order.sh 3 bmoe_order 'bmoe_order_*/'
-device_campaign bmoe_zram.sh  3 bmoe_zram  'bmoe_zram_*/'
-
-log "agg_bandwidth start"
-sh "$HOSTDIR/agg_bandwidth.sh" 3 >> "$LOG" 2>&1
-log "agg_bandwidth done"
-
-touch "$R/CHAIN_AFTER_AB_DONE"   # releases chain_matmul.sh, which installs the fixed app and sweeps
-log "released chain_matmul"
-touch "$R/CHAIN_NIGHT2_DONE"
+log "start; waiting for the phone lock"
+while :; do reconnect; [ -z "$(lock)" ] && break; sleep 60; done
+orph=$(A 'ps -A -o ARGS' | grep -E 'bmoe-cli|llama-|zcbench|gx_|sh bmoe_|run_phone|pinprobe' | grep -v grep)
+[ -n "$orph" ] && { log "FATAL: foreign phone processes: $orph"; finish 1; }
+# 2. pinprobe
+A "echo 'pinprobe $(date +%H:%M:%S)' > $H/.phone_busy; mkdir -p /data/local/tmp/pinprobe" >/dev/null
+adb push "$MP/host/pinned_arena/out/pinprobe" /data/local/tmp/pinprobe/ >/dev/null 2>&1 </dev/null
+A "cd /data/local/tmp/pinprobe && chmod 755 pinprobe && ./pinprobe 768" > "$R/pinprobe/pinprobe.out" 2>&1
+A "rm -f $H/.phone_busy" >/dev/null
+log "pinprobe: $(grep -E '^(BW|REREAD|VERDICT)' "$R/pinprobe/pinprobe.out" | tr '\n' ' ')"
+# 3. the gx session's window
+w=0; while [ $w -lt 10 ] && [ -z "$(lock)" ]; do sleep 60; w=$((w+1)); done
+if [ -n "$(lock)" ]; then
+  log "gx window: $(lock)"; w=0
+  while [ $w -lt 90 ] && [ -n "$(lock)" ]; do sleep 60; w=$((w+1)); reconnect; done
+  log "gx window closed after ${w} min (lock now: '$(lock)')"
+  [ -n "$(lock)" ] && { log "lock still held after 90 min; stopping"; finish 1; }
+else
+  log "gx window: no gx run started within 10 min"
+fi
+# 4. kgsl arena
+if ! grep -q "^VERDICT BUILD" "$R/pinprobe/pinprobe.out"; then log "pinprobe verdict not BUILD: kgsl campaign not run"; finish 0; fi
+A "mkdir -p $H/bmoe-i8mm-0020kgsl" >/dev/null
+for f in "$SP/bmoe-i8mm-0020kgsl"/*; do adb push "$f" "$H/bmoe-i8mm-0020kgsl/" >/dev/null 2>&1 </dev/null; done
+adb push "$MP/device/bmoe_kgsl.sh" "$H/" >/dev/null 2>&1 </dev/null
+want=$(grep bmoe-cli "$SP/bmoe-i8mm-0020kgsl/MD5" | cut -d' ' -f1); got=$(A "md5sum $H/bmoe-i8mm-0020kgsl/bmoe-cli" | cut -d' ' -f1)
+[ "$want" = "$got" ] || { log "FATAL: pushed md5 $got != $want"; finish 1; }
+A "chmod 755 $H/bmoe-i8mm-0020kgsl/bmoe-cli; svc power stayon true; settings put system screen_off_timeout 1800000; dumpsys deviceidle disable" >/dev/null 2>&1
+campaign bmoe_kgsl.sh smoke
+S="$LAST"; ok=1
+[ "$(grep -c 'text_match .* OK' "$S/log.txt")" = 2 ] || ok=0
+grep -q FATAL "$S"/*.err && ok=0
+grep -q "(kgsl)" "$S/stack_reps1.err" || ok=0
+log "kgsl smoke ok=$ok :: $(grep -hE 'generation:|slot-arena:' "$S"/*.out "$S"/*.err | tr '\n' ' ')"
+[ $ok = 1 ] || finish 1
+log "kgsl A/B start"; campaign bmoe_kgsl.sh ab; log "kgsl A/B pulled: $LAST"
+finish 0

@@ -1,0 +1,16 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field.
+
+The history of computing is a fascinating topic. It is a story of the development of the computer and the people who made it happen. The history of computing is a story of the development of the computer and the people who made it happen.
+
+The history of computing is a fascinating topic. It is a story of the development of the computer and the people who made it happen. The history of computing is a fascinating topic. It is a story of the development
+
+generation: 96 tokens, 0.051 s/token (19.683 tok/s)
+compute: 65.7% CPU occupancy (0.1336 cpu-s/token over 4 threads), 0.00 major faults/token
+prefill: 27 tokens, 1.539 s (17.5 tok/s) | model load 0.667 s | TTFT 2.206 s
+mode: expert streaming, cache 2000 MiB, dense anon, overlap
+moe-stream: read 6767.8 MiB (70.50 MiB/token), decode 0.051 s/token (compute 0.025 + cache mgmt 0.006 + flash I/O 0.087 s/token, 808 MiB/s)
+moe-cache: 82.1% hit, resident 1998.0 MiB
+moe-cache: 2168 evictions, 1824 re-reads (19.0/token) — bytes the cache had already paid for once
+moe-overlap: stall 0.020 s/token (flash reads overlapped with FFN compute)
+moe-waits: drain 0.000 s/token (inside compute), adopt 0.002 s/token (inside mgmt)
+moe-prefetch: 1432.1 MiB speculative, 204/423 experts useful (48%) [stale-gate]

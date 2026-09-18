@@ -1,0 +1,3 @@
+2026-09-19T00:26:35+05:30 start; waiting for the phone lock
+2026-09-19T00:29:43+05:30 start; waiting for the phone lock
+2026-09-19T00:34:01+05:30 superseded by host/chain_night2.sh (reordered for battery: pinprobe, gx v3 window, kgsl arena; gtier A/B launched after the v3 bench)
