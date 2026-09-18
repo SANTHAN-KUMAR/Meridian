@@ -1,1 +1,18 @@
-adb: device offline
+ACCT start | VmRSS:	    3644 kB | RssAnon:	     512 kB | RssShmem:	     416 kB | VmSwap:	       0 kB
+ACCT after_fill | VmRSS:	 1596144 kB | RssAnon:	  791424 kB | RssShmem:	     416 kB | VmSwap:	       0 kB
+SMAPS kgsl 6fc3800000-6fc7800000 rw-s 00000000 00:13 1837                           /dev/kgsl-3d0
+SMAPS kgsl Rss:               65536 kB
+SMAPS kgsl Anonymous:             0 kB
+SMAPS kgsl Swap:                  0 kB
+SMAPS kgsl VmFlags: rd wr sh mr mw me ms dc de dd mm 
+BW kgsl_GBps=62.93 malloc_GBps=61.74 ratio=1.019 (medians of 5; runs kgsl: 58.96 62.93 64.07 63.32 4.25 malloc: 62.18 63.21 61.74 58.40 54.44)
+PAGEOUT kgsl_rc=0 malloc_rc=0 (errno after last: 13)
+ACCT after_pageout | VmRSS:	  810224 kB | RssAnon:	    5504 kB | RssShmem:	     416 kB | VmSwap:	  786048 kB
+SMAPS kgsl 6fc3800000-6fc7800000 rw-s 00000000 00:13 1837                           /dev/kgsl-3d0
+SMAPS kgsl Rss:               65536 kB
+SMAPS kgsl Anonymous:             0 kB
+SMAPS kgsl Swap:                  0 kB
+SMAPS kgsl VmFlags: rd wr sh mr mw me ms dc de dd mm 
+REREAD kgsl_majflt=0 kgsl_s=0.033 malloc_majflt=196608 malloc_s=0.919
+ACCT after_reread | VmRSS:	 1596528 kB | RssAnon:	  791808 kB | RssShmem:	     416 kB | VmSwap:	       0 kB
+VERDICT BUILD (a: bw ratio 1.019 >= 0.95 -> 1; b: control malloc majflt 196608 > 1000 -> 1, kgsl 0 < 1% -> 1) sink=0
