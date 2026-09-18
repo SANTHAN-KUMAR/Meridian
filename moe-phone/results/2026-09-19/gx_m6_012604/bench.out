@@ -1,0 +1,73 @@
+DEVICE name="QUALCOMM Adreno(TM) 829" iters=200 slots_per_type=32
+POOL variant=0 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=0 n=64 median_ms=1.000 p90_ms=1.108
+MEMPROBE pass=0 order=aos n=200 device_median_ms=0.0240 device_p90_ms=0.0250 GBps=32.77
+MEMPROBE pass=0 order=soa n=200 device_median_ms=0.0256 device_p90_ms=0.0261 GBps=30.72
+MEMPROBE pass=0 order=tiled n=200 device_median_ms=0.0254 device_p90_ms=0.0262 GBps=30.96
+MEMPROBE pass=1 order=aos n=200 device_median_ms=0.0237 device_p90_ms=0.0248 GBps=33.18
+MEMPROBE pass=1 order=soa n=200 device_median_ms=0.0256 device_p90_ms=0.0259 GBps=30.72
+MEMPROBE pass=1 order=tiled n=200 device_median_ms=0.0253 device_p90_ms=0.0260 GBps=31.08
+BENCH spin=0 variant=0 down=Q4_0 k=1 n=200 median_ms=0.9242 p10_ms=0.4681 p90_ms=0.9996 GBps_at_median=2.87 device_median_ms=0.2669 device_p90_ms=0.2693
+BENCH spin=0 variant=0 down=Q4_0 k=2 n=200 median_ms=1.1618 p10_ms=0.7021 p90_ms=1.2318 GBps_at_median=4.57 device_median_ms=0.4936 device_p90_ms=0.4974
+BENCH spin=0 variant=0 down=Q4_0 k=3 n=200 median_ms=1.3941 p10_ms=0.9430 p90_ms=1.4834 GBps_at_median=5.71 device_median_ms=0.7190 device_p90_ms=0.7269
+BENCH spin=0 variant=0 down=Q4_0 k=4 n=200 median_ms=1.6511 p10_ms=1.1808 p90_ms=1.7718 GBps_at_median=6.43 device_median_ms=0.9603 device_p90_ms=0.9657
+BENCH spin=0 variant=0 down=Q4_1 k=1 n=200 median_ms=0.9778 p10_ms=0.5215 p90_ms=1.0559 GBps_at_median=2.82 device_median_ms=0.3210 device_p90_ms=0.3235
+BENCH spin=0 variant=0 down=Q4_1 k=2 n=200 median_ms=1.2666 p10_ms=0.8148 p90_ms=1.3430 GBps_at_median=4.35 device_median_ms=0.5973 device_p90_ms=0.6024
+BENCH spin=0 variant=0 down=Q4_1 k=3 n=200 median_ms=1.5468 p10_ms=1.0922 p90_ms=1.6360 GBps_at_median=5.34 device_median_ms=0.8701 device_p90_ms=0.8781
+BENCH spin=0 variant=0 down=Q4_1 k=4 n=200 median_ms=1.8554 p10_ms=1.3863 p90_ms=2.0623 GBps_at_median=5.93 device_median_ms=1.1599 device_p90_ms=1.1656
+STATS variant=0 dispatches=2152 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=8416
+POOL variant=1 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=1 n=64 median_ms=0.990 p90_ms=1.053
+BENCH spin=0 variant=1 down=Q4_0 k=1 n=200 median_ms=1.1331 p10_ms=1.0997 p90_ms=1.2856 GBps_at_median=2.34 device_median_ms=0.4506 device_p90_ms=0.4545
+BENCH spin=0 variant=1 down=Q4_0 k=2 n=200 median_ms=1.3126 p10_ms=1.2876 p90_ms=1.5086 GBps_at_median=4.04 device_median_ms=0.6235 device_p90_ms=0.6269
+BENCH spin=0 variant=1 down=Q4_0 k=3 n=200 median_ms=1.6111 p10_ms=1.5747 p90_ms=1.8235 GBps_at_median=4.94 device_median_ms=0.8986 device_p90_ms=0.9127
+BENCH spin=0 variant=1 down=Q4_0 k=4 n=200 median_ms=1.8907 p10_ms=1.7981 p90_ms=2.1093 GBps_at_median=5.62 device_median_ms=1.1146 device_p90_ms=1.1252
+BENCH spin=0 variant=1 down=Q4_1 k=1 n=200 median_ms=1.1480 p10_ms=1.1158 p90_ms=1.2863 GBps_at_median=2.40 device_median_ms=0.4648 device_p90_ms=0.4695
+BENCH spin=0 variant=1 down=Q4_1 k=2 n=200 median_ms=1.3548 p10_ms=1.3310 p90_ms=1.4518 GBps_at_median=4.06 device_median_ms=0.6695 device_p90_ms=0.6755
+BENCH spin=0 variant=1 down=Q4_1 k=3 n=200 median_ms=1.7386 p10_ms=1.6571 p90_ms=1.9673 GBps_at_median=4.75 device_median_ms=0.9938 device_p90_ms=1.0048
+BENCH spin=0 variant=1 down=Q4_1 k=4 n=200 median_ms=2.0828 p10_ms=1.8976 p90_ms=2.3452 GBps_at_median=5.29 device_median_ms=1.2140 device_p90_ms=1.2286
+STATS variant=1 dispatches=2081 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=7848
+POOL variant=3 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=3 n=64 median_ms=1.590 p90_ms=1.650
+BENCH spin=0 variant=3 down=Q4_0 k=1 n=200 median_ms=3.1585 p10_ms=2.9911 p90_ms=3.6696 GBps_at_median=0.84 device_median_ms=2.3619 device_p90_ms=2.3864
+BENCH spin=0 variant=3 down=Q4_0 k=2 n=200 median_ms=7.6171 p10_ms=7.2263 p90_ms=10.6263 GBps_at_median=0.70 device_median_ms=6.4624 device_p90_ms=6.5128
+BENCH spin=0 variant=3 down=Q4_0 k=3 n=200 median_ms=9.9982 p10_ms=9.5127 p90_ms=13.2287 GBps_at_median=0.80 device_median_ms=8.6985 device_p90_ms=8.7630
+BENCH spin=0 variant=3 down=Q4_0 k=4 n=200 median_ms=13.0329 p10_ms=12.4692 p90_ms=16.2542 GBps_at_median=0.81 device_median_ms=11.6693 device_p90_ms=11.7458
+BENCH spin=0 variant=3 down=Q4_1 k=1 n=200 median_ms=3.1047 p10_ms=3.0265 p90_ms=3.6674 GBps_at_median=0.89 device_median_ms=2.3464 device_p90_ms=2.3691
+BENCH spin=0 variant=3 down=Q4_1 k=2 n=200 median_ms=7.6040 p10_ms=7.1018 p90_ms=10.6134 GBps_at_median=0.72 device_median_ms=6.4465 device_p90_ms=6.4920
+BENCH spin=0 variant=3 down=Q4_1 k=3 n=200 median_ms=10.0095 p10_ms=9.4064 p90_ms=13.0326 GBps_at_median=0.82 device_median_ms=8.6791 device_p90_ms=8.7567
+BENCH spin=0 variant=3 down=Q4_1 k=4 n=200 median_ms=12.8727 p10_ms=12.3386 p90_ms=16.0421 GBps_at_median=0.86 device_median_ms=11.6535 device_p90_ms=11.7218
+STATS variant=3 dispatches=1660 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=4480
+POOL variant=0 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=0 n=64 median_ms=0.996 p90_ms=1.047
+BENCH spin=1 variant=0 down=Q4_0 k=1 n=200 median_ms=0.5833 p10_ms=0.5741 p90_ms=0.6236 GBps_at_median=4.55 device_median_ms=0.2673 device_p90_ms=0.2693
+BENCH spin=1 variant=0 down=Q4_0 k=2 n=200 median_ms=0.8391 p10_ms=0.8196 p90_ms=1.0771 GBps_at_median=6.33 device_median_ms=0.4944 device_p90_ms=0.4970
+BENCH spin=1 variant=0 down=Q4_0 k=3 n=200 median_ms=1.0696 p10_ms=1.0509 p90_ms=1.3169 GBps_at_median=7.44 device_median_ms=0.7195 device_p90_ms=0.7219
+BENCH spin=1 variant=0 down=Q4_0 k=4 n=200 median_ms=1.3301 p10_ms=1.3097 p90_ms=1.5737 GBps_at_median=7.98 device_median_ms=0.9607 device_p90_ms=0.9639
+BENCH spin=1 variant=0 down=Q4_1 k=1 n=200 median_ms=0.6364 p10_ms=0.6265 p90_ms=0.7500 GBps_at_median=4.33 device_median_ms=0.3212 device_p90_ms=0.3231
+BENCH spin=1 variant=0 down=Q4_1 k=2 n=200 median_ms=0.9372 p10_ms=0.9170 p90_ms=1.1687 GBps_at_median=5.87 device_median_ms=0.5977 device_p90_ms=0.6009
+BENCH spin=1 variant=0 down=Q4_1 k=3 n=200 median_ms=1.2264 p10_ms=1.2024 p90_ms=1.4819 GBps_at_median=6.73 device_median_ms=0.8712 device_p90_ms=0.8752
+BENCH spin=1 variant=0 down=Q4_1 k=4 n=200 median_ms=1.5534 p10_ms=1.5108 p90_ms=1.7973 GBps_at_median=7.09 device_median_ms=1.1593 device_p90_ms=1.1634
+STATS variant=0 dispatches=2147 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=8376
+POOL variant=1 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=1 n=64 median_ms=1.024 p90_ms=1.133
+BENCH spin=1 variant=1 down=Q4_0 k=1 n=200 median_ms=1.0824 p10_ms=1.0237 p90_ms=1.1418 GBps_at_median=2.45 device_median_ms=0.4507 device_p90_ms=0.4543
+BENCH spin=1 variant=1 down=Q4_0 k=2 n=200 median_ms=1.2612 p10_ms=1.2094 p90_ms=1.3554 GBps_at_median=4.21 device_median_ms=0.6241 device_p90_ms=0.6288
+BENCH spin=1 variant=1 down=Q4_0 k=3 n=200 median_ms=1.5426 p10_ms=1.4988 p90_ms=1.6341 GBps_at_median=5.16 device_median_ms=0.9010 device_p90_ms=0.9187
+BENCH spin=1 variant=1 down=Q4_0 k=4 n=200 median_ms=1.7755 p10_ms=1.7343 p90_ms=1.9195 GBps_at_median=5.98 device_median_ms=1.1178 device_p90_ms=1.1353
+BENCH spin=1 variant=1 down=Q4_1 k=1 n=200 median_ms=1.0908 p10_ms=0.9906 p90_ms=1.1770 GBps_at_median=2.52 device_median_ms=0.4654 device_p90_ms=0.4707
+BENCH spin=1 variant=1 down=Q4_1 k=2 n=200 median_ms=1.3062 p10_ms=0.9715 p90_ms=1.3815 GBps_at_median=4.21 device_median_ms=0.6717 device_p90_ms=0.6762
+BENCH spin=1 variant=1 down=Q4_1 k=3 n=200 median_ms=1.6333 p10_ms=1.3167 p90_ms=1.7230 GBps_at_median=5.06 device_median_ms=0.9972 device_p90_ms=1.0100
+BENCH spin=1 variant=1 down=Q4_1 k=4 n=200 median_ms=1.8676 p10_ms=1.8216 p90_ms=1.9607 GBps_at_median=5.90 device_median_ms=1.2174 device_p90_ms=1.2315
+STATS variant=1 dispatches=2075 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=7800
+POOL variant=3 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=3 n=64 median_ms=1.633 p90_ms=1.677
+BENCH spin=1 variant=3 down=Q4_0 k=1 n=200 median_ms=3.0016 p10_ms=2.9449 p90_ms=3.1129 GBps_at_median=0.88 device_median_ms=2.3618 device_p90_ms=2.3893
+BENCH spin=1 variant=3 down=Q4_0 k=2 n=200 median_ms=7.1488 p10_ms=7.0471 p90_ms=7.4760 GBps_at_median=0.74 device_median_ms=6.4710 device_p90_ms=6.5569
+BENCH spin=1 variant=3 down=Q4_0 k=3 n=200 median_ms=9.3821 p10_ms=9.3012 p90_ms=9.6957 GBps_at_median=0.85 device_median_ms=8.7015 device_p90_ms=8.7976
+BENCH spin=1 variant=3 down=Q4_0 k=4 n=200 median_ms=12.4045 p10_ms=12.3032 p90_ms=13.5958 GBps_at_median=0.86 device_median_ms=11.6832 device_p90_ms=11.8614
+BENCH spin=1 variant=3 down=Q4_1 k=1 n=200 median_ms=2.9870 p10_ms=2.9260 p90_ms=3.1417 GBps_at_median=0.92 device_median_ms=2.3474 device_p90_ms=2.3754
+BENCH spin=1 variant=3 down=Q4_1 k=2 n=200 median_ms=7.1237 p10_ms=7.0493 p90_ms=7.4468 GBps_at_median=0.77 device_median_ms=6.4555 device_p90_ms=6.5183
+BENCH spin=1 variant=3 down=Q4_1 k=3 n=200 median_ms=9.3784 p10_ms=9.2944 p90_ms=10.0494 GBps_at_median=0.88 device_median_ms=8.6863 device_p90_ms=8.8110
+BENCH spin=1 variant=3 down=Q4_1 k=4 n=200 median_ms=12.3560 p10_ms=12.2752 p90_ms=12.9766 GBps_at_median=0.89 device_median_ms=11.6535 device_p90_ms=11.8166
+STATS variant=3 dispatches=1662 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=4496
