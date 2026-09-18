@@ -781,6 +781,24 @@ CLAIMS = [
          text="hit rate 86.6% against 85.3%",
          artifact="bmoe_slru.json", expected=86.6, tol=0.05,
          value=lambda A: next(c["cache_hit_pct_median"] for c in A["bslru"]["cells"] if c["cell"] == "slru")),
+    # ------------------------- PER-OP MATMUL SWEEP (host/matmul_sweep.sh -> gates/matmul_sweep_analyze.py, 2026-09-18 14:42)
+    # Qwen3-30B-A3B shapes, q4_0, weights already on the device, 60 iterations x 2 repeats, each checked against the CPU backend.
+    dict(id="msweep_htp_expert_down_speedup",
+         text="even with the weights already resident, Hexagon runs Qwen3's expert down-projection (MUL_MAT_ID, 128 experts) at 0.39x the CPU's speed, and gate/up at 0.68x",
+         artifact="matmul_sweep.json", expected=0.39, tol=0.01,
+         value=lambda A: round(next(c for c in A["msweep"]["cells"] if c["shape"] == "ffn_down" and c["device"] == "HTP0")["speedup_vs_cpu"], 2)),
+    dict(id="msweep_gpu_expert_gate_up_speedup",
+         text="the Adreno GPU runs expert gate/up at 1.09x the CPU when resident, but its upload is 162x its compute, so for streamed experts it needs a 99.9% hit rate to break even",
+         artifact="matmul_sweep.json", expected=1.09, tol=0.01,
+         value=lambda A: round(next(c for c in A["msweep"]["cells"] if c["shape"] == "ffn_gate_up" and c["device"] == "GPUOpenCL")["speedup_vs_cpu"], 2)),
+    dict(id="msweep_gpu_expert_down_incorrect",
+         text="the OpenCL backend gets the expert down-projection WRONG: both repeats disagree with the CPU backend, max relative error 16.8",
+         artifact="matmul_sweep.json", expected=2, tol=0,
+         value=lambda A: next(c for c in A["msweep"]["cells"] if c["shape"] == "ffn_down" and c["device"] == "GPUOpenCL")["n_incorrect"]),
+    dict(id="msweep_gpu_attn_q_speedup",
+         text="for the resident attention projections the GPU is the fastest device: 1.64x the CPU on attn_q, 1.38x on attn_output, 2.80x on the K/V projection",
+         artifact="matmul_sweep.json", expected=1.64, tol=0.01,
+         value=lambda A: round(next(c for c in A["msweep"]["cells"] if c["shape"] == "attn_q" and c["device"] == "GPUOpenCL")["speedup_vs_cpu"], 2)),
     # ------------------------- ORDERING DRIFT (gates/position_effect.py, diagnostic, 2026-09-18)
     dict(id="position_drift_median",
          text="across 12 rotated phone campaigns the median last-position/first-position decode ratio is 0.992, with 5 campaigns drifting up and 7 down: the drift is campaign-specific, not one shared bias",
@@ -1015,6 +1033,7 @@ def load_all():
         "ezram": load("evict_zram_budgets.json"),
         "cproj": load("cache_projection.json"),
         "bslru": load("bmoe_slru.json"),
+        "msweep": load("matmul_sweep.json"),
     }
 
 

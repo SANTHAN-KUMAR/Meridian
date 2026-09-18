@@ -1,0 +1,1 @@
+RESULT device=CPU type=q4_0 k=2048 n=4096 experts=0 ids=0 iters=60 threads=4 copies=24 weight_MB=4.719 read_MB=4.719 compute_ms=0.3552 compute_GBps=13.285 upload_ms=0.9272 upload_GBps=5.089 cpu_compute_ms=0.3552 cpu_compute_GBps=13.285 max_rel_err=0.000e+00 correct=1

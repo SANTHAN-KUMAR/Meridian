@@ -1,0 +1,14 @@
+RESULT device=GPUOpenCL type=q4_0 k=2048 n=512 experts=0 ids=0 iters=60 threads=4 copies=96 weight_MB=0.590 read_MB=0.590 compute_ms=0.1777 compute_GBps=3.319 upload_ms=1.4892 upload_GBps=0.396 cpu_compute_ms=0.1634 cpu_compute_GBps=3.610 max_rel_err=2.913e-03 correct=1
+pencl: mem base addr align: 128
+ggml_opencl: global mem size: 5549 MB
+ggml_opencl: max mem alloc size: 2048 MB
+ggml_opencl: device max image buffer size (pixels): 2147483648
+ggml_opencl: device max image2d size: 16384 x 16384
+ggml_opencl: device max workgroup size: 1024
+ggml_opencl: SVM coarse grain buffer support: true
+ggml_opencl: SVM fine grain buffer support: true
+ggml_opencl: SVM fine grain system support: false
+ggml_opencl: SVM atomics support: true
+ggml_opencl: cl_qcom_subgroup_shuffle support: true
+ggml_opencl: flattening quantized weights representation as struct of arrays (GGML_OPENCL_SOA_Q)
+ggml_opencl: using kernels optimized for Adreno (GGML_OPENCL_USE_ADRENO_KERNELS)

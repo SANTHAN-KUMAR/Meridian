@@ -1,0 +1,1 @@
+RESULT device=HTP0 type=q4_0 k=2048 n=512 experts=0 ids=0 iters=60 threads=4 copies=96 weight_MB=0.590 read_MB=0.590 compute_ms=0.4437 compute_GBps=1.329 upload_ms=0.1656 upload_GBps=3.562 cpu_compute_ms=0.1716 cpu_compute_GBps=3.438 max_rel_err=4.247e-03 correct=1
