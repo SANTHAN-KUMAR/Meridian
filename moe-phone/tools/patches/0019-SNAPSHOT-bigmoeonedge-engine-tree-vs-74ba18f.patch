@@ -581,7 +581,7 @@ index f86db01..6487c67 100644
      // full attention, others a Mamba-style SSM block, but every MoE layer names its experts
      // with the standard split suffixes, so streaming is one row. There is also an always-on
 diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
-index 860acb8..95e0c03 100644
+index 860acb8..9dddedb 100644
 --- a/core/src/moe/expert_stream_source.cpp
 +++ b/core/src/moe/expert_stream_source.cpp
 @@ -12,6 +12,13 @@
@@ -1059,7 +1059,7 @@ index 860acb8..95e0c03 100644
              lru_push_front(id);
          else
              lru_push_back(id);
-@@ -891,6 +1203,415 @@ void ExpertStreamSource::drain_adopted(int adopt_il) {
+@@ -891,6 +1203,422 @@ void ExpertStreamSource::drain_adopted(int adopt_il) {
      }
  }
  
@@ -1227,6 +1227,7 @@ index 860acb8..95e0c03 100644
 +}
 +
 +void ExpertStreamSource::gtier_release_overflow() {
++    const auto t0 = std::chrono::steady_clock::now();
 +    for (int32_t e : gover_list_) {
 +        const int32_t slot = gover_slot_[(size_t) e];
 +        if (gover_base_[(size_t) e]) gpu_->unmap_read(slot, gover_base_[(size_t) e]);
@@ -1236,6 +1237,7 @@ index 860acb8..95e0c03 100644
 +    }
 +    gover_list_.clear();
 +    gover_layer_ = -1;
++    gt_overunmap_ns_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - t0).count();
 +}
 +
 +void ExpertStreamSource::gtier_flush() {
@@ -1284,7 +1286,10 @@ index 860acb8..95e0c03 100644
 +        bytes[p] = (size_t) L.proj[p].nb2;
 +        src[p] = (const char *) lbuf_[p][il] + (uint64_t) e * L.proj[p].nb2;
 +    }
-+    if (!gpu_->write_expert(s, src, bytes, L.proj[2].tensor->type)) { gfree_.push_back(s); ++gt_fail_; return false; }
++    const auto tp0 = std::chrono::steady_clock::now();
++    const bool wrote = gpu_->write_expert(s, src, bytes, L.proj[2].tensor->type);
++    gt_promo_ns_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - tp0).count();
++    if (!wrote) { gfree_.push_back(s); ++gt_fail_; return false; }
 +    gtier_release_cpu(id);
 +    gslot_of_[id] = s;
 +    gowner_[s] = id;
@@ -1343,6 +1348,7 @@ index 860acb8..95e0c03 100644
 +                }
 +                if (gover_slot_[(size_t) e] >= 0) continue; // already read-mapped for this layer
 +                const LayerExperts & LO = layers_[il];
++                const auto tmap0 = std::chrono::steady_clock::now();
 +                if (gpu_->native_layout()) {
 +                    const char * base = (const char *) gpu_->map_read(slot);
 +                    if (!base) {
@@ -1370,6 +1376,7 @@ index 860acb8..95e0c03 100644
 +                    if (held > gt_overbuf_peak_) gt_overbuf_peak_ = held;
 +                    ++gt_copyouts_;
 +                }
++                gt_overmap_ns_ += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - tmap0).count();
 +                gover_layer_ = il;
 +                gover_slot_[(size_t) e] = slot;
 +                gover_list_.push_back(e);
@@ -1475,7 +1482,7 @@ index 860acb8..95e0c03 100644
  void ExpertStreamSource::query_residency(int il, const int32_t * ids, int n_ids, uint8_t * out) const {
      for (int i = 0; i < n_ids; ++i)
          out[i] = 0;
-@@ -900,6 +1621,7 @@ void ExpertStreamSource::query_residency(int il, const int32_t * ids, int n_ids,
+@@ -900,6 +1628,7 @@ void ExpertStreamSource::query_residency(int il, const int32_t * ids, int n_ids,
          const int e = ids[i];
          if (e < 0 || e >= n_expert_) continue;
          const int32_t id = il * n_expert_ + e;
@@ -1483,7 +1490,7 @@ index 860acb8..95e0c03 100644
          if (!cvalid_[id]) continue;  // miss: this routing pays a read
          out[i] = cspec_[id] ? 2 : 1; // resident; 2 = a speculative prefetch guessed it right
      }
-@@ -916,7 +1638,54 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
+@@ -916,7 +1645,54 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
      const LayerExperts & L = layers_[il];
      const uint64_t slice = L.proj[p].nb2;
      if (slice == 0) return true; // absent slot in a fused layout
@@ -1538,7 +1545,7 @@ index 860acb8..95e0c03 100644
      uintptr_t a0 = (uintptr_t) dst & ~(uintptr_t) (page_ - 1);
      uintptr_t a1 = ((uintptr_t) dst + slice + page_ - 1) & ~(uintptr_t) (page_ - 1);
      if (!pio::vm_commit((void *) a0, (size_t) (a1 - a0))) {
-@@ -926,11 +1695,67 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
+@@ -926,11 +1702,67 @@ bool ExpertStreamSource::commit_proj_pages(int il, int e, int p) {
      return true;
  }
  
@@ -1606,7 +1613,7 @@ index 860acb8..95e0c03 100644
          chits_++;
          if (cspec_[id]) { // this hit was served by a speculative prefetch — count it useful once
              spec_useful_.fetch_add(1);
-@@ -938,7 +1763,22 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
+@@ -938,7 +1770,22 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
          }
          if (promote) {
              lru_unlink(id);
@@ -1630,7 +1637,7 @@ index 860acb8..95e0c03 100644
          }
          hit = true;
          return true;
-@@ -954,6 +1794,7 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
+@@ -954,6 +1801,7 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
          if (!commit_proj_pages(il, e, p)) return false;
      }
      if (ever_evicted_[id]) ++rereads_; // this entry was resident once; the cache is buying it again
@@ -1638,7 +1645,7 @@ index 860acb8..95e0c03 100644
      cvalid_[id] = 1;
      cspec_[id] = 0; // a real read, not speculative
      cresident_ += entry_bytes(il);
-@@ -965,6 +1806,11 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
+@@ -965,6 +1813,11 @@ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, in
  // ── load: stage routed experts, read the batch, evict cold entries to budget ────────
  bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
      if (!active_ || il < 0 || il >= n_layer_ || !layers_[il].bound || !ids || n_ids <= 0) return false;
@@ -1650,7 +1657,7 @@ index 860acb8..95e0c03 100644
      if (overlap_) return load_layer_async(il, ids, n_ids);
      LayerExperts & L = layers_[il];
      cgen_++;
-@@ -977,7 +1823,7 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
+@@ -977,7 +1830,7 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
      // Integrate / discard any speculative prefetch before this layer's real staging touches the
      // cache. After this returns no spec read is in flight and completed ones are resident hits. The
      // budget is fixed for the run (auto sizes it once at init), so there is nothing to resize here.
@@ -1659,7 +1666,7 @@ index 860acb8..95e0c03 100644
  
      auto stage = [&](int e) -> bool {
          if (cache_max_ == 0) {
-@@ -998,7 +1844,7 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
+@@ -998,7 +1851,7 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
          for (int p = 0; p < MoeRecipe::max_exps; ++p) {
              const uint64_t slice = L.proj[p].nb2;
              if (slice == 0) continue; // absent slot in a fused layout
@@ -1668,7 +1675,7 @@ index 860acb8..95e0c03 100644
                               slice, -1, (int16_t) L.proj[p].file_idx, e, (int16_t) il, (int8_t) p, 0});
          }
          return true;
-@@ -1020,7 +1866,8 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
+@@ -1020,7 +1873,8 @@ bool ExpertStreamSource::load_layer(int il, const int32_t * ids, int n_ids) {
              if (cache_max_) {
                  const int32_t id = il * n_expert_ + e;
                  lru_unlink(id);
@@ -1678,7 +1685,7 @@ index 860acb8..95e0c03 100644
              }
              continue;
          }
-@@ -1108,7 +1955,7 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
+@@ -1108,7 +1962,7 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
      // Integrate / discard speculative prefetch before this layer's real staging (the previous
      // batch is already drained above, so this only waits on in-flight spec reads). The budget is
      // fixed for the run, so there is nothing to resize here.
@@ -1687,7 +1694,7 @@ index 860acb8..95e0c03 100644
  
      // 2. New generation for this layer. A flag counts as ready only once its gen matches.
      const uint32_t gen = async_gen_.fetch_add(1, std::memory_order_relaxed) + 1;
-@@ -1194,7 +2041,7 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
+@@ -1194,7 +2048,7 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
              for (int e : staged_) {
                  if (!seen_[e]) continue; // cache hit, already marked ready
                  const int32_t flag = (int32_t) ((size_t) p * (size_t) n_expert_ + (size_t) e);
@@ -1696,7 +1703,7 @@ index 860acb8..95e0c03 100644
                                   L.proj[p].file_off + (uint64_t) e * slice, slice, flag, (int16_t) L.proj[p].file_idx,
                                   e, (int16_t) il, (int8_t) p, 0});
              }
-@@ -1262,7 +2109,24 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
+@@ -1262,7 +2116,24 @@ bool ExpertStreamSource::load_layer_async(int il, const int32_t * ids, int n_ids
                  const int32_t id = il * n_expert_ + e;
                  if (!cvalid_[id]) continue;
                  lru_unlink(id);
@@ -1722,7 +1729,7 @@ index 860acb8..95e0c03 100644
              }
          }
      }
-@@ -1317,6 +2181,27 @@ static inline void cpu_relax() {
+@@ -1317,6 +2188,27 @@ static inline void cpu_relax() {
  
  // Called from EVERY compute thread, for each routed expert, before it reads that expert's rows.
  // Blocks until the expert's slice for the layer in flight is resident (or the run goes fatal).
@@ -1750,7 +1757,7 @@ index 860acb8..95e0c03 100644
  void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
      const void * key = (const void *) src0;
      auto it = std::lower_bound(texp_.begin(), texp_.end(), key,
-@@ -1335,6 +2220,13 @@ void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
+@@ -1335,6 +2227,13 @@ void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
          }
          return;
      }
@@ -1764,7 +1771,7 @@ index 860acb8..95e0c03 100644
      const size_t idx = (size_t) p * (size_t) n_expert_ + (size_t) expert;
      const uint32_t want = async_gen_.load(std::memory_order_relaxed);
      if (ready_[idx].gen.load(std::memory_order_acquire) == want) return; // already resident
-@@ -1373,6 +2265,23 @@ void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
+@@ -1373,6 +2272,23 @@ void ExpertStreamSource::on_expert_ready(const ggml_tensor * src0, int expert) {
  void ExpertStreamSource::enable_overlap_hook() {
  #ifdef BMOE_HAVE_EXPERT_READY_HOOK
      ggml_cpu_set_expert_ready_hook(&ExpertStreamSource::c_expert_ready, this);
@@ -1788,7 +1795,7 @@ index 860acb8..95e0c03 100644
      hook_registered_ = true;
  #endif
  }
-@@ -1411,12 +2320,55 @@ IExpertSource::Stats ExpertStreamSource::stats() const {
+@@ -1411,12 +2327,55 @@ IExpertSource::Stats ExpertStreamSource::stats() const {
  }
  
  void ExpertStreamSource::shutdown() {
@@ -1835,17 +1842,17 @@ index 860acb8..95e0c03 100644
 +                                 "failures %lld, cpu budget reduced by %zu MiB, admissions rejected %lld, "
 +                                 "overflow experts CPU-computed from the tier %lld, promotions denied by the per-token budget %lld, "
 +                                 "risk-flagged experts recomputed on the CPU %lld, device time %.1f ms, "
-+                                 "layout copy-outs %lld (peak %zu KiB held), map errors %lld\n",
++                                 "layout copy-outs %lld (peak %zu KiB held), map errors %lld, host ms: overflow map %.1f unmap %.1f promotion %.1f\n",
 +                         gpu_ ? gpu_->name() : "-", gowner_.size(), gt_promotions_, gt_evictions_, gt_flushes_, gt_hits_,
 +                         gt_dispatches_, gt_experts_, gt_dispatches_ ? (double) gt_experts_ / (double) gt_dispatches_ : 0.0,
 +                         gt_wait_ns_ / 1e6, gt_fail_, gt_cpu_budget_taken_ >> 20, gt_rejected_, gt_overflow_, gt_budget_denied_,
 +                         gt_risk_recomputed_, gt_device_ns_ / 1e6, gt_copyouts_, gt_overbuf_peak_ >> 10,
-+                         gpu_ ? gpu_->map_errors() : 0LL);
++                         gpu_ ? gpu_->map_errors() : 0LL, gt_overmap_ns_ / 1e6, gt_overunmap_ns_ / 1e6, gt_promo_ns_ / 1e6);
          hook_registered_ = false;
      }
  #endif
 diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
-index 5995b7f..f2369d4 100644
+index 5995b7f..ba09a77 100644
 --- a/core/src/moe/expert_stream_source.h
 +++ b/core/src/moe/expert_stream_source.h
 @@ -22,6 +22,7 @@
@@ -1881,7 +1888,7 @@ index 5995b7f..f2369d4 100644
  
      // One expert's cache accounting for the layer being staged: the lookup, the hit/miss decision,
      // and the residency bookkeeping that follows. Both load paths need exactly this and used to spell
-@@ -202,6 +212,70 @@ private:
+@@ -202,6 +212,71 @@ private:
      // `commit_only_proj` >= 0 commits only that projection's pages on a miss (two-wave publish:
      // the caller contracts to commit the rest via commit_proj_pages before emitting their jobs).
      bool touch_entry(int il, int e, bool & hit, bool promote = true, int commit_only_proj = -1);
@@ -1923,6 +1930,7 @@ index 5995b7f..f2369d4 100644
 +    std::vector<char> gstage_buf_;           // warm start: the three slices as read from the file
 +    std::vector<char> grisk_buf_;            // risk recompute: one expert copied out
 +    long long gt_copyouts_ = 0;
++    long long gt_overmap_ns_ = 0, gt_overunmap_ns_ = 0, gt_promo_ns_ = 0; // host time in overflow read-maps, their unmaps, promotions
 +    size_t gt_overbuf_peak_ = 0;
 +    long long gt_rejected_ = 0, gt_overflow_ = 0, gt_budget_denied_ = 0;
 +    int gpromo_per_token_ = 2, gpromo_left_ = 0;
@@ -1952,7 +1960,7 @@ index 5995b7f..f2369d4 100644
  
      // Commit the pages of one (layer, expert, projection) cache slice so a read can land in it.
      bool commit_proj_pages(int il, int e, int p);
-@@ -210,6 +284,10 @@ private:
+@@ -210,6 +285,10 @@ private:
      void lru_unlink(int32_t id);
      void lru_push_front(int32_t id);
      void lru_push_back(int32_t id);
@@ -1963,7 +1971,7 @@ index 5995b7f..f2369d4 100644
      size_t entry_bytes(int il) const;
      void evict_tail();
  
-@@ -222,10 +300,25 @@ private:
+@@ -222,10 +301,25 @@ private:
      bool active_ = false;
      bool load_all_ = false;
      bool overlap_ = false;
@@ -1989,7 +1997,7 @@ index 5995b7f..f2369d4 100644
      std::vector<int32_t> spec_done_scratch_; // scratch: completed entries being integrated
      std::vector<int32_t> spec_cand_;         // scratch: prefetch candidates surviving the residency filter
      // How many completed entries are waiting to be integrated. Mirrors spec_done_.size(), but
-@@ -303,6 +396,17 @@ private:
+@@ -303,6 +397,17 @@ private:
      std::vector<size_t> lbuf_sz_[MoeRecipe::max_exps];
      std::vector<uint8_t> cvalid_;
      std::vector<int32_t> cprev_, cnext_;
@@ -2007,7 +2015,7 @@ index 5995b7f..f2369d4 100644
      std::vector<uint32_t> cstamp_;
      std::vector<uint8_t> cspec_; // 1 if this resident entry was filled speculatively, until first hit
      int32_t chead_ = -1, ctail_ = -1;
-@@ -337,6 +441,33 @@ private:
+@@ -337,6 +442,33 @@ private:
  
      // I/O lane pool
      int io_threads_ = 1;
@@ -2226,7 +2234,7 @@ index 7d20cf6..65e31b0 100644
      void predict_at_topk(ggml_tensor * t, int il, int nu, int nt); // watchdog + job submission
 diff --git a/core/src/moe/gpu_tier.cpp b/core/src/moe/gpu_tier.cpp
 new file mode 100755
-index 0000000..1c5bcb7
+index 0000000..e0c9f04
 --- /dev/null
 +++ b/core/src/moe/gpu_tier.cpp
 @@ -0,0 +1,377 @@
@@ -2489,10 +2497,10 @@ index 0000000..1c5bcb7
 +    void unmap_read(int slot, const void * base) override {
 +        if (gx_slot_unmap_read(g_, &slots_[(size_t) slot], base) != 0) ++map_errors_;
 +    }
-+    // Variants >= 2 keep their slots in gx's repacked layouts (2: [ib][row] planes, 3: tiled by 64-row groups; same
++    // Repacking variants (per gx_variant_uses_repack: 2 = [ib][row] planes, 3 = tiled by 64-row groups; same
 +    // bytes permuted, same offsets): writes go through gx_repack_expert and the CPU paths read through
 +    // gx_unpack_expert, its exact inverse; gx picks the layout from the context's variant.
-+    bool repacked() const { return variant_ >= 2; }
++    bool repacked() const { return gx_variant_uses_repack(variant_) != 0; } // libgx decides which layouts repack (v2, v3; v4 is native)
 +    bool native_layout() const override { return !repacked(); }
 +    bool write_expert(int slot, const void * const src[3], const size_t bytes[3], ggml_type t_down) override {
 +        if (!repacked()) return GpuExpertsBackend::write_expert(slot, src, bytes, t_down);

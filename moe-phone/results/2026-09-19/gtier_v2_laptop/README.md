@@ -33,3 +33,8 @@ v2/v3.
 ## Unrolled kernels (gx 58b13dd), 01:35
 Rows u1, u3 and u3w match v1 / v1w byte for byte, with 0 risk flags and 0 failures (u3: 973 / 644 copy-outs). The phone engine for the
 tier A/B is bmoe-i8mm-0022 (bmoe-cli md5 4263e767a5e1c552820e91683fc71d52).
+
+## gx v4 (native, 2 work-items per row), 06:05
+The engine now asks libgx which variants repack (gx_variant_uses_repack). A variant-number test (>= 2) would have repacked
+v4's native slots; libgx HEAD refuses that with -4. Rows w1, w3 and w4 match v1 byte for byte; w4 has 0 copy-outs (native)
+and w3 has 973 (repacked); all have 0 failures, 0 risk flags and 0 map errors.

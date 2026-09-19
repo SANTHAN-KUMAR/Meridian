@@ -17,3 +17,5 @@ It is a superset of 0019v2.
 Update 2026-09-19 01:00: repacked layouts for every gx variant >= 2 (the v2-only check wrote v3 slots unrepacked). Android bmoe-i8mm-0021, bmoe-cli md5 49e304df484689b27307d00a33926e44, supersedes 0020kgsl and 0019v2.
 
 Update 2026-09-19 01:35: engine unchanged; bmoe-i8mm-0022 = this tree + libgx 58b13dd (unrolled kernels), bmoe-cli md5 4263e767a5e1c552820e91683fc71d52.
+
+Update 2026-09-19 06:05: the repack decision comes from libgx (gx_variant_uses_repack: v2, v3), not from variant >= 2; v4 is native layout. Also carries the host-time counters (overflow map/unmap, promotion) of 0023.
