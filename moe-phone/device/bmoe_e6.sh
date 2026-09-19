@@ -25,7 +25,10 @@
 # pauses the run), so from here: E6_NOWAKE=1 leaves the screen off, and cooldown() waits (up to 20 min, logged) before every
 # row until thermal status < 3 and shell_front <= 43 C. Mode klresume DIR finishes the KL phase in DIR with its existing
 # ref.bkl, skipping arms already scored. The scoring rule is unchanged.
-#   GT_PIN=... sh bmoe_e6.sh kl | klresume DIR | mc "ARM ARM ..."
+# CONTROL added 2026-09-19 19:00 (after the T7/T6/RA1 rows): mode ident dumps FLOOR (Q4_0 top-8) and re-scores FLOOR against it
+# on the phone. Expected: KL exactly 0 and 0 flips. Any other value means run-to-run nondeterminism in the phone build, and every
+# E6 KL number is then suspect.
+#   GT_PIN=... sh bmoe_e6.sh kl | klresume DIR | mc "ARM ARM ..." | ident
 set -u
 MODE=${1:-kl}; MC_ARMS=${2:-}
 NOWAKE=${E6_NOWAKE:-0}
@@ -85,7 +88,11 @@ run() {  # tag arm extra...
   ( cd $H/$BIN && LD_LIBRARY_PATH=. ./bmoe-cli -m $m "$@" > "$O/$tag.out" 2> "$O/$tag.err" )
   echo "exit=$? AFTER $(thermal_state) $(grep -hE '^ppl:|^ppl-kl:|^ppl-policy|perplexity failed' "$O/$tag.out" "$O/$tag.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
 }
-if [ "$MODE" = klresume ]; then
+if [ "$MODE" = ident ]; then
+  run FLOOR_dump FLOOR $KLA --ppl-dump $O/floor.bkl
+  run FLOOR_self FLOOR $KLA --ppl-ref $O/floor.bkl --ppl-kl-out $O/FLOOR_self.kl
+  rm -f $O/floor.bkl
+elif [ "$MODE" = klresume ]; then
   [ -s $O/ref.bkl ] || { echo "FATAL no ref.bkl in $O" | tee -a "$O/log.txt"; exit 5; }
   echo "klresume $(date +%H:%M:%S)" >> "$O/log.txt"
   for a in FLOOR T7 T6 RA1 DC05 DC10 SUB; do
