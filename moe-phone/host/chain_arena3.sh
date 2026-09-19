@@ -38,6 +38,14 @@ reconnect
 orph=$(A 'ps -A -o ARGS' | grep -E 'bmoe-cli|gx_|sh bmoe_|pinprobe' | grep -v grep)
 [ -n "$orph" ] && { log "[arena3] FATAL foreign: $orph"; exit 1; }
 SP=/tmp/claude-1000/-run-media-santhankumar-New-Volume-identifying-variation/2d806460-912e-4de7-a437-dc77597a5bb6/scratchpad
+# repack_bench (pre-registered in host/repack_bench/repack_bench.cpp), ~1-2 min, under the lock, screen held awake
+A "echo 'repack_bench $(date +%H:%M:%S)' > $H/.phone_busy; mkdir -p /data/local/tmp/repack_bench" >/dev/null
+adb push "$MP/host/repack_bench/out/repack_bench" /data/local/tmp/repack_bench/ >/dev/null 2>&1 </dev/null || { log "[arena3] FATAL repack_bench push"; A "rm -f $H/.phone_busy"; exit 1; }
+A "settings put system screen_off_timeout 1800000; input keyevent KEYCODE_WAKEUP" >/dev/null 2>&1
+mkdir -p "$R/repack_bench"
+A "cd /data/local/tmp/repack_bench && chmod 755 repack_bench && dumpsys power | grep -m1 mWakefulness= && LD_LIBRARY_PATH=$H/bmoe-i8mm-0024 ./repack_bench 300 2>/dev/null && dumpsys power | grep -m1 mWakefulness=" > "$R/repack_bench/repack_bench_phone.out" 2>&1
+A "rm -f $H/.phone_busy" >/dev/null
+log "[arena3] repack_bench: $(grep -E '^(RESULT|VERDICT)|mWakefulness' "$R/repack_bench/repack_bench_phone.out" | tr '\n' ' ')"
 adb push "$MP/device/bmoe_arena3.sh" "$H/" >/dev/null 2>&1 </dev/null
 A "grep -q 'slot-arena --cache-ceil-mb 4600' $H/bmoe_arena3.sh" || { log "[arena3] FATAL pushed script wrong"; exit 1; }
 export GTENV="GT_BIN=bmoe-i8mm-0024 GT_PIN=$(cat "$SP/phone_pin")"
