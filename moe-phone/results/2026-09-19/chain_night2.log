@@ -28,3 +28,9 @@
 2026-09-19T04:37:19+05:30 [night3] [tier] A/B pulled: /run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/bmoe_gtier/bmoe_gtier_ab_20260919_0235
 2026-09-19T04:37:23+05:30 [night3] phone restored
 2026-09-19T04:44:28+05:30 [night3] [awake] start
+2026-09-19T04:47:32+05:30 [night3] pulled /data/local/tmp/moe-stream/bmoe_gtier_smoke_20260919_0444/
+2026-09-19T04:47:32+05:30 [night3] [awake] smoke ok=1 dev=2978 risk=0 :: generation: 64 tokens, 0.162 s/token (6.167 tok/s) generation: 64 tokens, 0.179 s/token (5.572 tok/s)  :: host ms: overflow map 16.2 unmap 22.0 promotion 23.9
+2026-09-19T04:47:32+05:30 [night3] [awake] A/B start (battery 55%)
+2026-09-19T05:39:40+05:30 [night3] pulled /data/local/tmp/moe-stream/bmoe_gtier_ab_20260919_0447/
+2026-09-19T05:39:40+05:30 [night3] [awake] A/B pulled: /run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/bmoe_gtier/bmoe_gtier_ab_20260919_0447
+2026-09-19T05:39:46+05:30 [night3] phone restored
