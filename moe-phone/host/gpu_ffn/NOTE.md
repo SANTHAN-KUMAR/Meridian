@@ -439,3 +439,23 @@ any use in the engine needs the model-level fidelity measurement (E6 machinery, 
 - **If positive:** the speed result does not adopt v5. Model-level fidelity is still required (E6 machinery, "negligible" bar of spec §0 item 4:
   mean/p99 KL <= 1.10x Q4_0's, flips <= +1%, PPL <= 1.01x, MMLU) with v5 wired into the engine, plus the E4b wall-time A/B; the bound is <= ~10 ms/token.
   **If killed:** the GPU branch is closed (spec E4 item 8); record the numbers here and in the write-up.
+
+### 11.2 E4 verdict: KILL (phone, 2026-09-19 20:17; `results/2026-09-19/gx_e4_phone_201740/`, written up in `results/2026-09-19/E4_VERDICT.md`)
+Values read from `tol_test.out` and `bench.out` of that directory (nothing hand-derived):
+- Tolerance gate on Adreno: PASS, 27/27 cases, worst rel vs fp64 5.5e-7 (same as the laptop). The kernel computes what it claims on the device.
+- `BENCH spin=1`, Q4_0 down, host-visible median (n = 300; p10-p90 in brackets), device median:
+  | variant | k | host ms | device ms |
+  |---|---|---|---|
+  | 5 | 1 | 1.128 [1.108-1.378] | 0.805 |
+  | 5 | 2 | 1.468 [1.442-1.721] | 1.125 |
+  | 4 (bit-exact, same session) | 1 | 0.584 [0.472-0.691] | 0.273 |
+  | 4 | 2 | 0.707 [0.587-0.954] | 0.381 |
+  Q4_1 down, v5: k=1 1.145, k=2 1.507 ms host.
+- Rule: positive needed k=2 <= 0.25 and k=1 <= 0.15 ms; kill at k=2 >= 0.40 ms. v5 k=2 is 3.7x the kill threshold and 5.9x the positive one, the
+  whole p10-p90 band is above it, and the Q4_1 rows agree: KILL, no middle-range rerun applies. The GPU branch is closed (spec E4 item 8).
+- The tolerant kernel is SLOWER than the bit-exact v4 (device 2.95x at k=1, 2.95x at k=2), the opposite of the hypothesis that dropping
+  bit-exactness would help. Kernel 1 dominates (0.618 of 0.805 ms at k=1). Mechanism NOT measured: candidates are the fp32 x staged in
+  local memory (8 KB vs 2 KB), float16 register pressure in `fast_block`, and the device `exp`/divide; none was isolated, so no
+  explanation is claimed. It does not change the verdict, since even v4's 0.58 ms is 4x the k=1 target.
+- Caveat on the run: `state_before.txt` records wake=Dozing and CPU caps below hardware max (cap0 2.02 vs hw 3.32 GHz); the GPU clock was not
+  logged, so the absolute times may carry a clock effect. It cannot bridge a 3.7x gap, and v4 ran in the same session under the same conditions.
