@@ -71,7 +71,14 @@ passes, but it touches ~2% of experts, worth ~5 ms/token (est.), so it cannot re
 If a chain died, re-launch it with `setsid nohup bash host/<chain>.sh > /dev/null 2>&1 < /dev/null &`. Each one waits for the
 previous marker file, so the order is preserved.
 
-## 3. How to close (after E4 and E1 land)
+### E7 (added 20:30 at the user's request: "run it tonight")
+E4 closed the GPU as a HELPER. E7 tests the GPU as the MAIN engine (the whole graph on llama.cpp's OpenCL/Adreno backend, which barely
+throttles). It is pre-registered in `device/bmoe_e7.sh`: Qwen3 truncated to 4 and 8 layers, t(L) = a + bL projected to 48 layers,
+and a 10-minute sustained GPU run. Decision: POSITIVE if C_gpu48 <= 28.5 ms, KILL if > 50.5 ms, MIDDLE = "not supported".
+`host/chain_e7.sh` runs it after CHAIN_E1_DONE (log `results/2026-09-19/chain_e7.log`), then touches CHAIN_E7_DONE.
+Scoring by hand from the csv files: median avg_ts (tok/s) per row -> ms/token; fit a, b; apply the rule.
+
+## 3. How to close (after E4, E1 and E7 land)
 1. **E4 verdict** (pre-registered in spec §6 E4, v2). Take `BENCH spin=1 variant=5` host-visible `median_ms` at k=2 and k=1 from
    `e4_run.log` or the gx results dir it names. Positive: k=2 ≤ 0.25 ms and k=1 ≤ 0.15 ms. Kill: k=2 ≥ 0.40. Middle: 3 more rounds
    (`E4_BENCH_ARGS="--variants 5 --ks 1,2 --iters 300"`), else kill. The saving it allows is S_gpu ≤ 10 ms/token (0 if killed).
