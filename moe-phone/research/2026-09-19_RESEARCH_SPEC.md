@@ -276,6 +276,55 @@ Same session, same Q4_0 file, BigMoeOnEdge's documented command vs our best Tier
 Already pre-registered in `device/bmoe_h2h.sh`. Positive: ratio decisive by the rule. It is the only experiment that makes
 "1.7× the published result on the same phone" a claim.
 
+### E6. The Tier-A frontier: how much speed does a quality loss no larger than Q4_0's own buy? (added 2026-09-19 after the user opened Tier A)
+1. **Question.** For each lossy routing change the engine already implements, what is its quality cost measured against the
+   reference model, and is that cost within the Tier-A margin, i.e. **no larger than the loss the Q4_0 quantisation itself already
+   causes** (`ESTIMAND.md` §3)? For the ones within the margin, what is the wall-time gain?
+2. **Why it matters.** Tier E at the capped clock has no measured path to 100 ms (§5). Tier A changes the floors themselves: fewer
+   experts cut expert bytes, compute and misses together (they remove work, §2.1); routing committed ahead removes the serial-miss
+   dependency (the stall's structure). This is the only branch where a single change moves every term in the same direction.
+3. **Hypotheses.** H6: at least one configuration within the margin gains ≥ 20% wall time. Candidates, each a single engine flag:
+   - `--route-ahead 1`: all 8 experts computed, routing taken from the gate one layer earlier, so every read can be prefetched a
+     layer ahead. Its target is the stall (35-38 ms); it cuts no compute.
+   - `--drop-cold-experts 0.5` / `1.0`: skips only experts that are both a cache miss and below 0.5-1.0 × the uniform weight
+     share. Target: the stall, at the lowest quality risk.
+   - `--n-expert-used 7` / `6`: fewer experts everywhere. Target: expert compute + bytes + misses (−12.5% / −25%). BigMoeOnEdge
+     reports 4.0 → 5.0 tok/s for top-6 on this phone class (their measurement, not ours).
+   - `--expert-substitute 0.15`: same number of experts, near-ties swapped for resident ones. Target: misses.
+4. **Construction.**
+   - **Reference.** The model's BF16 logits. BF16 does not fit on the phone or the laptop. The feasible reference is Q8_0 (~32 GB,
+     fits the phone's free storage, streamed by the same engine; llama.cpp's KL workflow uses such a base). This is a PROXY for
+     BF16, stated as such; its own KL to BF16 is recorded as a limitation. Alternatively BF16 on a rented GPU (the G3/X4 track in
+     `POSITION.md`), same corpus and tokens.
+   - **Engine change (small).** Teacher-forced `--ppl` mode writes each position's top-64 log-probs plus the tail mass to a file.
+     A script computes per-token KL(ref ‖ arm) over the union of supports, the mean, the p99, and the top-1 flip rate.
+   - **Corpus.** ~2,000 tokens of held-out text: factual/encyclopaedic prose (the "knowledge" concern), code, and a chat turn. Plus a
+     knowledge probe: a fixed 300-question multiple-choice set scored with `--ppl-choices` (accuracy with a binomial CI).
+   - **Cache-dependent policies** (drop-cold, substitute) are scored with `--ppl-step` at the deployed cache budget, since they act
+     only at decode.
+   - **Arms:** Q8_0 top-8 (reference); Q4_0 top-8 (**defines the margin**); each candidate alone; then the best passing
+     candidates combined, with the repacked kernels (H-A).
+5. **Measure.**
+   - Quality: mean KL, p99 KL, top-1 flip rate, multiple-choice accuracy.
+   - Speed, for passing arms only: the awake ABBA wall time against the best Tier-E configuration.
+6. **Not a proxy.** Perplexity alone (it can stay flat while the distribution changes); generated-text identity (greedy text
+   moves only when an argmax flips); anyone else's published quality numbers for other models or other quantisations.
+7. **Pass (pre-registered margin).** An arm passes if **all** of these hold: its added mean KL, KL(ref‖arm) − KL(ref‖Q4_0 top-8),
+   is ≤ KL(ref‖Q4_0 top-8); the same holds for the p99; its flip rate is ≤ 2 × the Q4_0 flip rate; and its multiple-choice accuracy
+   is within the Q4_0 arm's 95% CI. In words: **the extra damage is no bigger than the damage the 4-bit file already does**, on
+   every one of the four measures. **Positive signal:** a passing configuration whose awake wall time, with H-A, is ≤ 100 ms.
+8. **Kills.** No arm with a ≥ 15% wall-time gain passes the margin. Then Tier A is closed for this model on this phone, and with E1-E4
+   the goal is settled as unreachable under the constraints.
+9. **Conclusions.** It names the fastest configuration whose quality cost is provably inside what the user already accepts by
+   running Q4_0, with its measured speed. A published speed claim then carries the Tier-A label and its KL numbers.
+10. **Branches closed.** The whole family of retrained or modified-model routes (pruning, distillation, 2-bit experts, Medusa
+    heads) closes if a flag-level configuration passes; if none passes, every training-free lossy lever closes at once, because
+    these five knobs span the training-free options the engine has.
+
+**Cost:** Q8_0 download (~32 GB; downloads are allowed) and push to the phone, a small logit-dump patch plus a KL script
+(laptop-testable on OLMoE), then ~3 phone-hours for quality (Q8_0 streams slowly, but only a fixed corpus is scored) and ~1 h of
+speed A/B for the passing arm.
+
 **Total phone time for E1-E5: ~6 hours** (E4b adds ~1 h if E4 is positive). E5 runs LAST, against the final configuration the tree
 selects, so the head-to-head compares the engine we would actually report. Every experiment reports at context 512 **and** one
 4096-context row (ESTIMAND §5): a floor that only holds at short context is not a floor.
@@ -302,6 +351,9 @@ E3 → cap response
 it is still in the middle, it is a **kill** (the lever's ceiling is then below the resolution of any campaign this project can afford).
 E1 middle (80-95 ms): plan on C = the measured value and require the other terms to close the gap in the tree below; no compute campaign.
 
+**Tier-A branch (E6), independent of E1-E4:** a passing configuration with H-A at ≤ 100 ms awake → the deliverable is 10 tok/s
+Tier A with its KL numbers. A pass without reaching 100 ms → the fastest within-margin rate, reported. No pass → Tier A is closed.
+
 Every path ends in one of three states within ~6 phone-hours: **(a) 10 tok/s Tier E is reachable and the architecture is named** (A +
 predictor + split, with measured floors summing ≤ 100), **(b) reachable only at a clock we do not control**, or **(c) not reachable
 without Tier A**, and the write-up is the negative-results/benchmark-validity paper (`2026-09-19_paper_framing.md`).
@@ -323,7 +375,12 @@ without Tier A**, and the write-up is the negative-results/benchmark-validity pa
 7. **Energy is logged** (current × voltage, caps, skin) on every row from now on.
 8. **One architecture A/B per phone-day**, not five tunings.
 
-## 10. Final recommendation
+## 10. Final recommendation (updated after Tier A was opened)
+**E6 first.** It is the only experiment whose positive outcome reaches 100 ms without an unmeasured conjunction. Then E1 (it fixes the
+compute row that every other branch uses), E4, E2, E3, and E5 last. If E6 passes with `--route-ahead` or drop-cold, E2 is largely
+answered (the stall's structure has changed); run E2 only if E6 fails.
+
+## 10a. Earlier recommendation (before Tier A was opened)
 Run E1-E5 (~5 phone-hours), in the order E1, E4, E2, E3, E5 (E1 and E4 are the cheapest and each can end the Tier-E goal on its own).
 Then stop and write up according to the leaf reached. Do not build anything not named in §8 before the tree has been walked.
 
