@@ -10,7 +10,7 @@
 #   KL text    e6/kl_text.txt (human-written: 2 Wikipedia extracts, CPython heapq.py, one oasst1 turn; ~3,000 tokens), -c 4096,
 #              --ppl-step (the decode regime every cache-dependent policy acts in), --ppl-dump-k 8192 (KL over REF's top-8192 plus one
 #              tail bucket: a lower bound of the full KL; REF's largest tail mass is reported).
-#   Knowledge  e6/mmlu (100 MMLU test questions, 51 subjects, zero-shot), first-token log-prob of " A"/" B"/" C"/" D", --ppl-step.
+#   Knowledge  e6/mmlu (100 MMLU test questions, 51 subjects, zero-shot), first-token log-prob of " A"/" B"/" C"/" D" (mode: see below).
 #              Run for REF, FLOOR and every arm that passes the three KL criteria (a fail on any criterion is a fail).
 #              Batch mode for REF/FLOOR/T7/T6/RA1; --ppl-step only for DC05/DC10/SUB, whose policies act on cache residency and
 #              barely fire in a batch. The batch/step numeric difference is floating-point reordering (~1e-6), far below a choice.
