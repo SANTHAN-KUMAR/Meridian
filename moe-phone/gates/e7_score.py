@@ -52,13 +52,25 @@ def main():
     ga, gb, g48 = proj(ms["gpu_L4"], gpu_L8)
     ca, cb, c48 = proj(ms["cpu_L4"], ms["cpu_L8"])
     verdict = None
-    if g48 is not None:
+    # GUARD (added 2026-09-19 21:45, after the first scoring printed POSITIVE from a fit with b < 0): a per-layer cost <= 0 is
+    # physically impossible (more layers cannot run faster), so such a fit is INVALID and no verdict comes from it. The bounds
+    # below are used instead: t48 >= t(L=8) (monotonicity), and t48 >= t8 + 40 x (bytes per layer / peak GPU read rate).
+    fit_valid = gb is not None and gb > 0
+    bound_lo = None
+    if gpu_L8 is not None:
+        per_layer_floor_ms = 37e6 / 31e9 * 1000  # >= 8 experts x 2.65 MB + attention, at the MEMPROBE peak 31 GB/s
+        bound_lo = gpu_L8 + 40 * per_layer_floor_ms
+    if fit_valid and g48 is not None:
         verdict = "POSITIVE" if g48 <= 28.5 else ("KILL" if g48 > 50.5 else "MIDDLE (not supported)")
+    elif bound_lo is not None:
+        verdict = ("KILL (by bounds; fit invalid)" if bound_lo > 50.5 else
+                   "NOT POSITIVE (by bounds; fit invalid)" if gpu_L8 > 28.5 else "UNDECIDED (fit invalid)")
     out = dict(source=os.path.abspath(a.root), ms_per_token=ms, sustained_L8_ms=sus, sustained_tail_median_ms=sus_med,
                used_sustained_for_gpu_L8=used_sustained, gpu_fit=dict(a=ga, b=gb, t48=g48), cpu_fit=dict(a=ca, b=cb, t48=c48),
-               gpu_full_model_projection_ms=g48, gpu_projection_plus_io_ms=(g48 + 14.9 + 56.6) if g48 else None, verdict=verdict)
+               gpu_full_model_projection_ms=g48 if fit_valid else None, fit_valid=fit_valid, gpu_t48_lower_bound_ms=bound_lo,
+               gpu_projection_plus_io_ms=(g48 + 14.9 + 56.6) if (g48 and fit_valid) else None, verdict=verdict)
     json.dump(out, open(a.out, "w"), indent=1)
-    for k in ("ms_per_token", "sustained_tail_median_ms", "used_sustained_for_gpu_L8", "gpu_fit", "cpu_fit", "gpu_projection_plus_io_ms", "verdict"):
+    for k in ("ms_per_token", "sustained_tail_median_ms", "used_sustained_for_gpu_L8", "gpu_fit", "fit_valid", "gpu_t48_lower_bound_ms", "cpu_fit", "gpu_projection_plus_io_ms", "verdict"):
         print(k, out[k])
 
 
