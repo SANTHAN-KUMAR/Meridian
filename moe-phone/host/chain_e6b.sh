@@ -35,8 +35,13 @@ PASS=$(python3 -c "
 import json; d=json.load(open('$R/e6_kl_summary.json'))['verdict']
 print(' '.join(a for a,v in d.items() if v['negligible_kl']))" 2>/dev/null)
 log "[e6b] arms passing the KL criteria: [${PASS}]"
-campaign mc "REF FLOOR $PASS"; MC="$LAST"
-python3 "$MP/gates/e6_score.py" --kl "$K" --mc "$MC" --answers "$R/e6_corpus/mmlu_answers.json" --out "$R/e6_summary.json" > "$R/e6_summary.txt" 2>&1
+if [ -n "$PASS" ]; then
+  campaign mc "REF FLOOR $PASS"; MC="$LAST"
+  python3 "$MP/gates/e6_score.py" --kl "$K" --mc "$MC" --answers "$R/e6_corpus/mmlu_answers.json" --out "$R/e6_summary.json" > "$R/e6_summary.txt" 2>&1
+else
+  log "[e6b] no arm is negligible on the KL/PPL measures: knowledge probe skipped (it cannot change the verdict)"
+  cp "$R/e6_kl_summary.json" "$R/e6_summary.json"; cp "$R/e6_kl_summary.txt" "$R/e6_summary.txt"
+fi
 log "[e6b] E6 scored: $(tr '\n' ' ' < "$R/e6_summary.txt")"
 restore
 touch "$R/CHAIN_E6_DONE"
