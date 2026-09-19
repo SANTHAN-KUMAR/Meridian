@@ -12,6 +12,8 @@
 #              tail bucket: a lower bound of the full KL; REF's largest tail mass is reported).
 #   Knowledge  e6/mmlu (100 MMLU test questions, 51 subjects, zero-shot), first-token log-prob of " A"/" B"/" C"/" D", --ppl-step.
 #              Run for REF, FLOOR and every arm that passes the three KL criteria (a fail on any criterion is a fail).
+#              Batch mode for REF/FLOOR/T7/T6/RA1; --ppl-step only for DC05/DC10/SUB, whose policies act on cache residency and
+#              barely fire in a batch. The batch/step numeric difference is floating-point reordering (~1e-6), far below a choice.
 #   PASS (all four; gates/e6_score.py):  KL_mean(arm) <= 2 x KL_mean(FLOOR);  KL_p99(arm) <= 2 x KL_p99(FLOOR);
 #              flips(arm) <= 2 x flips(FLOOR);  MMLU accuracy(arm) >= the lower end of FLOOR's 95% Wilson interval.
 #   Adoption (§0): a passing arm is adopted only if it ALSO decodes >= 10.0 tok/s (median, awake, unplugged, steady state) in the
@@ -73,6 +75,9 @@ if [ "$MODE" = kl ]; then
   for a in FLOOR T7 T6 RA1 DC05 DC10 SUB; do run $a $a $KLA --ppl-ref $O/ref.bkl --ppl-kl-out $O/$a.kl; done
   rm -f $O/ref.bkl   # 200+ MB; the per-token KL files and logs are the record
 else
-  for a in $MC_ARMS; do run mc_$a $a -c 4096 --ppl-list $E/mmlu_list_phone.txt --ppl-choices " A, B, C, D" --ppl-skip 0 --ppl-step; done
+  for a in $MC_ARMS; do
+    st=""; case $a in DC05|DC10|SUB) st="--ppl-step";; esac
+    run mc_$a $a -c 4096 --ppl-list $E/mmlu_list_phone.txt --ppl-choices " A, B, C, D" --ppl-skip 0 $st
+  done
 fi
 echo "done $(date)" | tee "$O/DONE"
