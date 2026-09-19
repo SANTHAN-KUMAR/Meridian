@@ -53,3 +53,4 @@ bmoe: slot-arena: slots 6112 reused 21481 blocks 191, kgsl 0 MiB
 2026-09-19T08:51:22+05:30 [night3] [arena3] A/B start (battery 41%)
 2026-09-19T08:57:06+05:30 [night3] [prerepack] waiting for the arena3 A/B on the phone to finish
 2026-09-19T09:07:10+05:30 [night3] [h2h] waiting for CHAIN_PREREPACK_DONE
+2026-09-19T09:20:14+05:30 [agent] user asked to stop testing after the running arena3 A/B: chain_prerepack and chain_h2h cancelled before starting (no conversion, no repack A/B, no head-to-head run)
