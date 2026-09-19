@@ -404,3 +404,21 @@ The discriminating tests are interventions, none of them run:
 
 If cooling holds the caps at hardware maximum, compute at full clocks is the largest remaining lever toward
 10 tok/s (a projection, not measured).
+
+## 11. Variant 5 (E4, 2026-09-19): declared tolerance instead of bit-exactness
+
+`research/2026-09-19_RESEARCH_SPEC.md` E4 asks whether the GPU beats the repacked CPU at the sizes the engine dispatches
+(k = 1-2) once bit-exactness is dropped. Variant 5 is variant 4's mapping (two work-items per row, native layout) with fp32
+x and h (no Q8 quantisation of either), hardware fp16 scale loads, fp32 fma and the device `exp` and division. It is NOT
+ggml-equivalent: it differs from ggml-cpu by ggml's own Q8 activation error (~1e-2). It is for the speed question first;
+any use in the engine needs the model-level fidelity measurement (E6 machinery, the "negligible" bar of spec §0 item 4).
+- Acceptance (`gx_tol_test`, laptop NVIDIA, `results/2026-09-19/gx_e4_v5_192245/`): gate fixed before the first run,
+  max relative error per slot <= 1e-5 against an fp64 FFN on the same dequantised weights with the unquantised x.
+  27 cases (20 random incl. 8-decade activations, 7 real Qwen3 layers): worst 5.5e-7, 0 failures. Against ggml ARM the
+  worst is 3.0e-2, equal to ggml's own error against fp64 on each case (`arm_rel_vs_fp64`), i.e. the gap is ggml's Q8.
+- Negative controls (3 single-line mutations of the v5 kernel: Q4_1 m term dropped, Q4_0 bias 7, gate/up odd blocks
+  skipped): fail the gate on 12, 15, 27 of 27 cases.
+- Variants 0-4 unchanged: gx_test down/h differences 0 of 262,144 / 98,304 (the quantizer and SwiGLU self-tests were not
+  rerun; their ARM refs were not regenerated).
+- Laptop timings are meaningless (NVIDIA, copying driver). Phone: `run_phone_e4.sh` (tolerance gate on Adreno first,
+  then `gx_bench --variants 4,5 --ks 1,2,3,4`). Criterion is host-visible median_ms of v5 at k=2 and k=1 (spec E4).

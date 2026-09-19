@@ -1,0 +1,3 @@
+date=2026-09-19T19:22:46+05:30 git=b85973c kernel_md5=b7605e98ed74b500
+gate: rel_vs_fp64 <= 1e-5 per slot (declared before the first run); controls: 3 single-line kernel mutations each fail the gate (12, 15, 27 of 27 cases): down Q4_1 m term dropped, Q4_0 bias 7, gate/up odd blocks skipped
+gx_test v0-4 regression: down/h diff bits 0 (quant/swiglu self-tests not run: their arm refs were not generated)

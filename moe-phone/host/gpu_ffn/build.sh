@@ -34,6 +34,8 @@ case "$what" in
       -l:libOpenCL.so.1 -ldl -lpthread -o "$O/gx_pool_test"
     c++ -std=c++17 -O2 -ffp-contract=off -I"$HERE" -I"$CL_HDR" "$HERE/gx.cpp" "$HERE/gx_bench.cpp" \
       -l:libOpenCL.so.1 -ldl -lpthread -o "$O/gx_bench"
+    c++ -std=c++17 -O2 -ffp-contract=off -I"$HERE" -I"$CL_HDR" "$HERE/gx.cpp" "$HERE/gx_tol_test.cpp" \
+      -l:libOpenCL.so.1 -ldl -o "$O/gx_tol_test"
     c++ -std=c++17 -O2 -I"$GGML_SRC/include" "$HERE/ggml_ref.cpp" -L"$GGML_HOST" -lggml -lggml-base -lggml-cpu \
       -Wl,-rpath,"$GGML_HOST" -o "$O/ggml_ref_x86"
     echo "built $O/gx_test $O/gx_pool_test $O/gx_bench $O/ggml_ref_x86" ;;
@@ -49,7 +51,7 @@ case "$what" in
     "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" rcs "$O/libgx.a" "$O/gx.o"
     # M6 tools: OpenCL reached through cl_shim.cpp (dlopen of the device's libOpenCL.so); ggml_ref_arm (arm-ref)
     # is static and runs on the phone unchanged
-    for t in gx_test gx_pool_test gx_bench; do
+    for t in gx_test gx_pool_test gx_bench gx_tol_test; do
       $CXX_A64 -std=c++17 -O2 -ffp-contract=off -I"$HERE" -I"$CL_HDR" "$HERE/$t.cpp" "$O/gx.o" "$HERE/cl_shim.cpp" \
         -static-libstdc++ -ldl -o "$O/$t"
     done

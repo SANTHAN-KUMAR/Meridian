@@ -610,3 +610,87 @@ kernel void gx_down_pair(global const uchar * w0, global const uchar * w1, globa
         out[(size_t) s * N_EMBD + row] = dt == DT_Q4_1 ? summs + v : v;
     }
 }
+
+// ---------------------------------------------------------------------------------------------------
+// Variant 5 ("fast", E4 of research/2026-09-19_RESEARCH_SPEC.md): NOT bit-exact with ggml-cpu, by design. Variant 4's
+// mapping (two work-items per row, native layout, 16-byte loads) with a declared tolerance instead of
+// bit-exactness: x and h stay fp32 (no Q8_0/Q8_1 quantization of either), the fp16 scales are decoded
+// by the hardware (vload_half), products and sums are fp32 fma in a fixed order, SwiGLU uses the device's
+// exp and division. The result approximates the FFN of the dequantized weights on the UNQUANTIZED x (an fp64
+// evaluation of that is the reference, gx_tol_test); it differs from ggml-cpu by ggml's own Q8 activation
+// error (~1e-2), so it is never mixed with the bit-exact paths without a fidelity measurement.
+// Buffers: in = [x as fp32, N_EMBD*4 bytes][offs: 3*GX_MAX_K ulong]; hq = fp32 h, k * N_FF floats.
+// The risk region of the out buffer is not written (no denormal-sensitive step remains: 0 = no flags).
+// Q4_1 down: sum_i (d*q_i + m) * h_i = d * sum q_i h_i + m * sum h_i, per block.
+// ---------------------------------------------------------------------------------------------------
+#define IN5_OFFS_OFF (N_EMBD * 4)
+
+static float fast_block(global const uchar * qs, local const float * y, int off, float * sumy) {   // sum_i (q_i - off) * y_i
+    const uchar16 q = vload16(0, qs);
+    const float16 lo = convert_float16(q & (uchar16)(15)) - (float16)((float) off);
+    const float16 hi = convert_float16(q >> (uchar16)(4)) - (float16)((float) off);
+    const float16 yl = vload16(0, y), yh = vload16(1, y);
+    const float16 pr = fma(hi, yh, lo * yl);
+    if (sumy) { const float16 t = yl + yh; const float8 t8 = t.lo + t.hi; const float4 t4 = t8.lo + t8.hi; *sumy = (t4.x + t4.y) + (t4.z + t4.w); }
+    const float8 p8 = pr.lo + pr.hi;
+    const float4 p4 = p8.lo + p8.hi;
+    return (p4.x + p4.y) + (p4.z + p4.w);
+}
+
+// Grid (2 * N_FF, k), local (128, 1).
+kernel void gx_gate_up_fast(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
+                            global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
+                            global const uchar * inb, global uchar * hq,
+                            global float * hdbg, int dbg, int dt, global uchar * outb) {
+    local float  lx[N_EMBD];
+    local float2 xg[128], xu[128];
+    global const ulong * offs = (global const ulong *) (inb + IN5_OFFS_OFF);
+    const int t = get_local_id(0), s = get_group_id(1), p = t & 1, rr = t >> 1;
+    const int row = get_group_id(0) * 64 + rr;
+    for (int i = t; i < N_EMBD / 4; i += 128) vstore4(vload4(i, (global const float *) inb), i, lx);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    global const uchar * W = pick(s, w0, w1, w2, w3, w4, w5, w6, w7);
+    global const uchar * G = W + offs[s * 3 + 0] + (size_t) row * NBX * QB0;
+    global const uchar * U = W + offs[s * 3 + 1] + (size_t) row * NBX * QB0;
+    float ag = 0.0f, au = 0.0f;
+    for (int ib = p; ib < NBX; ib += 2) {
+        global const uchar * gb = G + ib * QB0;
+        global const uchar * ub = U + ib * QB0;
+        ag = fma(vload_half(0, (global const half *) gb), fast_block(gb + 2, lx + ib * 32, 8, 0), ag);
+        au = fma(vload_half(0, (global const half *) ub), fast_block(ub + 2, lx + ib * 32, 8, 0), au);
+    }
+    xg[t] = (float2)(ag, 0.0f); xu[t] = (float2)(au, 0.0f);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (p == 0) {
+        const float g = xg[t].x + xg[t + 1].x, u = xu[t].x + xu[t + 1].x;
+        const float h = g / (1.0f + exp(-g)) * u;
+        ((global float *) hq)[(size_t) s * N_FF + row] = h;
+        if (dbg) hdbg[s * N_FF + row] = h;
+    }
+}
+
+// Grid (2 * N_EMBD, k), local (128, 1).
+kernel void gx_down_fast(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
+                         global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
+                         global const uchar * inb, global const uchar * hq, global uchar * outb, int dt) {
+    local float  lh[N_FF];
+    local float2 xa[128];
+    global const ulong * offs = (global const ulong *) (inb + IN5_OFFS_OFF);
+    global float * out = (global float *) (outb + OUT_OFF);
+    const int t = get_local_id(0), s = get_group_id(1), p = t & 1, rr = t >> 1;
+    const int row = get_group_id(0) * 64 + rr;
+    for (int i = t; i < N_FF / 4; i += 128) vstore4(vload4(i, (global const float *) hq + (size_t) s * N_FF), i, lh);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    const int qb = dt == DT_Q4_1 ? QB1 : QB0, qo = dt == DT_Q4_1 ? 4 : 2, bias = dt == DT_Q4_1 ? 0 : 8;
+    global const uchar * D = pick(s, w0, w1, w2, w3, w4, w5, w6, w7) + offs[s * 3 + 2] + (size_t) row * NBH * qb;
+    float ac = 0.0f, am = 0.0f;
+    for (int ib = p; ib < NBH; ib += 2) {
+        global const uchar * xb = D + ib * qb;
+        float sy;
+        ac = fma(vload_half(0, (global const half *) xb), fast_block(xb + qo, lh + ib * 32, bias, &sy), ac);
+        if (dt == DT_Q4_1) am = fma(vload_half(1, (global const half *) xb), sy, am);
+    }
+    xa[t] = (float2)(ac, am);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (p == 0) out[(size_t) s * N_EMBD + row] = (xa[t].x + xa[t + 1].x) + (xa[t].y + xa[t + 1].y);
+}

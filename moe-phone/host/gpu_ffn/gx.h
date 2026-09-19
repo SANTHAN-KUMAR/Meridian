@@ -47,7 +47,9 @@ typedef struct gx_params {
                        1 = one work-item per row (whole-block loads), 2 = variant 1 on the repacked slot layout
                        (every slot must be written with gx_repack_expert), 3 = variant 2's planes tiled by 64-row
                        groups (also written with gx_repack_expert), 4 = two work-items per row (one per NEON
-                       accumulator) on the NATIVE layout. All held to the same bit-exact test. Whether a variant
+                       accumulator) on the NATIVE layout. All held to the same bit-exact test. 5 = variant 4's mapping with a declared
+                       tolerance instead of bit-exactness (fp32 x and h, native fp16 loads, fp32 fma): NOT bit-exact, tested
+                       by gx_tol_test against an fp64 reference; research spec E4. Whether a variant
                        needs repacked slots: gx_variant_uses_repack(). */
     int profile;    /* 1: create the dispatch queue with CL_QUEUE_PROFILING_ENABLE and record each dispatch's
                        device time (first kernel start to last kernel end) in gx_stats / gx_last_timing */

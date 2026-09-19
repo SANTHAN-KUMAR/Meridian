@@ -202,14 +202,14 @@ extern "C" gx_ctx * gx_init(cl_context ctx, cl_device_id dev, gx_params p, char 
         gx_free(g);
         return nullptr;
     }
-    if (p.variant < 0 || p.variant > 4) { seterr(err, errlen, "variant must be 0..4"); gx_free(g); return nullptr; }
+    if (p.variant < 0 || p.variant > 5) { seterr(err, errlen, "variant must be 0..5"); gx_free(g); return nullptr; }
     if (p.variant == 3 && (p.n_ff % 64 || p.n_embd % 64 || p.n_ff == p.n_embd)) {
         seterr(err, errlen, "variant 3 needs n_ff, n_embd multiples of 64 and n_ff != n_embd"); gx_free(g); return nullptr;
     }
-    static const size_t wg_of[5] = {256, 64, 64, 64, 128};
+    static const size_t wg_of[6] = {256, 64, 64, 64, 128, 128};
     const size_t wg_need = wg_of[p.variant];
-    static const char * kn1[5] = {"gx_gate_up", "gx_gate_up_row", "gx_gate_up_soa", "gx_gate_up_tiled", "gx_gate_up_pair"},
-                      * kn2[5] = {"gx_down", "gx_down_row", "gx_down_soa", "gx_down_tiled", "gx_down_pair"};
+    static const char * kn1[6] = {"gx_gate_up", "gx_gate_up_row", "gx_gate_up_soa", "gx_gate_up_tiled", "gx_gate_up_pair", "gx_gate_up_fast"},
+                      * kn2[6] = {"gx_down", "gx_down_row", "gx_down_soa", "gx_down_tiled", "gx_down_pair", "gx_down_fast"};
     g->k1 = p_clCreateKernel(g->prog, kn1[p.variant], &e);
     if (e == CL_SUCCESS) g->k2 = p_clCreateKernel(g->prog, kn2[p.variant], &e);
     for (cl_kernel k : {g->k1, g->k2}) {
@@ -227,13 +227,13 @@ extern "C" gx_ctx * gx_init(cl_context ctx, cl_device_id dev, gx_params p, char 
         if (e == CL_SUCCESS) m = p_clCreateBuffer(ctx, f | hv, bytes, nullptr, &e);
         return m;
     };
-    g->in_offs_off = ((size_t) p.n_embd / 32 * 34 + 7) & ~(size_t) 7;
+    g->in_offs_off = p.variant == 5 ? (size_t) p.n_embd * 4 : ((size_t) p.n_embd / 32 * 34 + 7) & ~(size_t) 7;   // variant 5: x as fp32
     g->risk_wg = (size_t) p.n_ff / 32;
     g->out_off = GX_MAX_K * g->risk_wg * sizeof(cl_int);
     g->in_host.assign(g->in_offs_off + 3 * GX_MAX_K * sizeof(cl_ulong), 0);
     g->out_host.assign(g->out_off + (size_t) GX_MAX_K * p.n_embd * sizeof(float), 0);
     g->inb = mk(CL_MEM_READ_ONLY, g->in_host.size());
-    g->hq = mk(CL_MEM_READ_WRITE, (size_t) GX_MAX_K * p.n_ff / 32 * 36);
+    g->hq = mk(CL_MEM_READ_WRITE, p.variant == 5 ? (size_t) GX_MAX_K * p.n_ff * 4 : (size_t) GX_MAX_K * p.n_ff / 32 * 36);
     g->outb = mk(CL_MEM_READ_WRITE, g->out_host.size());
     g->hdbg = mk(CL_MEM_WRITE_ONLY, (size_t) GX_MAX_K * p.n_ff * sizeof(float));
     // risk flags are written per work-group; variant 1 writes half the entries, so start from zeros once
@@ -268,7 +268,8 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
     }
     const int ne = g->p.n_embd, nf = g->p.n_ff;
     g->t_dispatch = now_ns();
-    gx_quantize_q8_0(x, g->in_host.data(), ne);   // x is not read after this
+    if (g->p.variant == 5) memcpy(g->in_host.data(), x, (size_t) ne * sizeof(float));   // variant 5: x stays fp32
+    else gx_quantize_q8_0(x, g->in_host.data(), ne);   // x is not read after this
     cl_ulong * offs = (cl_ulong *) (g->in_host.data() + g->in_offs_off);
     for (int s = 0; s < k; s++) {
         offs[3 * s + 0] = slots[s].off_gate;
@@ -291,8 +292,8 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
     // work-items per row: variant 0 = 8 (256-wide groups of 32 rows), variants 1-3 = 1 (64 rows per group),
     // variant 4 = 2 (128-wide groups of 64 rows)
     const int v = g->p.variant;
-    const size_t per_row = v == 0 ? 8 : v == 4 ? 2 : 1;
-    const size_t l[2] = {(size_t) (v == 0 ? 256 : v == 4 ? 128 : 64), 1};
+    const size_t per_row = v == 0 ? 8 : v >= 4 ? 2 : 1;
+    const size_t l[2] = {(size_t) (v == 0 ? 256 : v >= 4 ? 128 : 64), 1};
     const size_t g1[2] = {per_row * (size_t) nf, (size_t) k};
     const size_t g2[2] = {per_row * (size_t) ne, (size_t) k};
     cl_event * e1 = g->p.profile ? &g->ev_first : nullptr, * e2 = g->p.profile ? &g->ev_last : nullptr;
