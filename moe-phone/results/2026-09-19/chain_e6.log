@@ -11,3 +11,4 @@
 2026-09-19T19:38:15+05:30 [e6b] arms passing the KL criteria: [DC05 DC10 RA1 SUB T6 T7]
 2026-09-19T19:39:02+05:30 [agent] chain_e6b stopped at its knowledge probe: it had buffered the stale 2x arm list (all 6) before the negligible-bar edit; no arm is negligible on KL/PPL (e6_summary.json), so the probe was stopped (it cannot change the verdict). CHAIN_E6_DONE set by hand.
 2026-09-19T19:39:32+05:30 [ident] started
+2026-09-19T20:11:37+05:30 [ident] result: ppl-kl: mean 0.000000  p99 0.000000  max 0.000000  flips 0/3258 (0.00%)  ref_tail_max 0.0386

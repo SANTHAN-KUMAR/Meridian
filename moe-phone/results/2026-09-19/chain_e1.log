@@ -1,0 +1,4 @@
+2026-09-19T19:22:00+05:30 waiting for CHAIN_E6_IDENT_DONE
+2026-09-19T20:12:00+05:30 E6 done; waiting for E1_GO (wireless adb + phone unplugged)
+2026-09-19T20:17:40+05:30 E1_GO: serial 192.168.0.65:5555, power:  AC powered: false  USB powered: false 
+2026-09-19T20:17:40+05:30 E4: running host/gpu_ffn/run_phone_e4.sh

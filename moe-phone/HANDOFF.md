@@ -18,7 +18,11 @@ Everything needed is in this repository. The chat history is not. **Update this 
   3. Nothing else is built or tested.
 - **Long-term goals of the user** (not blockers): a top-venue paper; a cross-device app/PC product built on the engine.
 
-## 2. Where things stand right now (19:30 IST)
+## 2. Where things stand right now (updated 20:20 IST)
+**Latest:** E6 closed (no option negligible). The phone determinism control PASSED (Q4_0 against itself: KL 0.000000, 0/3258 flips,
+`results/2026-09-19/bmoe_e6/bmoe_e6_ident_*`). adb was switched to Wi-Fi (192.168.0.65:5555), the phone was UNPLUGGED at 20:17,
+and `E1_GO` was written. **E4 started at 20:17**; E1 follows automatically (see chain_e1.log). What remains is steps 1-3 of §3 below.
+
 
 ### E6 (Tier A quality): essentially decided NEGATIVE
 Reference Q8_0 (sha256 a68fe734…), margin = our Q4_0. Data in `results/2026-09-19/bmoe_e6/` (pulled when the chain finishes).
