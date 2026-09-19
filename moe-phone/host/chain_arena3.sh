@@ -46,6 +46,24 @@ mkdir -p "$R/repack_bench"
 A "cd /data/local/tmp/repack_bench && chmod 755 repack_bench && dumpsys power | grep -m1 mWakefulness= && LD_LIBRARY_PATH=$H/bmoe-i8mm-0024 ./repack_bench 300 2>/dev/null && dumpsys power | grep -m1 mWakefulness=" > "$R/repack_bench/repack_bench_phone.out" 2>&1
 A "rm -f $H/.phone_busy" >/dev/null
 log "[arena3] repack_bench: $(grep -E '^(RESULT|VERDICT)|mWakefulness' "$R/repack_bench/repack_bench_phone.out" | tr '\n' ' ')"
+# repack engine A/B first, only on the phone microbench's pre-registered VERDICT BUILD
+if grep -q "^VERDICT BUILD" "$R/repack_bench/repack_bench_phone.out"; then
+  adb push "$MP/device/bmoe_repack.sh" "$H/" >/dev/null 2>&1 </dev/null
+  export GTENV="GT_BIN=bmoe-i8mm-0024 GT_PIN=$(cat "$SP/phone_pin")"
+  A "svc power stayon true; settings put system screen_off_timeout 1800000; dumpsys deviceidle disable" >/dev/null 2>&1
+  campaign bmoe_repack.sh smoke
+  S="$LAST"; ok=1
+  [ "$(grep -c 'text_match .* OK' "$S/log.txt")" = 2 ] || ok=0
+  grep -q FATAL "$S"/*.err && ok=0
+  grep -q "repack-experts: 48 expert tensors on repacked" "$S/stack_reps1.err" || ok=0
+  [ "$(grep -c 'wake_start=Awake' "$S/log.txt")" = 2 ] || ok=0
+  [ "$(grep -c 'AFTER wake=Awake' "$S/log.txt")" = 2 ] || ok=0
+  log "[repack] smoke ok=$ok :: $(grep -h 'generation:' "$S"/*.out | tr '\n' ' ')"
+  b=$(A "dumpsys battery | grep -m1 ' level' | tr -dc 0-9")
+  if [ $ok = 1 ] && [ "${b:-0}" -ge 30 ]; then log "[repack] A/B start (battery $b%)"; campaign bmoe_repack.sh ab; log "[repack] A/B pulled: $LAST"; else log "[repack] A/B not started (smoke ok=$ok, battery ${b}%)"; fi
+else
+  log "[repack] phone microbench not BUILD: engine A/B not run"
+fi
 adb push "$MP/device/bmoe_arena3.sh" "$H/" >/dev/null 2>&1 </dev/null
 A "grep -q 'slot-arena --cache-ceil-mb 4600' $H/bmoe_arena3.sh" || { log "[arena3] FATAL pushed script wrong"; exit 1; }
 export GTENV="GT_BIN=bmoe-i8mm-0024 GT_PIN=$(cat "$SP/phone_pin")"

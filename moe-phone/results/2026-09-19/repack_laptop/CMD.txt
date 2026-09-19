@@ -1,0 +1,1 @@
+-n 128 --moe-stream --cache-mb 2000 --overlap -t 4 --expert-slru --predict-prefetch --spec-adopt-selective
