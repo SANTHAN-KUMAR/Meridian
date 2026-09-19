@@ -59,6 +59,9 @@
 # showing it swipes and types the unlock PIN; screen_off_timeout is 30 min (a row takes <= 10 min). KEEP RULE ADDITION:
 # a row counts only if thermal_state shows wake=Awake both BEFORE and AFTER it (gates/stack_summary.py --require-awake).
 # At the end the screen is locked (KEYCODE_SLEEP) and the timeout restored by the host chain.
+# CHOICE 2026-09-19 08:35 (before any v4 row): GT_VARIANT=4, cap 8, spin, bmoe-i8mm-0024 (gx 5e00544). M6 run 7
+# (gx_m6_082901) found v4 fastest at every k by host and device time (k=2: 0.72 / 0.38 ms), and it uses the native
+# layout. Same rule, keep rule (--require-awake) and outcomes as the 04:47 A/B.
 #   GT_BIN=... GT_VARIANT=... GT_CAP=... sh bmoe_gtier.sh MODE   (MODE = smoke | ab)
 set -u
 MODE=${1:-smoke}
