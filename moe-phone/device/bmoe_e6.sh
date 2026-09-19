@@ -20,30 +20,46 @@
 #              speed A/B that follows; that A/B is a separate, pre-registered script.
 # All arms use the deployed stack flags, except where a flag excludes them (route-ahead excludes --predict-prefetch and
 # --spec-adopt-selective); the cache budget is the deployed one. The phone is held Awake (waker below). Shared lock, battery >= 25%.
-#   GT_PIN=... sh bmoe_e6.sh kl | mc "ARM ARM ..."
+# REVISION 2026-09-19 17:40 (after the REF row, before any arm row was scored): the REF row ended at thermal status 3,
+# shell 49 C, battery 47.8 C (on USB power, screen held on). Quality numbers do not depend on clock or wake state (a suspend
+# pauses the run), so from here: E6_NOWAKE=1 leaves the screen off, and cooldown() waits (up to 20 min, logged) before every
+# row until thermal status < 3 and shell_front <= 43 C. Mode klresume DIR finishes the KL phase in DIR with its existing
+# ref.bkl, skipping arms already scored. The scoring rule is unchanged.
+#   GT_PIN=... sh bmoe_e6.sh kl | klresume DIR | mc "ARM ARM ..."
 set -u
 MODE=${1:-kl}; MC_ARMS=${2:-}
+NOWAKE=${E6_NOWAKE:-0}
 H=/data/local/tmp/moe-stream
 BIN=bmoe-i8mm-0026
 . $H/thermal_gate.sh
 Q4=$H/Qwen3-30B-A3B-Q4_0.gguf
 Q8=$H/Qwen3-30B-A3B-Q8_0.gguf
 E=$H/e6
-O=$H/bmoe_e6_${MODE}_$(date +%Y%m%d_%H%M); mkdir -p "$O"
+if [ "$MODE" = klresume ]; then O=$MC_ARMS; else O=$H/bmoe_e6_${MODE}_$(date +%Y%m%d_%H%M); mkdir -p "$O"; fi
 STACK="--ubatch 512 --moe-stream --cache-mb auto --cache-floor-mb 1024 --cache-ceil-mb 5000 --overlap --dense-weights anon -t 4 --cpu-mask f0 --io-threads 4 --io-cpu-mask 0f --expert-slru"
 PRED="--predict-prefetch --spec-adopt-selective"
 KLA="-c 4096 --ppl $E/kl_text.txt --ppl-step --ppl-dump-k 8192"
 if [ -e $H/.phone_busy ]; then echo "phone busy: $(cat $H/.phone_busy)" | tee "$O/REFUSED"; exit 3; fi
 echo "e6 $MODE $(date +%H:%M:%S)" > $H/.phone_busy
 PIN=${GT_PIN:-}
+cooldown() {
+  w=0
+  while [ $w -lt 1200 ]; do
+    st=$(dumpsys thermalservice | grep -m1 'Thermal Status' | tr -dc 0-9); sf=$(for z in /sys/class/thermal/thermal_zone*; do [ "$(cat $z/type 2>/dev/null)" = shell_front ] && cat $z/temp; done | head -1)
+    [ "${st:-9}" -lt 3 ] && [ "${sf:-99999}" -le 43000 ] && break
+    sleep 30; w=$((w + 30))
+  done
+  echo "cooldown waited=${w}s status=${st} shell_front_mC=${sf}"
+}
 awake() {
+  [ "$NOWAKE" = 1 ] && return 0
   settings put system screen_off_timeout 1800000
   dumpsys power | grep -q 'mWakefulness=Awake' || { input keyevent KEYCODE_WAKEUP; sleep 1; }
   if [ -n "$PIN" ] && dumpsys window | grep -q 'isKeyguardShowing=true'; then
     input swipe 540 1900 540 700 200; sleep 1; input text "$PIN"; input keyevent 66; sleep 2
   fi
 }
-trap 'rm -f $H/.phone_busy; input keyevent KEYCODE_SLEEP' EXIT
+trap 'rm -f $H/.phone_busy; [ "$NOWAKE" = 1 ] || input keyevent KEYCODE_SLEEP' EXIT
 batt() { dumpsys battery | grep -m1 ' level:' | tr -dc 0-9; }
 echo "binary=$BIN md5=$(md5sum $H/$BIN/bmoe-cli | cut -d' ' -f1) q4=$(ls -l $Q4 | awk '{print $5}') q8=$(ls -l $Q8 2>/dev/null | awk '{print $5}')" >> "$O/log.txt"
 flags() {  # arm -> model and flags
@@ -61,15 +77,23 @@ flags() {  # arm -> model and flags
 run() {  # tag arm extra...
   tag=$1; arm=$2; shift 2
   b=$(batt); if [ "${b:-0}" -lt 25 ]; then echo "STOP battery ${b}% before $tag" | tee -a "$O/log.txt"; exit 4; fi
-  g=$(thermal_wait 30); mr=$(mem_ready 6500 120); awake
+  cd_=$(cooldown); g=$(thermal_wait 30); mr=$(mem_ready 6500 120); awake
   ws=$(dumpsys power | grep -m1 'mWakefulness=' | cut -d= -f2)
   set -- $(flags $arm) "$@"
   m=$1; shift
-  echo "=== $tag $(date +%H:%M:%S) batt=${b}% wake_start=${ws} $mr" | tee -a "$O/log.txt"
+  echo "=== $tag $(date +%H:%M:%S) batt=${b}% wake_start=${ws} $mr $cd_" | tee -a "$O/log.txt"
   ( cd $H/$BIN && LD_LIBRARY_PATH=. ./bmoe-cli -m $m "$@" > "$O/$tag.out" 2> "$O/$tag.err" )
   echo "exit=$? AFTER $(thermal_state) $(grep -hE '^ppl:|^ppl-kl:|^ppl-policy|perplexity failed' "$O/$tag.out" "$O/$tag.err" | tr '\n' ' ')" | tee -a "$O/log.txt"
 }
-if [ "$MODE" = kl ]; then
+if [ "$MODE" = klresume ]; then
+  [ -s $O/ref.bkl ] || { echo "FATAL no ref.bkl in $O" | tee -a "$O/log.txt"; exit 5; }
+  echo "klresume $(date +%H:%M:%S)" >> "$O/log.txt"
+  for a in FLOOR T7 T6 RA1 DC05 DC10 SUB; do
+    grep -q '^ppl-kl:' $O/$a.out 2>/dev/null && continue
+    run $a $a $KLA --ppl-ref $O/ref.bkl --ppl-kl-out $O/$a.kl
+  done
+  rm -f $O/ref.bkl
+elif [ "$MODE" = kl ]; then
   run REF REF $KLA --ppl-dump $O/ref.bkl
   [ -s $O/ref.bkl ] || { echo "FATAL no reference dump" | tee -a "$O/log.txt"; exit 5; }
   for a in FLOOR T7 T6 RA1 DC05 DC10 SUB; do run $a $a $KLA --ppl-ref $O/ref.bkl --ppl-kl-out $O/$a.kl; done

@@ -1,0 +1,8 @@
+2026-09-19T15:42:27+05:30 waiter: waiting for the Q8_0 download and a phone
+2026-09-19T16:11:28+05:30 waiter: download complete
+2026-09-19T16:38:59+05:30 waiter: phone connected; starting chain_e6
+2026-09-19T16:38:59+05:30 start (device 3C15CK0028J00000)
+2026-09-19T16:39:28+05:30 Q8_0 download verified against the published sha256
+2026-09-19T16:39:28+05:30 pushing Q8_0 (32.5 GB)
+2026-09-19T16:53:37+05:30 Q8_0 on the phone verified
+2026-09-19T17:37:59+05:30 [e6b] start: klresume
