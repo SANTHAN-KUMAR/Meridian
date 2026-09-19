@@ -1,0 +1,159 @@
+{
+ "description": "thermal_caps.py \u2014 how the 15R's CPU frequency caps covary with its thermal state, from every phone log.",
+ "files_with_gate_lines": 130,
+ "samples": 934,
+ "hardware_max_ghz": {
+  "policy0": 3.3216,
+  "policy6": 3.8016
+ },
+ "by_thermal_status": {
+  "0": {
+   "n": 297,
+   "front_c_median": 34.941,
+   "front_c_min": 28.476,
+   "front_c_max": 38.621,
+   "cap0_median_ghz": 2.2656,
+   "cap6_median_ghz": 1.6512,
+   "fraction_at_hardware_max": 0.10774410774410774
+  },
+  "1": {
+   "n": 196,
+   "front_c_median": 38.809,
+   "front_c_min": 36.355,
+   "front_c_max": 40.461,
+   "cap0_median_ghz": 2.1888,
+   "cap6_median_ghz": 1.6512,
+   "fraction_at_hardware_max": 0.0
+  },
+  "2": {
+   "n": 358,
+   "front_c_median": 41.678,
+   "front_c_min": 39.39,
+   "front_c_max": 44.138,
+   "cap0_median_ghz": 1.9008,
+   "cap6_median_ghz": 1.6512,
+   "fraction_at_hardware_max": 0.0
+  },
+  "3": {
+   "n": 83,
+   "front_c_median": 43.833,
+   "front_c_min": 42.167,
+   "front_c_max": 45.525,
+   "cap0_median_ghz": 1.4016,
+   "cap6_median_ghz": 1.248,
+   "fraction_at_hardware_max": 0.0
+  }
+ },
+ "by_front_temperature": {
+  "0-32C": {
+   "n": 32,
+   "front_c_median": 30.305,
+   "front_c_min": 28.476,
+   "front_c_max": 31.889,
+   "cap0_median_ghz": 3.3216,
+   "cap6_median_ghz": 3.8016,
+   "fraction_at_hardware_max": 0.78125
+  },
+  "32-34C": {
+   "n": 73,
+   "front_c_median": 33.128,
+   "front_c_min": 32.005,
+   "front_c_max": 33.991,
+   "cap0_median_ghz": 2.016,
+   "cap6_median_ghz": 2.4768,
+   "fraction_at_hardware_max": 0.0684931506849315
+  },
+  "34-36C": {
+   "n": 100,
+   "front_c_median": 35.0955,
+   "front_c_min": 34.025,
+   "front_c_max": 35.988,
+   "cap0_median_ghz": 2.2656,
+   "cap6_median_ghz": 1.6512,
+   "fraction_at_hardware_max": 0.01
+  },
+  "36-38C": {
+   "n": 122,
+   "front_c_median": 36.9615,
+   "front_c_min": 36.023,
+   "front_c_max": 37.979,
+   "cap0_median_ghz": 2.1888,
+   "cap6_median_ghz": 1.6512,
+   "fraction_at_hardware_max": 0.0
+  },
+  "38-40C": {
+   "n": 171,
+   "front_c_median": 39.028,
+   "front_c_min": 38.015,
+   "front_c_max": 39.971,
+   "cap0_median_ghz": 2.1888,
+   "cap6_median_ghz": 1.6512,
+   "fraction_at_hardware_max": 0.005847953216374269
+  },
+  "40-42C": {
+   "n": 222,
+   "front_c_median": 41.0445,
+   "front_c_min": 40.013,
+   "front_c_max": 41.993,
+   "cap0_median_ghz": 1.9008,
+   "cap6_median_ghz": 1.6512,
+   "fraction_at_hardware_max": 0.0
+  },
+  "42-44C": {
+   "n": 184,
+   "front_c_median": 42.8605,
+   "front_c_min": 42.001,
+   "front_c_max": 43.981,
+   "cap0_median_ghz": 1.7472,
+   "cap6_median_ghz": 1.6512,
+   "fraction_at_hardware_max": 0.0
+  },
+  "44-99C": {
+   "n": 30,
+   "front_c_median": 44.2625,
+   "front_c_min": 44.025,
+   "front_c_max": 45.525,
+   "cap0_median_ghz": 1.4016,
+   "cap6_median_ghz": 1.248,
+   "fraction_at_hardware_max": 0.0
+  }
+ },
+ "by_wake": {
+  "Awake": {
+   "n": 832,
+   "front_c_median": 40.145,
+   "front_c_min": 28.476,
+   "front_c_max": 45.525,
+   "cap0_median_ghz": 1.9008,
+   "cap6_median_ghz": 1.6512,
+   "fraction_at_hardware_max": 0.038461538461538464
+  },
+  "Dozing": {
+   "n": 102,
+   "front_c_median": 34.3465,
+   "front_c_min": 30.794,
+   "front_c_max": 40.141,
+   "cap0_median_ghz": 2.016,
+   "cap6_median_ghz": 2.4768,
+   "fraction_at_hardware_max": 0.0
+  }
+ },
+ "at_hardware_max": {
+  "n": 32,
+  "front_c_median": 30.305,
+  "front_c_min": 28.476,
+  "front_c_max": 38.015,
+  "cap0_median_ghz": 3.3216,
+  "cap6_median_ghz": 3.8016,
+  "fraction_at_hardware_max": 1.0
+ },
+ "status0_below_hardware_max": {
+  "n": 265,
+  "front_c_median": 35.323,
+  "front_c_min": 30.794,
+  "front_c_max": 38.621,
+  "cap0_median_ghz": 2.2656,
+  "cap6_median_ghz": 1.6512,
+  "fraction_at_hardware_max": 0.0
+ }
+}

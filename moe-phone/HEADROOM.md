@@ -300,8 +300,12 @@ project has already closed are not repeated. The ordering is by expected ms/toke
    I/O lanes spinning on the other cluster the arithmetic expectation is 20–35 ms of the residual.
    Neither this nor a hardware-counter profile (`simpleperf` on the compute threads only) has
    been taken. Until it is, every compute lever below is a guess with a sign.
-2. **The clock cap is an OEM governor, not thermal, and it is the single largest measured gap
-   on this device [D on a sibling device, M here].** OnePlus ships `cpufreq_bouncing` (clamps
+2. **The clock cap is the single largest measured gap on this device; whether it is thermal or an
+   OEM load governor is UNRESOLVED [D on a sibling device, M here].** (Corrected 2026-09-19: across
+   934 logged samples the caps covary strongly with front temperature — hardware max in 78% of samples
+   below 32 °C, almost never above 34 °C; `gates/thermal_caps.py`, claims `thermal_caps_*`. The
+   observational data cannot separate a thermal engine from a load-driven clamp; see
+   `host/gpu_ffn/NOTE.md` §10 for the interventions that would.) OnePlus ships `cpufreq_bouncing` (clamps
    `scaling_max_freq` through `freq_qos` after ~50 ms of sustained load) and
    `oplus_bsp_task_overload` (a `uclamp.max` clamp on "abnormal" threads, 466/792 of mid-cluster
    capacity ≈ 2.08 GHz on the OnePlus 13), documented in

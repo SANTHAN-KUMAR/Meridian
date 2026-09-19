@@ -335,6 +335,7 @@ All runs are on the phone (Adreno 829, spin-wait where stated). The numbers are 
 | 4 `gx_m6_012604` | why is v2 slow: memory or compute? | memory-only probe reads aos 33, soa 31, tiled 31 GB/s. The page-locality hypothesis is **refuted**; v3 (tiled) is as slow as v2. Every kernel is compute-bound |
 | 5 `gx_m6_020545` | unrolled kernels, explicit float4 accumulators (58b13dd) | **the spill diagnosis holds**: v3 k=3 device 8.70 → 0.64 ms (13.6x), v1 0.90 → 0.70. k=3 host: v1 0.92, v3 1.00, v0 1.07 ms |
 | 6 `gx_m6_054129` | where the fixed device cost is (timing split) | v1 k=3: kernel 1 0.51 + gap 0.0005 + kernel 2 0.20 ms. Kernel 1 carries a ~0.23 ms intercept (0.32 ms at k=1, 768 work-items). The kernel gap is negligible, so **fusing the kernels would save nothing** |
+| 7 `gx_m6_082901` | variant 4 (two work-items per row, native layout) on the phone | v4 bit-exact on the phone, **fastest at every k**: k=1 host 0.59 / device 0.27 ms (kernel 1 0.21 vs v1's 0.32), k=2 0.72 / 0.38, k=3 0.94 / 0.58. Host overhead (~0.33 ms, spin on) is now the largest term. thermal_state read Dozing, so compare within the run |
 
 Run 6's thermal_state read `wake=Dozing` before and after, even though the screen was woken (without
 unlocking). Its device times match run 5, but it does not meet the engine A/B's Awake keep-rule. It is
@@ -362,3 +363,44 @@ host-visible in less than the CPU's time for those experts, about 0.2–0.25 ms 
 
 `gx_variant_uses_repack(v)` (1 for variants 2 and 3) is now the API's answer to "does this variant need
 repacked slots". `gx_repack_expert` / `gx_unpack_expert` return −4 in a native-layout context.
+
+
+## 10. Status at the end of phone testing (2026-09-19 ~10:00) and the CPU clock caps
+
+**gx, where it stands:**
+- Bit-exact on the phone against ggml-cpu ARM, variants 0–4, with the denormal-risk detector covering every
+  reachable mismatch.
+- Pool API, repack/unpack and the layout guard are engine-integrated (the other session's gx backend).
+- Best kernel: **v4** (native layout, two work-items per row).
+- The engine A/B with v1 was net-neutral: compute +6.9 ms/token, stall −5.3 ms/token, decode not resolved.
+  At k≈2 a v4 dispatch takes ~0.72 ms against the ~0.2–0.25 ms the tier needs.
+- The remaining gap is fixed per-dispatch cost:
+  - ~0.33 ms host (spin-wait already on);
+  - ~0.2 ms kernel-1 intercept;
+  - ~0.06 ms per expert in kernel 2.
+- The next lever, not built: a dispatch pre-enqueued before the router, ready to fire.
+
+**CPU clock caps.** `gates/thermal_caps.py` → `results/2026-09-19/thermal_caps.json` covers every
+thermal-gate line logged by any phone run (934 unique samples, 130 files). The caps covary strongly with
+the front-panel temperature and Android's thermal status (claims `thermal_caps_*`):
+- Hardware maximum (3.32 / 3.80 GHz) in 78% of samples below 32 °C, and almost never above 34 °C.
+- Median caps by band:
+  - 34–36 °C: 2.27 / 1.65 GHz;
+  - 40–42 °C: 1.90 / 1.65 GHz;
+  - above 44 °C: 1.40 / 1.25 GHz.
+- The prime cluster drops first.
+
+This corrects an earlier statement in this project that the cap was "an OEM governor, not thermal"
+(HEADROOM §4, compute memo §5). That was a hypothesis carried over from a sibling device. The data are
+OBSERVATIONAL and cannot separate the two mechanisms: sustained load raises both the temperature and the
+time under load.
+- A temperature-driven vendor thermal engine would produce this pattern.
+- So would a load-driven clamp (OnePlus `cpufreq_bouncing`, documented on the OnePlus 13).
+
+The discriminating tests are interventions, none of them run:
+1. Active cooling (a clip-on thermoelectric cooler holding the front near 30 °C) at equal load.
+2. OnePlus High Performance Mode on/off at equal temperature.
+3. `cmd power set-fixed-performance-mode-enabled` on/off.
+
+If cooling holds the caps at hardware maximum, compute at full clocks is the largest remaining lever toward
+10 tok/s (a projection, not measured).

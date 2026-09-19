@@ -175,7 +175,12 @@ with no map cost" is **not verified** and BigMoMo's explicit `TeMap` term implie
 
 ## 5. Clocks and thermal — the highest-value, least-glamorous item
 
-**Your cap is probably not thermal.** The best source is
+> **Correction 2026-09-19 (main session, from this phone's own logs):** across 934 logged samples the
+> 15R's caps covary strongly with front temperature (hardware max in 78% of samples below 32 °C, almost
+> never above 34 °C; `gates/thermal_caps.py`). Whether the mechanism is thermal or the load-driven clamp
+> described below is unresolved; the heading below is a hypothesis from a sibling device, not a finding.
+
+**Your cap is probably not thermal (hypothesis; see the correction above).** The best source is
 github.com/wyl2607/oneplus13-performance-investigation (OnePlus 13, Snapdragon 8 Elite), which
 identifies two OEM kernel modules:
 

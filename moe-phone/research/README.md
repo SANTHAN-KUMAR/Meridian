@@ -13,7 +13,7 @@ nothing here is a claim of this project until it is measured on the 15R and ente
 
 | file | question | the memo's own top item |
 |---|---|---|
-| `2026-09-17_compute_memo.md` | what cuts the ~100 ms/token CPU compute residual | instrument first (barrier ledger + counters); the frequency cap is an OEM governor, not thermal |
+| `2026-09-17_compute_memo.md` | what cuts the ~100 ms/token CPU compute residual | instrument first (barrier ledger + counters); the frequency cap is an OEM governor, not thermal (a sibling-device hypothesis; the 15R's caps covary with temperature, mechanism unresolved: `host/gpu_ffn/NOTE.md` §10) |
 | `2026-09-17_io_memo.md` | what removes the I/O stall and cache-management terms losslessly | a pre-committed never-decommitted slot arena; a split-phase (`gate|up` then `down`) expert read |
 | `2026-09-17_bytes_memo.md` | what cuts bytes/token or yields >1 token per fetch without training | MTP-head checkpoints with the verify on the GPU; KL-instrument dynamic top-k |
 
