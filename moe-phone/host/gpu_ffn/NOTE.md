@@ -422,3 +422,20 @@ any use in the engine needs the model-level fidelity measurement (E6 machinery, 
   rerun; their ARM refs were not regenerated).
 - Laptop timings are meaningless (NVIDIA, copying driver). Phone: `run_phone_e4.sh` (tolerance gate on Adreno first,
   then `gx_bench --variants 4,5 --ks 1,2,3,4`). Criterion is host-visible median_ms of v5 at k=2 and k=1 (spec E4).
+
+### 11.1 Finishing E4 from the repo alone (state at commit 8dbcfb9)
+- **Rebuild** (only if `out/android_e4` is missing; `out/` is gitignored): `ANDROID_OUT=$PWD/host/gpu_ffn/out/android_e4 host/gpu_ffn/build.sh android`.
+  Cases: `python3 host/gpu_ffn/make_cases.py /tmp/claude-1000/gxcases --gguf <moe-work>/models/Qwen3-30B-A3B-Q4_0.gguf` (the phone run
+  needs only the `rand_*.bin` and `qwen3_*.bin`; ARM references are not used on the phone).
+- **Run** (phone lock, battery >= 25%, ~15 min): `host/gpu_ffn/run_phone_e4.sh /tmp/claude-1000/gxcases`; results in
+  `results/<date>/gx_e4_phone_<time>/` (`tol_test.out`, `bench.out`, `BUILD`, `state_*.txt`, `VERDICT` on failure). The engine session's chain
+  (`host/chain_e1.sh`) also runs it and logs to `results/2026-09-19/e4_run.log`.
+- **Gate 1 (correctness on Adreno):** `tol_test.out` must end `TOLSUMMARY ... fails=0 gx_errors=0` and `exit=0` (rel vs fp64 <= 1e-5).
+  If it fails, there are no speed rows and E4 is not a speed result: diagnose the kernel/driver first (fp16 or denormal handling on Adreno).
+- **Verdict (spec §6 E4 v2, judged on host-visible `median_ms` of `BENCH spin=1 variant=5`, either down type; report both):**
+  positive = k=2 <= 0.25 ms AND k=1 <= 0.15 ms; kill = k=2 >= 0.40 ms; in between = three more interleaved rounds
+  (`E4_BENCH_ARGS="--variants 5 --ks 1,2 --iters 300"`), still in between = kill. `device_median_ms` and k=3,4 and the v4 rows (bit-exact, same
+  session) are reported, not the criterion. Reference points: v4 at k=2 is ~0.72 ms host-visible (spec E4 item 8). The laptop v5 rows are not evidence.
+- **If positive:** the speed result does not adopt v5. Model-level fidelity is still required (E6 machinery, "negligible" bar of spec §0 item 4:
+  mean/p99 KL <= 1.10x Q4_0's, flips <= +1%, PPL <= 1.01x, MMLU) with v5 wired into the engine, plus the E4b wall-time A/B; the bound is <= ~10 ms/token.
+  **If killed:** the GPU branch is closed (spec E4 item 8); record the numbers here and in the write-up.
