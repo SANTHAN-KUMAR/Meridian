@@ -9,6 +9,10 @@ H=/data/local/tmp/moe-stream; LOG="$R/chain_e1.log"; log() { echo "$(date -Iseco
 A() { adb shell "$@" </dev/null; }
 log "waiting for CHAIN_E6_IDENT_DONE"
 while [ ! -f "$R/CHAIN_E6_IDENT_DONE" ]; do sleep 60; done
+# E4 (gx v5, the peer's pre-registered run, ~15 min) before E1, while the phone is otherwise idle
+log "E4: running host/gpu_ffn/run_phone_e4.sh"
+bash "$MP/host/gpu_ffn/run_phone_e4.sh" /tmp/claude-1000/gxcases > "$R/e4_run.log" 2>&1
+log "E4 exit=$?: $(grep -E 'BENCH spin=1 variant=5 down=Q4_0 k=[12] |TOL|VERDICT|PASS|FAIL|results in' "$R/e4_run.log" | tr '\n' ' ' | cut -c1-600)"
 [ -n "$(A "cat $H/.phone_busy 2>/dev/null" | tr -d '\r')" ] && { log "phone busy"; exit 1; }
 orph=$(A 'ps -A -o ARGS' | grep -E 'bmoe-cli|gx_|sh bmoe_' | grep -v grep); [ -n "$orph" ] && { log "FATAL foreign: $orph"; exit 1; }
 A "echo 'e1-prep $(date +%H:%M:%S)' > $H/.phone_busy; rm -f $H/Qwen3-30B-A3B-Q8_0.gguf; mkdir -p $H/bmoe-i8mm-0027" >/dev/null
