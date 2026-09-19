@@ -1,0 +1,7 @@
+2026-09-19T22:10:45+05:30 waiting for the model push
+2026-09-19T22:18:46+05:30 model on the Nord verified by size
+2026-09-19T22:18:47+05:30 sustained test started (compute on cpu6-7, -t 2; I/O on cpu0-3)
+2026-09-19T22:23:45+05:30 restart after the doze fix
+2026-09-19T22:23:45+05:30 model on the Nord verified by size
+2026-09-19T22:23:46+05:30 sustained test started (compute on cpu6-7, -t 2; I/O on cpu0-3)
+2026-09-19T22:41:52+05:30 pulled /data/local/tmp/moe-stream/bmoe_sustain_20260919_2223/
