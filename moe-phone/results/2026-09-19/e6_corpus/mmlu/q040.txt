@@ -1,0 +1,8 @@
+The following is a multiple choice question about high school statistics.
+
+A manufacturer of motor oil is interested in testing the effects of a newly developed additive on the lifespan of an engine. Twenty-five different engine types are selected at random and each one is tested using oil with the additive and oil without the additive. What type of analysis will yield the most useful information?
+A. Matched pairs comparison of population proportions
+B. Matched pairs comparison of population means
+C. Independent samples comparison of population proportions
+D. Independent samples comparison of population means
+Answer:

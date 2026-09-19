@@ -1,0 +1,8 @@
+The following is a multiple choice question about college physics.
+
+If the Sun were suddenly replaced by a black hole of the same mass, it would have a Schwarzschild radius of 3,000 m. What effect, if any, would this change have on the orbits of the planets?
+A. The planets would move directly toward the Sun.
+B. The planets would move in spiral orbits.
+C. The planets would oscillate about their former elliptical orbits.
+D. The orbits would remain unchanged.
+Answer:

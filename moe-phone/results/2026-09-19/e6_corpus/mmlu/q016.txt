@@ -1,0 +1,8 @@
+The following is a multiple choice question about elementary mathematics.
+
+The distance from Chicago to New York City is 794 miles. What is 794 rounded to the nearest hundred?
+A. 700
+B. 794
+C. 800
+D. 894
+Answer:

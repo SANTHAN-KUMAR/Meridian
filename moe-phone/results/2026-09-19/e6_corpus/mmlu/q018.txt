@@ -1,0 +1,8 @@
+The following is a multiple choice question about formal logic.
+
+Select the best translation into predicate logic. Some animals are neglected by cruel people. (Ax: x is an animal; Cx: x is cruel; Px: x is a person; Nxy: x neglects y)
+A. (∃x)[(Ax • Cx) • (∃y)(Py • Nyx)]
+B. (∃x)[(Cx • Px) • (∃y)(Ay • Nxy)]
+C. (∃x)[(Ax • Px) • (∃y)(Cy • Nxy)]
+D. (∃x)(∃y){[(Ax • Cy) • Py] • Nxy)]}
+Answer:

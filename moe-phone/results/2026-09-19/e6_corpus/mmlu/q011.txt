@@ -1,0 +1,8 @@
+The following is a multiple choice question about computer security.
+
+You are given a message (m) and its OTP encryption (c). Can you compute the OTP key from m and c ?
+A. No, I cannot compute the key.
+B. Yes, the key is k = m xor c.
+C. I can only compute half the bits of the key.
+D. Yes, the key is k = m xor m.
+Answer:

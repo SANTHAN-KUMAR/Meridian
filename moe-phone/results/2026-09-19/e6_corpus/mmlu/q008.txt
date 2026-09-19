@@ -1,0 +1,8 @@
+The following is a multiple choice question about college mathematics.
+
+Statement 1 | Suppose {s_n} and {t_n} are sequences of complex numbers such that lim_n→∞ s_n = s and lim_n→∞ tn = t. lim_n→∞ s_nt_n = st. Statement 2 | There exists a bounded sequence of real numbers with no convergent subsequence.
+A. True, True
+B. True, False
+C. False, True
+D. False, False
+Answer:

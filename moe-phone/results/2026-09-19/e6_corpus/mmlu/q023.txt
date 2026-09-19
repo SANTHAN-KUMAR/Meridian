@@ -1,0 +1,8 @@
+The following is a multiple choice question about high school computer science.
+
+Which of the following is the hexadecimal representation of the decimal number 231_{10} ?
+A. 17_{16}
+B. E4_{16}
+C. E7_{16}
+D. F4_{16}
+Answer:

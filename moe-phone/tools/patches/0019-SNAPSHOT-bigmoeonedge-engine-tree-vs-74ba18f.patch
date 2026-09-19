@@ -13,7 +13,7 @@ index e21da45..76c29d4 100644
 +target_link_libraries(bmoe_entry PRIVATE bmoe_core)
 +set_target_properties(bmoe_entry PROPERTIES OUTPUT_NAME bmoe_entry)
 diff --git a/cli/main.cpp b/cli/main.cpp
-index ea3c2b7..20ac12a 100644
+index ea3c2b7..cd7918e 100644
 --- a/cli/main.cpp
 +++ b/cli/main.cpp
 @@ -445,6 +445,19 @@ static void print_usage(const char * argv0) {
@@ -44,7 +44,17 @@ index ea3c2b7..20ac12a 100644
          "      --io-two-wave       publish a layer's first-projection reads before committing the\n"
          "                          rest, so the lanes start sooner (needs --overlap and the cache;\n"
          "                          experimental, off by default pending the on-device A/B)\n"
-@@ -519,6 +533,15 @@ static void print_usage(const char * argv0) {
+@@ -490,6 +504,9 @@ static void print_usage(const char * argv0) {
+         "                          a scale: comparing GENERATED text cannot price a lossy setting,\n"
+         "                          because greedy output only moves when a perturbation happens to\n"
+         "                          cross an argmax boundary, whatever its size\n"
++        "      --ppl-dump FILE     with --ppl: write each position's top-k log-probs (the Tier-A reference run) (moe-phone)\n"
++        "      --ppl-ref FILE      with --ppl: score KL(ref || this run) and top-1 flips against a --ppl-dump file (moe-phone)\n"
++        "      --ppl-kl-out FILE   with --ppl-ref: per-token KL values; --ppl-dump-k K (default 256)\n"
+         "      --ppl-skip N        leading tokens evaluated but not scored (default 8)\n"
+         "      --ppl-step          score one token per decode, so a cache-dependent policy (dropping,\n"
+         "                          substitution) is priced in the regime where it acts. A wide batch\n"
+@@ -519,6 +536,15 @@ static void print_usage(const char * argv0) {
          "                          predicted below the drop threshold are not speculated.\n"
          "      --predict-spec-max N  speculated predicted misses per layer [0..8] (default 2;\n"
          "                          0 = retention only, the prediction spends no flash at all)\n"
@@ -60,7 +70,7 @@ index ea3c2b7..20ac12a 100644
          "      --list-archs        print supported MoE architectures and exit\n"
          "\n"
          "  Env overrides (flag wins): BMOE_CACHE_MB, BMOE_IO_THREADS, BMOE_PROGRESS, BMOE_OVERLAP, BMOE_PREFETCH, "
-@@ -585,7 +608,15 @@ static void print_predict_report(const RunSummary & s) {
+@@ -585,7 +611,15 @@ static void print_predict_report(const RunSummary & s) {
      }
  }
  
@@ -76,7 +86,16 @@ index ea3c2b7..20ac12a 100644
      RunConfig cfg;
      std::string csv_path;
      std::string route_trace_path;
-@@ -681,6 +712,48 @@ int main(int argc, char ** argv) {
+@@ -594,6 +628,8 @@ int main(int argc, char ** argv) {
+     bool ppl_step = false;
+     std::string ppl_list;                 // --ppl-list: one text path per line, scored in one session
+     std::vector<std::string> ppl_choices; // --ppl-choices: strings whose first-token log-prob is reported
++    std::string ppl_dump, ppl_ref, ppl_kl_out; // moe-phone E6: reference dump / KL against it
++    int ppl_dump_k = 256;
+     std::string compute_trace_path;
+     std::string io_trace_path;
+     bool session_mode = false;
+@@ -681,6 +717,48 @@ int main(int argc, char ** argv) {
              cfg.moe.cache_floor_mb = std::atoi(next("--cache-floor-mb"));
          else if (a == "--cache-ceil-mb")
              cfg.moe.cache_ceil_mb = std::atoi(next("--cache-ceil-mb"));
@@ -125,7 +144,7 @@ index ea3c2b7..20ac12a 100644
          else if (a == "--io-threads")
              cfg.moe.io_threads = std::atoi(next("--io-threads"));
          else if (a == "--no-odirect")
-@@ -718,6 +791,10 @@ int main(int argc, char ** argv) {
+@@ -718,6 +796,10 @@ int main(int argc, char ** argv) {
              cfg.moe.force_cache = true;
          else if (a == "--overlap")
              cfg.moe.overlap = true;
@@ -136,7 +155,22 @@ index ea3c2b7..20ac12a 100644
          else if (a == "--io-two-wave")
              cfg.moe.io_two_wave = true;
          else if (a == "--prefetch")
-@@ -757,6 +834,12 @@ int main(int argc, char ** argv) {
+@@ -730,6 +812,14 @@ int main(int argc, char ** argv) {
+             cfg.moe.substitute_lambda = (float) std::atof(next("--expert-substitute"));
+         else if (a == "--ppl")
+             ppl_path = next("--ppl");
++        else if (a == "--ppl-dump")
++            ppl_dump = next("--ppl-dump");
++        else if (a == "--ppl-ref")
++            ppl_ref = next("--ppl-ref");
++        else if (a == "--ppl-kl-out")
++            ppl_kl_out = next("--ppl-kl-out");
++        else if (a == "--ppl-dump-k")
++            ppl_dump_k = std::atoi(next("--ppl-dump-k"));
+         else if (a == "--ppl-skip")
+             ppl_skip = std::atoi(next("--ppl-skip"));
+         else if (a == "--ppl-step")
+@@ -757,6 +847,12 @@ int main(int argc, char ** argv) {
              cfg.moe.predict_prefetch = true;
          else if (a == "--predict-spec-max")
              cfg.moe.predict_spec_max = std::atoi(next("--predict-spec-max"));
@@ -149,6 +183,31 @@ index ea3c2b7..20ac12a 100644
          else if (a == "--list-archs") {
              std::printf("supported MoE architectures:\n");
              for (int k = 0; k < n_moe_recipes(); ++k)
+@@ -896,6 +992,14 @@ int main(int argc, char ** argv) {
+             pr.skip = ppl_skip;
+             pr.step = ppl_step;
+             pr.choices = ppl_choices;
++            if (paths.size() > 1 && (!ppl_dump.empty() || !ppl_ref.empty())) {
++                std::fprintf(stderr, "bmoe: --ppl-dump/--ppl-ref take a single --ppl text\n");
++                return 2;
++            }
++            pr.dump_path = ppl_dump;
++            pr.ref_path = ppl_ref;
++            pr.kl_out = ppl_kl_out;
++            pr.dump_k = ppl_dump_k;
+             const PplResult pres = session->perplexity(pr);
+             if (!pres.ok) {
+                 std::fprintf(stderr, "bmoe: perplexity failed on '%s': %s\n", path.c_str(), pres.error.c_str());
+@@ -905,6 +1009,9 @@ int main(int argc, char ** argv) {
+             std::printf("ppl: %.4f  nll: %.5f  next-token hits: %d/%d (%.1f%%)  %.2f s\n", pres.ppl, pres.nll,
+                         pres.n_top1, pres.n_scored, pres.n_scored > 0 ? 100.0 * pres.n_top1 / pres.n_scored : 0.0,
+                         pres.seconds);
++            if (pres.kl_n > 0)
++                std::printf("ppl-kl: mean %.6f  p99 %.6f  max %.6f  flips %d/%d (%.2f%%)  ref_tail_max %.3g\n", pres.kl_mean,
++                            pres.kl_p99, pres.kl_max, pres.kl_flips, pres.kl_n, 100.0 * pres.kl_flips / pres.kl_n, pres.ref_tail_max);
+             if (!pres.choice_logp.empty()) {
+                 std::printf("ppl-choices:");
+                 for (size_t k = 0; k < pres.choice_logp.size(); ++k)
 diff --git a/core/CMakeLists.txt b/core/CMakeLists.txt
 index 8d37f72..f0f8ba0 100644
 --- a/core/CMakeLists.txt
@@ -364,7 +423,7 @@ index 40b525b..382e658 100644
      // Hint that layer `il` is likely to route `ids` (n_ids of them) on a future token, so the
      // implementation may read them ahead on otherwise-idle lanes. Purely advisory: a correct
 diff --git a/core/include/bmoe/session.h b/core/include/bmoe/session.h
-index 1587d80..fbb1b7f 100644
+index 1587d80..853bf9d 100644
 --- a/core/include/bmoe/session.h
 +++ b/core/include/bmoe/session.h
 @@ -35,6 +35,8 @@ class IIoTraceSink;
@@ -376,6 +435,35 @@ index 1587d80..fbb1b7f 100644
      int n_ctx = 2048;
      int n_batch = 512; // prefill chunk capacity; longer prompts are prefilled in n_batch slices
      // Widest graph actually computed at once. 0 = follow n_batch. Sizing this down trades prefill
+@@ -126,6 +128,11 @@ struct PplResult {
+     long long experts_dropped = 0;
+     long long experts_reranked = 0; // slots the substitution examined (its own denominator)
+     long long experts_substituted = 0;
++    // E6 fidelity against a reference dump (PplRequest::ref_path); kl_n == 0 when not requested.
++    int kl_n = 0;
++    double kl_mean = 0.0, kl_p99 = 0.0, kl_max = 0.0;
++    int kl_flips = 0;           // positions where this run's argmax differs from the reference's
++    double ref_tail_max = 0.0;  // largest reference probability mass outside its top-k (the bound's slack)
+ };
+ 
+ struct PplRequest {
+@@ -150,6 +157,16 @@ struct PplRequest {
+     // fed in full (its last token too), so the reported distribution is the one a generation
+     // would sample its first token from.
+     std::vector<std::string> choices;
++    // moe-phone Tier-A fidelity (research spec E6). dump_path: write, per scored position, the target token, this run's argmax,
++    // its top-`dump_k` token ids with log-probs, and the log of the probability mass outside them (the reference run).
++    // ref_path: read such a dump and score THIS run against it: KL(ref || this) over the reference's top-k ids plus one tail
++    // bucket (a coarsened KL, which by the data-processing inequality is a lower bound of the full KL; the reference's
++    // largest tail mass is reported so the bound's tightness is visible), and top-1 flips against the reference's argmax.
++    // kl_out: optional per-token KL file. Positions and target tokens must match the dump exactly, else the pass fails.
++    std::string dump_path;
++    std::string ref_path;
++    std::string kl_out;
++    int dump_k = 256;
+ };
+ 
+ class Session {
 diff --git a/core/src/config.cpp b/core/src/config.cpp
 index 53f355b..dd83d7d 100644
 --- a/core/src/config.cpp
@@ -419,7 +507,7 @@ index 75ef409..f2ee84b 100644
      sc.chatml = cfg.chatml;
      sc.n_expert_used = cfg.n_expert_used; // active-expert (top-k) override; 0 = model default
 diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
-index f484ca9..82d0fd3 100644
+index f484ca9..2f5c875 100644
 --- a/core/src/engine/session.cpp
 +++ b/core/src/engine/session.cpp
 @@ -4,6 +4,8 @@
@@ -431,7 +519,18 @@ index f484ca9..82d0fd3 100644
  #include "chat_parse.h"
  #include "thinking_control.h"
  #include "../moe/router_hook.h"
-@@ -284,6 +286,8 @@ struct Session::Impl {
+@@ -13,6 +15,10 @@
+ #include "../io/mapping_release.h"
+ 
+ #include "llama.h"
++#include <algorithm>
++#include <cmath>
++#include <cstdio>
++#include <cstring>
+ #include "ggml.h"
+ 
+ // llama.cpp's `common` layer (NOT the stable public API): chat-template rendering and
+@@ -284,6 +290,8 @@ struct Session::Impl {
      // why it costs no context, no memory and no expert read. Everything below this pair is shared by
      // both sources, because the verify half of the loop does not care who drafted.
      std::unique_ptr<llama_context, void (*)(llama_context *)> ctx_dft{nullptr, llama_free};
@@ -440,7 +539,7 @@ index f484ca9..82d0fd3 100644
      common_speculative_ptr mtp;
      // Serves both roles on the speculative path, never both at once: a prefill chunk (up to
      // n_batch tokens, logits on the last) and a verify pass (1 + draft_max tokens, logits on all).
-@@ -373,8 +377,11 @@ struct Session::Impl {
+@@ -373,8 +381,11 @@ struct Session::Impl {
          if (mtp_batch_owned) llama_batch_free(mtp_batch);
          ctx_dft.reset();
          ctx.reset();
@@ -452,7 +551,120 @@ index f484ca9..82d0fd3 100644
          mapping_placeholders.release();
          if (backend_inited) llama_backend_free();
      }
-@@ -616,6 +623,40 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
+@@ -462,6 +473,31 @@ PplResult Session::perplexity(const PplRequest & req) {
+ 
+     double nll = 0.0;
+     int scored = 0, top1 = 0;
++    // E6 fidelity: dump (reference) or compare (arm)
++    FILE * dumpf = nullptr, * reff = nullptr;
++    int ref_k = 0;
++    std::vector<double> kls;
++    int kl_flips = 0;
++    double ref_tail_max = 0.0;
++    struct FileGuard { FILE *& f; ~FileGuard() { if (f) std::fclose(f); } } dg{dumpf}, rg{reff};
++    const int dump_k = std::max(1, std::min(req.dump_k, im.n_vocab));
++    if (!req.dump_path.empty()) {
++        dumpf = std::fopen(req.dump_path.c_str(), "wb");
++        if (!dumpf) { r.error = "cannot write --ppl-dump " + req.dump_path; return r; }
++        const int32_t hdr[3] = {0x314C4B42 /* "BKL1" */, dump_k, im.n_vocab};
++        std::fwrite(hdr, sizeof hdr, 1, dumpf);
++    }
++    if (!req.ref_path.empty()) {
++        reff = std::fopen(req.ref_path.c_str(), "rb");
++        int32_t hdr[3] = {0, 0, 0};
++        if (!reff || std::fread(hdr, sizeof hdr, 1, reff) != 1 || hdr[0] != 0x314C4B42 || hdr[2] != im.n_vocab) {
++            r.error = "bad --ppl-ref " + req.ref_path + " (missing, wrong format, or a different vocabulary)";
++            return r;
++        }
++        ref_k = hdr[1];
++    }
++    std::vector<int32_t> idx_buf;
++    std::vector<float> lp_buf;
+     int last_row = 0; // logits row of the text's final position, for the choices
+     // Score the logits at row `row` of the last decode against the token at `pos + 1`.
+     auto score = [&](int row, int pos) -> bool {
+@@ -480,7 +516,55 @@ PplResult Session::perplexity(const PplRequest & req) {
+         const double logp = (double) (lg[tokens[pos + 1]] - max) - std::log(sum);
+         nll -= logp;
+         ++scored;
+-        if (argmax(lg, im.n_vocab) == tokens[pos + 1]) ++top1;
++        const int am = argmax(lg, im.n_vocab);
++        if (am == tokens[pos + 1]) ++top1;
++        const double lse = (double) max + std::log(sum);
++        if (dumpf) {
++            idx_buf.resize(im.n_vocab);
++            for (int v = 0; v < im.n_vocab; ++v) idx_buf[v] = v;
++            std::nth_element(idx_buf.begin(), idx_buf.begin() + dump_k, idx_buf.end(),
++                             [&](int32_t a, int32_t b2) { return lg[a] > lg[b2]; });
++            lp_buf.resize(dump_k);
++            double top_mass = 0.0;
++            for (int k = 0; k < dump_k; ++k) { lp_buf[k] = (float) ((double) lg[idx_buf[k]] - lse); top_mass += std::exp((double) lp_buf[k]); }
++            const float tail_lp = (float) std::log(std::max(1e-30, 1.0 - top_mass));
++            const int32_t rec[3] = {pos, tokens[pos + 1], am};
++            std::fwrite(rec, sizeof rec, 1, dumpf);
++            std::fwrite(&tail_lp, sizeof tail_lp, 1, dumpf);
++            std::fwrite(idx_buf.data(), sizeof(int32_t), (size_t) dump_k, dumpf);
++            std::fwrite(lp_buf.data(), sizeof(float), (size_t) dump_k, dumpf);
++        }
++        if (reff) {
++            int32_t rec[3];
++            float tail_lp_r = 0.f;
++            idx_buf.resize(ref_k);
++            lp_buf.resize(ref_k);
++            if (std::fread(rec, sizeof rec, 1, reff) != 1 || std::fread(&tail_lp_r, sizeof tail_lp_r, 1, reff) != 1 ||
++                std::fread(idx_buf.data(), sizeof(int32_t), (size_t) ref_k, reff) != (size_t) ref_k ||
++                std::fread(lp_buf.data(), sizeof(float), (size_t) ref_k, reff) != (size_t) ref_k) {
++                r.error = "--ppl-ref ended early at position " + std::to_string(pos);
++                return false;
++            }
++            if (rec[0] != pos || rec[1] != tokens[pos + 1]) {
++                r.error = "--ppl-ref misaligned at position " + std::to_string(pos) + " (a different text, skip or tokenizer)";
++                return false;
++            }
++            double kl = 0.0, pa_top = 0.0, pr_top = 0.0;
++            for (int k = 0; k < ref_k; ++k) {
++                const double lpr = (double) lp_buf[k];
++                const double lpa = (double) lg[idx_buf[k]] - lse;
++                const double pr = std::exp(lpr);
++                kl += pr * (lpr - lpa);
++                pa_top += std::exp(lpa);
++                pr_top += pr;
++            }
++            const double tr = std::exp((double) tail_lp_r);
++            const double ta = std::max(1e-30, 1.0 - pa_top);
++            if (tr > 0.0) kl += tr * (std::log(tr) - std::log(ta));
++            kls.push_back(std::max(0.0, kl));
++            if (am != rec[2]) ++kl_flips;
++            ref_tail_max = std::max(ref_tail_max, tr);
++        }
+         return true;
+     };
+ 
+@@ -556,6 +640,23 @@ PplResult Session::perplexity(const PplRequest & req) {
+     }
+     r.nll = scored > 0 ? nll / scored : 0.0;
+     r.ppl = std::exp(r.nll);
++    if (reff && !kls.empty()) {
++        std::vector<double> sorted = kls;
++        std::sort(sorted.begin(), sorted.end());
++        double s = 0.0;
++        for (double x : kls) s += x;
++        r.kl_n = (int) kls.size();
++        r.kl_mean = s / (double) kls.size();
++        r.kl_p99 = sorted[std::min(sorted.size() - 1, (size_t) std::ceil(0.99 * (double) sorted.size()) - 1)];
++        r.kl_max = sorted.back();
++        r.kl_flips = kl_flips;
++        r.ref_tail_max = ref_tail_max;
++        if (!req.kl_out.empty())
++            if (FILE * ko = std::fopen(req.kl_out.c_str(), "w")) {
++                for (double x : kls) std::fprintf(ko, "%.9g\n", x);
++                std::fclose(ko);
++            }
++    }
+     r.n_scored = scored;
+     r.n_top1 = top1;
+     r.experts_routed = im.hook->experts_routed() - routed0;
+@@ -616,6 +717,40 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
      mparams.load_mode = LLAMA_LOAD_MODE_MMAP;
      mparams.use_extra_bufts = false;
      mparams.n_gpu_layers = 0;
@@ -493,7 +705,7 @@ index f484ca9..82d0fd3 100644
      // The nextn/MTP block is skipped at load unless asked for: llama.cpp marks its tensors
      // TENSOR_SKIP by default, and only --mtp builds a graph over them. n_layer_nextn comes from
      // the gguf metadata either way, so the "this model has no trained head" check below is
-@@ -701,6 +742,7 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
+@@ -701,6 +836,7 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
      im.hook->set_expert_substitute(cfg.moe.substitute_lambda);
      im.hook->set_predict_log(cfg.moe.predict_log);
      im.hook->set_predict_prefetch(cfg.moe.predict_prefetch, cfg.moe.predict_spec_max);
@@ -501,7 +713,7 @@ index f484ca9..82d0fd3 100644
      im.hook->set_route_ahead(cfg.moe.route_ahead);
  
      llama_context_params cparams = llama_context_default_params();
-@@ -726,6 +768,18 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
+@@ -726,6 +862,18 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
      if (!ctx) return fail("failed to create context");
      im.ctx.reset(ctx);
      llama_set_n_threads(ctx, cfg.n_threads, cfg.n_threads);
@@ -520,7 +732,7 @@ index f484ca9..82d0fd3 100644
  
      // The MTP draft context: same model, same eval callback, but ctx_type = MTP so llama.cpp builds
      // the nextn graph. It keeps its own (single-position) KV, hence n_rs_seq = 0 — nothing is ever
-@@ -750,6 +804,7 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
+@@ -750,6 +898,7 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
          if (!ctx_dft) return fail("failed to create the MTP draft context");
          im.ctx_dft.reset(ctx_dft);
          llama_set_n_threads(ctx_dft, cfg.n_threads, cfg.n_threads);
@@ -528,7 +740,7 @@ index f484ca9..82d0fd3 100644
      }
  
      // Opt-in sampling. temp <= 0 leaves smpl null and the decode loop on argmax — the deterministic
-@@ -881,6 +936,12 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
+@@ -881,6 +1030,12 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
              // one entry's alias list so the bytes are still read and allocated exactly once.
              std::vector<DenseTensorRef> dense, rows;
              std::unordered_map<uint64_t, size_t> dense_at; // (shard, file offset) -> index in `dense`
@@ -541,7 +753,7 @@ index f484ca9..82d0fd3 100644
              for (ggml_tensor * t : im.hook->captured_weight_objects()) {
                  if (!t) continue;
                  const std::string name = t->name;
-@@ -888,6 +949,15 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
+@@ -888,6 +1043,15 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
                  auto off = offs.off_by_name.find(name);
                  auto sz = offs.size_by_name.find(name);
                  if (off == offs.off_by_name.end() || sz == offs.size_by_name.end()) continue; // not a file tensor
@@ -557,7 +769,7 @@ index f484ca9..82d0fd3 100644
                  const int file_idx = offs.file_by_name.at(name);
                  const uint64_t key = ((uint64_t) (uint32_t) file_idx << 48) ^ off->second;
                  auto seen = dense_at.find(key);
-@@ -906,6 +976,11 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
+@@ -906,6 +1070,11 @@ std::unique_ptr<Session> Session::open(const SessionConfig & cfg,
                  // qualified as row-gathered; the guard costs nothing and keeps that coupling explicit.
                  if (row_names.count(name)) rows.push_back(d);
              }
@@ -569,7 +781,7 @@ index f484ca9..82d0fd3 100644
              for (const DenseTensorRef & d : dense)
                  if (!d.aliases.empty())
                      std::fprintf(stderr, "bmoe: '%s' is bound %zu times over one range (tied head) — all rebound\n",
-@@ -1593,6 +1668,7 @@ RunResult Session::generate(const GenerateRequest & req,
+@@ -1593,6 +1762,7 @@ RunResult Session::generate(const GenerateRequest & req,
          loop_overhead_s += overhead;
          trace_begin(n_past, /*n_tokens*/ 1 + n_draft, /*phase*/ 1);
          int dec = llama_decode(ctx, step);

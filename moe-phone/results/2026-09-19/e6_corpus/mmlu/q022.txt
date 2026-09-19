@@ -1,0 +1,8 @@
+The following is a multiple choice question about high school chemistry.
+
+Atoms of four elements are examined: carbon, nitrogen, neon, and sulfur. Atoms of which element are most likely to form a structure with the formula XF6 (where X is one of the four atoms)?
+A. Carbon
+B. Nitrogen
+C. Neon
+D. Sulfur
+Answer:

@@ -1,0 +1,8 @@
+The following is a multiple choice question about electrical engineering.
+
+Speed control by variation of field flux results in
+A. constant power drive.
+B. constant torque drive.
+C. variable power drive.
+D. none of the above.
+Answer:

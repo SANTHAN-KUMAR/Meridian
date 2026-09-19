@@ -1,0 +1,8 @@
+The following is a multiple choice question about econometrics.
+
+Negative residual autocorrelation is indicated by which one of the following?
+A. A cyclical pattern in the residuals
+B. An alternating pattern in the residuals
+C. A complete randomness in the residuals
+D. Residuals that are all close to zero
+Answer:

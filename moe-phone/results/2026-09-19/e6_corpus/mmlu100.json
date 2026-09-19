@@ -1,0 +1,1202 @@
+[
+ {
+  "offset": 0,
+  "subject": "abstract_algebra",
+  "question": "Find the degree for the given field extension Q(sqrt(2), sqrt(3), sqrt(18)) over Q.",
+  "choices": [
+   "0",
+   "4",
+   "2",
+   "6"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 140,
+  "subject": "anatomy",
+  "question": "Which of the following conditions is characterized by incompetence of the esophageal sphincter?",
+  "choices": [
+   "Crohn's disease",
+   "Esophageal varices",
+   "Gastroesophageal reflux disease",
+   "Pyloric stenosis"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 280,
+  "subject": "astronomy",
+  "question": "According to the Solar Nebular theory what are asteroids and comets?",
+  "choices": [
+   "They are the shattered remains of collisions between planets.",
+   "They are chunks of rock or ice that condensed long after the planets and moons had formed.",
+   "They are chunks of rock or ice that were expelled from planets by volcanoes.",
+   "They are leftover planetesimals that never accreted into planets."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 420,
+  "subject": "business_ethics",
+  "question": "There are a number of means by which can influence _______. These include _________to decision maker, varying from very direct modes to indirect modes, _________, being either public or private and ________ of communication.",
+  "choices": [
+   "Government, Avenue of approach, Breadth of transmission, Content",
+   "Consumers, Avenue of approach, Height of transmission, Content",
+   "Government, Breath of transmission, Avenue of approach, Content",
+   "Employees, Breadth of transmission, Content, Avenue of approach"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 560,
+  "subject": "clinical_knowledge",
+  "question": "When using an inhaler, when should a patient be asked to rinse their mouth?",
+  "choices": [
+   "Before using their bronchodilator inhaler.",
+   "After using their bronchodilator inhaler.",
+   "Before using their steroid inhaler.",
+   "After using their steroid inhaler."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 700,
+  "subject": "clinical_knowledge",
+  "question": "Your first action following confirmation of cardiac arrest is to:",
+  "choices": [
+   "ensure the emergency team/services are called.",
+   "give two rescue breaths.",
+   "give 30 chest compressions.",
+   "check the notes to see if the patient has a DNAR order."
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 840,
+  "subject": "college_biology",
+  "question": "Which of the following tissues in an actively photosynthesizing plant would have the highest rate of oxygen production?",
+  "choices": [
+   "Cortex",
+   "Palisade mesophyll",
+   "Epidermis",
+   "Vascular cambium"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 980,
+  "subject": "college_chemistry",
+  "question": "Which of the following procedures tend(s) to minimize the influence of random errors on measured results?\nI. Signal averaging\nII. Use of internal standards\nIII. Averaging the results from multiple samples",
+  "choices": [
+   "I only",
+   "II only",
+   "III only",
+   "I and III only"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 1120,
+  "subject": "college_mathematics",
+  "question": "Statement 1 | Suppose {s_n} and {t_n} are sequences of complex numbers such that lim_n\u2192\u221e s_n = s and lim_n\u2192\u221e tn = t. lim_n\u2192\u221e s_nt_n = st. Statement 2 | There exists a bounded sequence of real numbers with no convergent subsequence.",
+  "choices": [
+   "True, True",
+   "True, False",
+   "False, True",
+   "False, False"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 1260,
+  "subject": "college_medicine",
+  "question": "If the mean rate of oxygen consumption of a male athlete during a training session is 2 l/min, then his rate of energy expenditure is approximately:",
+  "choices": [
+   "400 kJ/min.",
+   "200 kJ/min.",
+   "80 kJ/min.",
+   "40 kJ/min."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 1400,
+  "subject": "college_physics",
+  "question": "If the Sun were suddenly replaced by a black hole of the same mass, it would have a Schwarzschild radius of 3,000 m. What effect, if any, would this change have on the orbits of the planets?",
+  "choices": [
+   "The planets would move directly toward the Sun.",
+   "The planets would move in spiral orbits.",
+   "The planets would oscillate about their former elliptical orbits.",
+   "The orbits would remain unchanged."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 1540,
+  "subject": "computer_security",
+  "question": "You are given a message (m) and its OTP encryption (c). Can you compute the OTP key from m and c ?",
+  "choices": [
+   "No, I cannot compute the key.",
+   "Yes, the key is k = m xor c.",
+   "I can only compute half the bits of the key.",
+   "Yes, the key is k = m xor m."
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 1680,
+  "subject": "conceptual_physics",
+  "question": "The direction of natural processes is from states of",
+  "choices": [
+   "higher order to lower order",
+   "lower order to higher order",
+   "disorganization to organization",
+   "disorder to equilibrium"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 1820,
+  "subject": "econometrics",
+  "question": "Negative residual autocorrelation is indicated by which one of the following?",
+  "choices": [
+   "A cyclical pattern in the residuals",
+   "An alternating pattern in the residuals",
+   "A complete randomness in the residuals",
+   "Residuals that are all close to zero"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 1960,
+  "subject": "electrical_engineering",
+  "question": "Speed control by variation of field flux results in",
+  "choices": [
+   "constant power drive.",
+   "constant torque drive.",
+   "variable power drive.",
+   "none of the above."
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 2100,
+  "subject": "elementary_mathematics",
+  "question": "Abe found the mean and median of this list of numbers. 1, 3, 3 If the number 6 were added to the list, then",
+  "choices": [
+   "the mean would increase.",
+   "the mean would decrease.",
+   "the median would increase.",
+   "the median would decrease."
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 2240,
+  "subject": "elementary_mathematics",
+  "question": "The distance from Chicago to New York City is 794 miles. What is 794 rounded to the nearest hundred?",
+  "choices": [
+   "700",
+   "794",
+   "800",
+   "894"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 2380,
+  "subject": "elementary_mathematics",
+  "question": "What is 836 rounded to the nearest 10?",
+  "choices": [
+   "800",
+   "830",
+   "840",
+   "870"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 2520,
+  "subject": "formal_logic",
+  "question": " Select the best translation into predicate logic. Some animals are neglected by cruel people. (Ax: x is an animal; Cx: x is cruel; Px: x is a person; Nxy: x neglects y)",
+  "choices": [
+   "(\u2203x)[(Ax \u2022 Cx) \u2022 (\u2203y)(Py \u2022 Nyx)]",
+   "(\u2203x)[(Cx \u2022 Px) \u2022 (\u2203y)(Ay \u2022 Nxy)]",
+   "(\u2203x)[(Ax \u2022 Px) \u2022 (\u2203y)(Cy \u2022 Nxy)]",
+   "(\u2203x)(\u2203y){[(Ax \u2022 Cy) \u2022 Py] \u2022 Nxy)]}"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 2660,
+  "subject": "global_facts",
+  "question": "At the time of independence, there were already hundreds of thousands of university graduates in ____, but hardly any at all in ____.",
+  "choices": [
+   "India, Congo",
+   "India, South Korea",
+   "Congo, South Korea",
+   "South Korea, India"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 2800,
+  "subject": "high_school_biology",
+  "question": "Which describes an African butterfly species that exists in two strikingly different color patterns?",
+  "choices": [
+   "artificial selection",
+   "directional selection",
+   "stabilizing selection",
+   "disruptive selection"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 2940,
+  "subject": "high_school_biology",
+  "question": "Which of the following describes a symbiotic relationship?",
+  "choices": [
+   "A tapeworm feeds off of its host's nutrients causing the host to lose large amounts of weight.",
+   "Certain plants grow on trees in order to gain access to sunlight, not affecting the tree.",
+   "Remora fish eat parasites off of sharks; the sharks stay free of parasites, and the remora fish are protected from predators.",
+   "Meerkats sound alarm calls to warn other meerkats of predators."
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 3080,
+  "subject": "high_school_chemistry",
+  "question": "Atoms of four elements are examined: carbon, nitrogen, neon, and sulfur. Atoms of which element are most likely to form a structure with the formula XF6 (where X is one of the four atoms)?",
+  "choices": [
+   "Carbon",
+   "Nitrogen",
+   "Neon",
+   "Sulfur"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 3220,
+  "subject": "high_school_computer_science",
+  "question": "Which of the following is the hexadecimal representation of the decimal number 231_{10} ?",
+  "choices": [
+   "17_{16}",
+   "E4_{16}",
+   "E7_{16}",
+   "F4_{16}"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 3360,
+  "subject": "high_school_european_history",
+  "question": "This question refers to the following information.\nRead the the following poem to answer questions.\nTake up the White Man's burden\u2014\nSend forth the best ye breed\u2014\nGo bind your sons to exile\nTo serve your captives' need;\nTo wait in heavy harness,\nOn fluttered folk and wild\u2014\nYour new-caught, sullen peoples,\nHalf-devil and half-child.\n...\nTake up the White Man's burden\u2014\nThe savage wars of peace\u2014\nFill full the mouth of Famine\nAnd bid the sickness cease;\nAnd when your goal is nearest\nThe end for others sought\u2026\nWatch sloth and heathen Folly\nBring all your hopes to naught.\nRudyard Kipling, The White Man's Burden, 1899\nBased on this poem, Kipling's conception of the British imperial mission could best be summed up as",
+  "choices": [
+   "a difficult but necessary task",
+   "a ruthless exercise of power",
+   "a glorious, religious responsibility",
+   "a hopeless task with no purpose"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 3500,
+  "subject": "high_school_geography",
+  "question": "Which one of the statements below is characteristic of most African cities?",
+  "choices": [
+   "They have thriving, clean residential areas.",
+   "There are jobs for most rural-to-urban migrants.",
+   "They have three separate business districts.",
+   "They have a well-developed infrastructure."
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 3640,
+  "subject": "high_school_geography",
+  "question": "What was the primary reason the Green Revolution did NOT help Africa much?",
+  "choices": [
+   "It targeted crops Africans don't grow and eat.",
+   "It required sophisticated machinery.",
+   "Population growth has fallen so drastically that Africans don't need the increased food production.",
+   "African agricultural production went up without its help."
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 3780,
+  "subject": "high_school_government_and_politics",
+  "question": "When the Supreme Court decides to take a case on appeal it",
+  "choices": [
+   "issues a writ of habeas corpus",
+   "issues a writ of certiorari",
+   "issues amicus curiae briefs",
+   "engages in judicial review"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 3920,
+  "subject": "high_school_macroeconomics",
+  "question": "Using the model of AD and AS what happens in the short run to real GDP the price level and unemployment with more consumption spending (C)? REAL GDP \u00a0\u00a0\u00a0 PRICE LEVEL \u00a0\u00a0\u00a0 UNEMPLOYMENT",
+  "choices": [
+   "Increases \u00a0\u00a0\u00a0 Decreases \u00a0\u00a0\u00a0 Decreases",
+   "Decreases \u00a0\u00a0\u00a0 Increases \u00a0\u00a0\u00a0 Increases",
+   "Increases \u00a0\u00a0\u00a0 Increases \u00a0\u00a0\u00a0 Decreases",
+   "Decreases \u00a0\u00a0\u00a0 Decreases \u00a0\u00a0\u00a0 Decreases"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 4060,
+  "subject": "high_school_macroeconomics",
+  "question": "If prices are expected to rise more slowly in the future",
+  "choices": [
+   "the Phillips curve will shift to the right",
+   "the actual rate of inflation will increase",
+   "the actual inflation rate will remain steady unless supply shocks set in",
+   "these expectations will become reality"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 4200,
+  "subject": "high_school_macroeconomics",
+  "question": "According to Classical economic theory the equation of exchange demonstrates the neutrality of money only if the",
+  "choices": [
+   "velocity of money supply and the quantity of output are constant.",
+   "money supply and its velocity are equal.",
+   "velocity of money supply equals the speed of transactions.",
+   "money supply and its velocity are inversely related."
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 4340,
+  "subject": "high_school_mathematics",
+  "question": "If $a=7$ and $b=13$, what is the number of even positive integers less than $ab$?",
+  "choices": [
+   "45",
+   "46",
+   "90",
+   "180"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 4480,
+  "subject": "high_school_mathematics",
+  "question": "As the tides change, the water level in a bay varies sinusoidally. At high tide today at 8 A.M., the water level was 15 feet; at low tide, 6 hours later at 2 P.M., it was 3 feet. How fast, in feet per hour, was the water level dropping at noon today?",
+  "choices": [
+   "3",
+   "\u03c0\\sqrt{3}/2",
+   "3\\sqrt{3}",
+   "\u03c0\\sqrt{3}"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 4620,
+  "subject": "high_school_microeconomics",
+  "question": "The law of increasing costs",
+  "choices": [
+   "does not apply to guns and butter.",
+   "is the result of resources not being perfectly adaptable between the production of two goods.",
+   "implies that prices will rise when the costs of making a good rise.",
+   "causes the production possibilities frontier to be a straight line."
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 4760,
+  "subject": "high_school_physics",
+  "question": "An electric dipole consists of a pair of equal but opposite point charges of magnitude 4.0 nC separated by a distance of 2.0 cm. What is the electric field strength at the point midway between the charges?",
+  "choices": [
+   "0",
+   "9.0 \u00d7 10^4 N/C",
+   "1.8 \u00d7 10^5 N/C",
+   "7.2 \u00d7 10^5 N/C"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 4900,
+  "subject": "high_school_psychology",
+  "question": "Which of the following terms applies to IQ tests?",
+  "choices": [
+   "achievement",
+   "standardized",
+   "projective",
+   "triarchic"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 5040,
+  "subject": "high_school_psychology",
+  "question": "An artist doing a pencil drawing could use which of the following techniques to add depth to her or his drawing?",
+  "choices": [
+   "retinal disparity",
+   "convergence",
+   "closure",
+   "linear perspective"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 5180,
+  "subject": "high_school_psychology",
+  "question": "Janice often has feelings of hostility and contempt for her husband of forty years. However, instead of expressing these feelings, Janice goes overboard to dote on her husband. Janice is using which of the following defense mechanisms?",
+  "choices": [
+   "Rational philosophy",
+   "Reaction formation",
+   "Repression",
+   "Sublimation"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 5320,
+  "subject": "high_school_psychology",
+  "question": "Albert Bandura's work evidenced that children who witnessed aggressive behavior on the part of adults would be likely to imitate the aggressive behavior later on. This phenomenon is known as",
+  "choices": [
+   "instrumental learning.",
+   "modeling.",
+   "the copycat effect.",
+   "thanatos."
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 5460,
+  "subject": "high_school_statistics",
+  "question": "A company has a choice of three investment schemes. Option I gives a sure $25,000 return on investment. Option II gives a 50% chance of returning $50,000 and a 50% chance of returning $10,000. Option III gives a 5% chance of returning $100,000 and a 95% chance of returning nothing. Which option should the company choose?",
+  "choices": [
+   "Option II if it wants to maximize expected return",
+   "Option I if it needs at least $20,000 to pay off an overdue loan",
+   "Option III if it needs at least $80,000 to pay off an overdue loan",
+   "All of the above answers are correct."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 5600,
+  "subject": "high_school_statistics",
+  "question": "A manufacturer of motor oil is interested in testing the effects of a newly developed additive on the lifespan of an engine. Twenty-five different engine types are selected at random and each one is tested using oil with the additive and oil without the additive. What type of analysis will yield the most useful information?",
+  "choices": [
+   "Matched pairs comparison of population proportions",
+   "Matched pairs comparison of population means",
+   "Independent samples comparison of population proportions",
+   "Independent samples comparison of population means"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 5740,
+  "subject": "high_school_us_history",
+  "question": "This question refers to the following information.\n\"The conscience of the people, in a time of grave national problems, has called into being a new party, born of the nation's sense of justice. We of the Progressive party here dedicate ourselves to the fulfillment of the duty laid upon us by our fathers to maintain the government of the people, by the people and for the people whose foundations they laid. We hold with Thomas Jefferson and Abraham Lincoln that the people are the masters of their Constitution, to fulfill its purposes and to safeguard it from those who, by perversion of its intent, would convert it into an instrument of injustice. In accordance with the needs of each generation the people must use their sovereign powers to establish and maintain equal opportunity and industrial justice, to secure which this Government was founded and without which no republic can endure.\n\"This country belongs to the people who inhabit it. Its resources, its business, its institutions and its laws should be utilized, maintained or altered in whatever manner will best promote the general interest. It is time to set the public welfare in the first place.\"\nProgressive Party Platform, 1912\nWould the Underwood-Simmons Tariff of 1913 be generally endorsed by Progressives of that era?",
+  "choices": [
+   "Yes, because they were largely supporters of Teddy Roosevelt's \"Square Deal\"",
+   "Yes, because most Democrats advocated lower duties",
+   "No, because they were largely supporters of Teddy Roosevelt's \"New Nationalism\"",
+   "No, because they were largely opponents of Woodrow Wilson"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 5880,
+  "subject": "high_school_world_history",
+  "question": "This question refers to the following information.\n\"Let a woman retire late to bed, but rise early to duties; let her nor dread tasks by day or by night. Let her not refuse to perform domestic duties whether easy or difficult. That which must be done, let her finish completely, tidily, and systematically, When a woman follows such rules as these, then she may be said to be industrious.\nLet a woman be correct in manner and upright in character in order to serve her husband. Let her live in purity and quietness of spirit, and attend to her own affairs. Let her love not gossip and silly laughter. Let her cleanse and purify and arrange in order the wine and the food for the offerings to the ancestors. When a woman observes such principles as these, then she may be said to continue ancestral worship.\nNo woman who observes these three fundamentals of life has ever had a bad reputation or has fallen into disgrace. If a woman fail to observe them, how can her name be honored; how can she but bring disgrace upon herself?\"\n\u00a9 The East Asian Library and the Gest Collection, Princeton University.\nBan Zhao, Lessons for a Woman, ca. 80 C.E.\nWhich of the following is expressed as an expectation for women in ancient China, according to the passage?",
+  "choices": [
+   "That they obediently fulfill their obligations within the home",
+   "That they collaborate with their husbands on domestic tasks",
+   "That they pursue education in order to find meaningful employment",
+   "That they speak their minds boldly"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 6020,
+  "subject": "high_school_world_history",
+  "question": "This question refers to the following information.\nIn fact, the peculiar aggravation of the Cawnpore massacres was this, that the deed was done by a subject race \u2014 by black men who dared to shed the blood of their masters, and that of poor helpless ladies and children. Here we had not only a servile war, but we had a war of religion, a war of race, and a war of revenge, of hope, of national promptings to shake off the yoke of a stranger, and to re-establish the full power of native chiefs, and the full sway of native religions. Whatever the causes of the mutiny and the revolt, it is clear enough that one of the modes by which the leaders, as if by common instinct, determined to effect their end was, the destruction of every white man, woman or child who fell into their hands.\nBritish journalist William Howard Russell, My Indian Mutlny Diary, 1860\nViolence, it must be emphasized, was an essential component of the British presence in India. A dominant power is always uneasy with violence directed against it. The right to violence is, therefore, everywhere a privilege that authority enjoys and refuses to share with those under it: power always insists on violence as its exclusive monopoly. British rule in India, as an autocracy, had meticulously constructed a monopoly of violence. The revolt of 1857 shattered that monopoly by matching an official, alien violence by an indigenous violence of the colonized. The bodies of the British had acquired certain dignities in India that were predestined by birth and by the colour of their skin. This was the condition of their domination, of their superiority: rulers and ruled were arranged hierarchically as superior and inferior races, as civilized and uncivilized. And this superiority manifested itself by denying to the Indians a \"humanness\"; by treating them and conceiving of them as animals.\nRudrangshu Mukherjee, \"The Kanpur [Cawnpore] Massacres in India in the Revolt of 1857,\" 1990\nFrom the perspective of the first passage, the death of British citizens at Cawnpore",
+  "choices": [
+   "seems to mark a betrayal of a \"higher\" race by a \"lesser\" race.",
+   "should be seen as a regrettable but avoidable mistake.",
+   "can be said to have been brought on by the British themselves.",
+   "was seen by those who killed them as a religious duty."
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 6160,
+  "subject": "human_aging",
+  "question": "The positive relationship between religion and physical health is NOT thought to be due to",
+  "choices": [
+   "Social support derived from a religious community",
+   "The rules of some religions which forbid unhealthy behaviors",
+   "The stress reducing effects of prayerful meditation",
+   "The benefits of knowing that others are praying for you"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 6300,
+  "subject": "human_aging",
+  "question": "If you believe that we are mostly in control of our own development and that our behaviors, good or bad, determine how successful our aging with be, you would be said to have which of the following perspectives?",
+  "choices": [
+   "Organismic",
+   "Nurture",
+   "Continuity",
+   "Mechanistic"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 6440,
+  "subject": "human_sexuality",
+  "question": "Miss Jones has been concerned about her health lately. She has noticed some itching and skin irritation around her genitals. Given her promiscuous sexual history she suspects that she has contracted:",
+  "choices": [
+   "chlamydia",
+   "genital warts",
+   "gonorrhea",
+   "pubic lice"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 6580,
+  "subject": "jurisprudence",
+  "question": "To claim that one has a prima facie duty to obey the law is to assert that:",
+  "choices": [
+   "One is under a duty to obey the law without exception, regardless of its content.",
+   "There is no duty to obey a law to which one hasn't agreed.",
+   "The duty applies only to those who are directly affected by the law in question.",
+   "The obligation arises independently of the precise legal provisions involved - unless there are grounds to justify a specific exception."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 6720,
+  "subject": "logical_fallacies",
+  "question": "Which of the following describes the fallacy of evading the issue?",
+  "choices": [
+   "arguing that someone should do something only because of ill will towards someone else",
+   "characterizing an opponent's position in a way that makes it seem ridiculous",
+   "supporting a claim with evidence or reasoning that is not relevant to the proposition, or responding to another's argument by changing the subject",
+   "attempting to gain agreement based only on the feelings aroused in the message"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 6860,
+  "subject": "machine_learning",
+  "question": "Statement 1| In AdaBoost weights of the misclassified examples go up by the same multiplicative factor. Statement 2| In AdaBoost, weighted training error e_t of the tth weak classifier on training data with weights D_t tends to increase as a function of t.",
+  "choices": [
+   "True, True",
+   "False, False",
+   "True, False",
+   "False, True"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 7000,
+  "subject": "management",
+  "question": "What is the term for the extent to which competition in one country is influenced by competition in other countries?",
+  "choices": [
+   "International trade",
+   "Global economics",
+   "Global competition",
+   "Globalisation"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 7140,
+  "subject": "marketing",
+  "question": "________ is the process of marketing accomplished or facilitated via the use of Internet technologies (e.g. web, email, intranet, extranets, etc.).",
+  "choices": [
+   "Internet marketing.",
+   "Search marketing.",
+   "E-marketing.",
+   "Mobile marketing."
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 7280,
+  "subject": "marketing",
+  "question": "Which of the following is an example of costbased pricing?",
+  "choices": [
+   "Basing the price on what the customer is willing to pay",
+   "Basing the price on the psychological expectations of the customer",
+   "Basing the price on the features and benefits of the product",
+   "Basing the price on the full cost of production plus the required profit"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 7420,
+  "subject": "miscellaneous",
+  "question": "Which of these bones is located in the wrist?",
+  "choices": [
+   "Patella",
+   "Humerus",
+   "Carpals",
+   "Coccyx"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 7560,
+  "subject": "miscellaneous",
+  "question": "What is the last letter of the Greek alphabet?",
+  "choices": [
+   "omicron",
+   "omega",
+   "upsilon",
+   "zeta"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 7700,
+  "subject": "miscellaneous",
+  "question": "Who was the longest reigning monarch in French history?",
+  "choices": [
+   "Louis XIII",
+   "Louis XIV",
+   "Louis XV",
+   "Louis XVI"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 7840,
+  "subject": "miscellaneous",
+  "question": "Which of the following is not a TV cartoon duo?",
+  "choices": [
+   "Chip and Dale",
+   "Beavis and Butt-head",
+   "Simon and Garfunkel",
+   "Tom and Jerry"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 7980,
+  "subject": "miscellaneous",
+  "question": "What is the birthstone for the month of January?",
+  "choices": [
+   "topaz",
+   "garnet",
+   "opal",
+   "diamond"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 8120,
+  "subject": "miscellaneous",
+  "question": "The intention of making traditional, saleable art objects was abandoned by",
+  "choices": [
+   "Impressionists",
+   "Pop artists",
+   "Abstract Expressionists",
+   "Conceptual artists"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 8260,
+  "subject": "moral_disputes",
+  "question": " In contrast to Garrett Hardin's approach, the Confucian model rejects coercion because",
+  "choices": [
+   "the costs of eliminating a collective action problem are not irrelevant to its solution",
+   "it affirms the autonomy of individuals apart from others.",
+   "it cannot lead to real social change, which involves changes of mind as well as action",
+   "The Confucian model actually accepts coercion."
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 8400,
+  "subject": "moral_disputes",
+  "question": " One objection to care ethics is thatit seems to imply that we areresponsible for our attitudes, even though they seem not to be under our voluntary control. Collins responds by arguing that",
+  "choices": [
+   "caring attitudes are not moral attitudes at all.",
+   "we can often bring ourselves to have attitudes of care indirectly",
+   "when we fail to have attitudes of care this means that no caring attitudes were required of us towards some person",
+   "Collins agrees with the objection."
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 8540,
+  "subject": "moral_scenarios",
+  "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, according to ordinary moral standards in the US as of 2020? Scenario 1 | I lost my legs while serving in Iraq so I parked in the handicap parking spot. Scenario 2 | The hospital signs told us to turn off all electrical devices, but I kept my phone on.",
+  "choices": [
+   "Wrong, Wrong",
+   "Wrong, Not wrong",
+   "Not wrong, Wrong",
+   "Not wrong, Not wrong"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 8680,
+  "subject": "moral_scenarios",
+  "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, according to ordinary moral standards in the US as of 2020? Scenario 1 | I tickled my best volleyball player in a private moment. Scenario 2 | I was sure to put out the wet floor sign after mopping.",
+  "choices": [
+   "Wrong, Wrong",
+   "Wrong, Not wrong",
+   "Not wrong, Wrong",
+   "Not wrong, Not wrong"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 8820,
+  "subject": "moral_scenarios",
+  "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, according to ordinary moral standards in the US as of 2020? Scenario 1 | I needed money, so I brought my gun to the pawn shop.   Scenario 2 | I installed cameras inside store bathrooms to watch customers.",
+  "choices": [
+   "Wrong, Wrong",
+   "Wrong, Not wrong",
+   "Not wrong, Wrong",
+   "Not wrong, Not wrong"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 8960,
+  "subject": "moral_scenarios",
+  "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, according to ordinary moral standards in the US as of 2020? Scenario 1 | My daughter was getting F's, so I took her phone away. Scenario 2 | I ate all the candy my mother bought for my sister.",
+  "choices": [
+   "Wrong, Wrong",
+   "Wrong, Not wrong",
+   "Not wrong, Wrong",
+   "Not wrong, Not wrong"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 9100,
+  "subject": "moral_scenarios",
+  "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, according to ordinary moral standards in the US as of 2020? Scenario 1 | I ran over the fresh grass with a lawnmower. Scenario 2 | My rent was due, so I had to sell my guitar without telling my friend.",
+  "choices": [
+   "Wrong, Wrong",
+   "Wrong, Not wrong",
+   "Not wrong, Wrong",
+   "Not wrong, Not wrong"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 9240,
+  "subject": "moral_scenarios",
+  "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, according to ordinary moral standards in the US as of 2020? Scenario 1 | I decided to pee in a bush where no one could see me. Scenario 2 | I complimented Kelly's transition.",
+  "choices": [
+   "Wrong, Wrong",
+   "Wrong, Not wrong",
+   "Not wrong, Wrong",
+   "Not wrong, Not wrong"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 9380,
+  "subject": "moral_scenarios",
+  "question": "For which of these two scenarios does the main character (who uses I/me/my) do something clearly morally wrong, according to ordinary moral standards in the US as of 2020? Scenario 1 | I stuffed popcorn into the zipper bag. Scenario 2 | I consoled my sick and helpless dog after he vomited on the carpet.",
+  "choices": [
+   "Wrong, Wrong",
+   "Wrong, Not wrong",
+   "Not wrong, Wrong",
+   "Not wrong, Not wrong"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 9520,
+  "subject": "nutrition",
+  "question": "Which of the following amino acids cannot provide a substrate for gluconeogenesis?\n",
+  "choices": [
+   "Leucine",
+   "Tryptophan",
+   "Histidine",
+   "isoleucine"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 9660,
+  "subject": "nutrition",
+  "question": "What are the effects of globalisation on food security?\n",
+  "choices": [
+   "Wealthy countries subsidies and trade barriers make it difficult for developing countries to take advantage of the potential of globalisation for advancing food security.",
+   "World Trade Organisation rules do not cover agriculture, so globalisation really has no bearing on food security.",
+   "Supermarkets are so far the only way in which food and agriculture have experienced globalisation.",
+   "Developing countries need to create publicly-owned food reserves in order to realise the potential benefits."
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 9800,
+  "subject": "philosophy",
+  "question": "Epictetus recommends that we refrain from:",
+  "choices": [
+   "laughing without restraint.",
+   "casually going to lectures.",
+   "having sex before marriage.",
+   "all of the above."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 9940,
+  "subject": "philosophy",
+  "question": "One objection to Singer\u2019s theory that he considers is that it:",
+  "choices": [
+   "does not do enough to address suffering in other countries besides our own.",
+   "inappropriately makes proximity morally important.",
+   "does not account for the fact that we have stricter obligations to our loved ones than to strangers.",
+   "requires too drastic a revision to our moral scheme."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 10080,
+  "subject": "prehistory",
+  "question": "The Chinese process of divining the future by examining fired animal bones is called:",
+  "choices": [
+   "hang-t'u.",
+   "sarsen divination",
+   "scapulimancy",
+   "cylinder seal prophecy"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 10220,
+  "subject": "prehistory",
+  "question": "What was concluded in a recent study comparing the genomes of modern people with ancient skeletal remains in North and South America?",
+  "choices": [
+   "Native Americans in North America and South America genetically diverged from each other and their ancestors in the far north by about 30,000 years ago.",
+   "All Native Americans, both ancient and modern, are derived from a single migration of Austral-Melanesians into the Americas by about 13,000 years ago.",
+   "All Native Americans, both ancient and modern, are derived from a single migration of the Inuit, who arrived in the Americas by about 13,000 years ago.",
+   "The separation between native Siberians and the earliest Native Americans occurred sometime between 20,000 and 23,000 years ago."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 10360,
+  "subject": "professional_accounting",
+  "question": "Smith has an adjusted gross income (AGI) of $120,000 without taking into consideration $40,000 of losses from rental real estate activities. Smith actively participates in the rental real estate activities. What amount of the rental losses may Smith deduct in determining taxable income?",
+  "choices": [
+   "$0",
+   "$15,000",
+   "$20,000",
+   "$40,000"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 10500,
+  "subject": "professional_accounting",
+  "question": "Which of the following defenses is likely to be successful in a suit alleging negligence by a CPA?",
+  "choices": [
+   "Due care.",
+   "Ignorance of the law.",
+   "Lack of intent.",
+   "Lack of mental capacity."
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 10640,
+  "subject": "professional_law",
+  "question": "A man who was separated but never divorced from his first wife, married another woman and lived with her as husband and wife. The man and his purported second wife bought a home together as tenants by the entirety. They lived there together for a few years, when the man was accused and convicted of killing his purported wife. He was given a life sentence. The decedent's estate brought a quiet title action to declare the property forfeited to the decedent on the basis that a murderer cannot benefit from his crime. The trial court awarded the property to the estate. The man appealed from his prison cell. Under the common law, will the appellate court affirm the trial court's decision and strip the man of all ownership rights in the home?",
+  "choices": [
+   "Yes, because a murderer cannot reap the benefits of his ill-doing.",
+   "Yes, because the murderer was also a bigamist who could not take good title to the property in the first place, thus putting full title in the decedent from the date of purchase.",
+   "No, the court will as a policy matter recognize the murderer's pre-slaying right to one-half of the property as a tenant in common.",
+   "No, there is no rule of law that gives the victim or her estate any additional rights in the property that she had before the homicide."
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 10780,
+  "subject": "professional_law",
+  "question": "A man was at a bar drinking beer when he started conversing with a woman who was seated at the next barstool. During the course of their conversation, the woman told the man that she was just laid off her job and desperately needed money to pay her rent. The man, a practical joker, pointed to a nearby coat rack and said, \"Hey, see that fur coat there. Why don't you take it?\" The man then told the woman that he would cause a disturbance to distract attention while she ran out of the bar with the coat. Believing that it was a good idea, the woman agreed to take part in the scheme. Thereupon, the man lit a matchbook and threw it on top of the bar. He then yelled, \"The bar's on fire, help!\" When everyone turned to look at the man, the woman ran to the back of the bar, took the fur coat and scurried outside unnoticed. Just as the woman left the bar and was running down the sidewalk, she was apprehended and arrested by a police officer. Later, the man confessed that the fur coat that the woman took really belonged to him. With respect to the man's and the woman's criminal liability, which of the following is most correct?",
+  "choices": [
+   "The man and the woman are guilty of conspiracy and larceny.",
+   "The man and the woman are guilty of larceny.",
+   "The woman is guilty of larceny.",
+   "The man and the woman are not guilty of either conspiracy or larceny."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 10920,
+  "subject": "professional_law",
+  "question": "A plaintiff sued a defendant for injuries suffered in an automobile accident that occurred six months ago. The plaintiff claimed that the defendant drove through a red light and hit her as she was crossing the street. The posted speed limit at the scene of the accident was 25 m. p. h. In his case-in-chief, the defendant testified that the traffic light was green and he was driving carefully at 20 m. p. h. The plaintiff's attorney did not cross-examine the defendant. Rather, she called a police officer who testified that the defendant told him immediately after the accident that he was going 30 m. p. h. The police officer's testimony is",
+  "choices": [
+   "a prior inconsistent statement and, therefore, admissible to impeach.",
+   "hearsay, but admissible as a prior inconsistent statement for any purpose.",
+   "admissible, as offered against the defendant.",
+   "inadmissible, because the accident report is the best evidence of what the defendant told the police officer."
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 11060,
+  "subject": "professional_law",
+  "question": "On Monday, a man told a gardener, \"I am having a party on Sunday and I want my house to look good. If you will promise to mow my lawn by Saturday, I will pay you $50. \" On Friday, the gardener arrived at the man's home just as the man was leaving for work and began to mow the man's lawn. The man said nothing to the gardener but drove off as he saw the gardener unloading his lawn mower. When the man arrived home from work that evening, he noticed that only half of his lawn had been mowed. He then found a note from the gardener slipped into his mailbox. The note said:\"Sorry, but I ran out of gas to power the lawn mower and did not have time to buy more gas to finish the job. I'm taking the weekend off, but I will be back Monday morning to finish the job. \"If the man brings suit against the gardener for breach of contract, who is likely to prevail?",
+  "choices": [
+   "The gardener, because he never accepted the offer made by the man.",
+   "The gardener, because he offered to cure the defective performance by finishing the job on Monday morning.",
+   "The man, because the gardener's part performance necessarily implied an acceptance and a promise that he would render complete performance.",
+   "The man, because under the doctrine of equitable estoppel, the gardener's part performance was evidence of his intent to honor the entire contract."
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 11200,
+  "subject": "professional_law",
+  "question": "A landlord, the owner of a large, high-rise apartment building in the city, leased a three-bedroom apartment in the building to a husband and wife. The written lease agreement specified that rent should be paid at a rate of $2,000 per month and provided that the tenants were required to pay two months rent initially, of which one half, or $2,000, should be held by the landlord as a security deposit. In addition, the lease contained the following provision:\"The duration of this lease shall be month-to-month and either party may have the right to terminate on thirty (30) days notice. \"The lease agreement did not specify whether notice of termination must be in writing, but it did provide that the deposit could be applied, at the landlord's option, to unpaid rent and to reimbursement for damage done by the tenant(s) to the apartment or the fixtures attached thereto. On January 1, the husband and wife paid the landlord $4,000 and moved in. The tenants then paid the $2,000 rent on the first of each of the months of February, March, and April, and all rents were duly accepted by the landlord. On February 1, the city enacted a housing code applicable to all multiple dwellings in the city. A provision of that code required that in \"any building having a main or central entrance that is open and accessible to the public directly from a public street, a doorkeeper shall be maintained on duty at all times. \" Although the landlord's building has such an entrance, the landlord failed to comply with the requirement. On March 15 and again on April 1, the husband and wife lodged complaints with the city's housing authority relating to the landlord's failure to hire a doorkeeper in violation of the code regulation. On April 5, the landlord orally gave notice to the tenants that he was terminating the lease and demanded that they vacate the premises by May 5. No damage was done to the apartment, furnishings, or fixtures. There is no statute applicable to cover any landlord \u0080\u0094tenant dispute except those related to housing and building codes. In the landlord's action to evict, the husband and wife have contested the landlord's right to terminate on May 5. If the tenants prevail, it will probably be because",
+  "choices": [
+   "there was no damage to the apartment, furnishings, or fixtures.",
+   "the statute of frauds requires that the notice of termination be in writing.",
+   "the jurisdiction recognizes that retaliatory actions are a defense.",
+   "the husband and wife have the option to apply their $2,000 deposit to cover May's rental."
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 11340,
+  "subject": "professional_law",
+  "question": "A state's attorney was convicted in federal court of taking bribes to drop charges against an oil company. He was sentenced to probation. The state's attorney had served long enough to become fully qualified for his pension upon retirement. The state's attorney retired and immediately started receiving monthly pension checks. Subsequently, the governor signed into law a statute which provided in part:\"Section 8. Any member of the state attorneys staff who is convicted of. . . bribery . . . shall not beentitled to receive any retirement or other benefit or payment of any kind from the state . Such conviction shall be considered a breach of the staff member's employment contract. \"Following the enactment of the statute, the state's attorney received a letter from the state which stated they are immediately discontinuing pension benefit payments to him on account of his bribery conviction. The state's attorney contacted an attorney, who challenged the discontinuance of benefits on the grounds that the new law was unconstitutional. In order to reinstate the state attorney's pension on the grounds that the statute is unconstitutional, the attorney's strongest argument would be that",
+  "choices": [
+   "the state attorney was retroactively punished.",
+   "the statute is an ex post facto law",
+   "the supremacy clause invalidates the state law, because there is federal legislation regulating pension and profit sharing plans.",
+   "the statute has a chilling effecton legislators' rights to freely discuss pending bills with members of their staff."
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 11480,
+  "subject": "professional_law",
+  "question": "A senator, had been a state senator for three years. During that period of time, it had been his regular practice to stay at a hotel in the state's capital while the legislature was in session (namely from September through March). As a general rule, the senator stayed at the hotel each and every night during that seven-month period. When the senator checked into the hotel on September 1, 2007 for the 2007 \u0080\u00942008 term, the hotel manager quoted the senator his usual senatorial discount rate of $50 per night. Although nothing was said regarding payment terms, the senator customarily paid the bill in weekly installments. During the months of September and October, he paid the hotel at the end of each week $350 plus tax and other accumulated expenses. On the last day of October, the senator made his usual weekly payment covering the rental period from October 25 to October 31. Then, on the morning of November 4 (before checkout time for that day), the senator decided to suddenly move out of the hotel and register at a new motel located two blocks away. He notified the manager at the hotel of his intent to check out and tendered a check for $150 plus tax and other incidental charges incurred from November 1 through November 3. When the manager noticed that the senator was paying only for three days, she remarked, \"You still owe us $200 plus tax for the rest of the week and $350 plus taxes for an additional week because you didn't give us a week's notice that you planned to vacate. \" The senator refused to pay the additional charges. If the hotel brings suit against the senator to recover for the unpaid balance, how many additional days lodging will he be required to pay for?",
+  "choices": [
+   "None.",
+   "Four.",
+   "Seven.",
+   "Eleven."
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 11620,
+  "subject": "professional_law",
+  "question": "A driver was severely injured when his car burst into flames after he was rear-ended in a minor auto accident. The driver filed suit against the manufacturer. To prove negligent design by the manufacturer, the driver offers the portion of the transcript from a prior trial in which an expert witness testified that in his opinion the car was unsafe as designed. The testimony could qualify under the hearsay exception for former testimony",
+  "choices": [
+   "only if the manufacturer had been a party to the former proceeding.",
+   "whether or not the manufacturer had been a party to the former proceeding.",
+   "if this exception has been held incompatible with the confrontation clause of the Sixth Amendment.",
+   "if the manufacturer had an opportunity to cross-examine the expert at the former preceding."
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 11760,
+  "subject": "professional_law",
+  "question": "A federal statute makes it a crime for anyone to \"knowingly\" use, transfer, acquire, alter, or possess food stamps in any manner not authorized by statute or federal regulations. A restaurant owner purchased food stamps from an undercover federal agent several times for a price below face value. At trial, the judge refused to charge the jury that this was a specific intent crime requiring proof that the defendant knew that he was acting illegally. The government urged that no mens rea, or \"evil-meaning mind\" had to be proved. The court simply told the jury that \"knowingly\" means that the Defendant realized what he was doing, and did not act through ignorance, mistake, or accident. The owner was convicted and appealed. What will the federal appellate court likely decide regarding the lower court's interpretation of the criminal intent required under the statute?",
+  "choices": [
+   "Some statutes are written without the need to prove any particular mens rea, and this statute appears to be one of them, making the court's instructions appropriate.",
+   "Where all that is available regarding intent is the use of the word \"knowingly\", the prosecution must at least prove that the defendant knew his conduct to be unauthorized by statute or regulations.",
+   "This is a strict liability crime that requires no proof of criminal knowledge or specific criminal intent.",
+   "The prosecution must prove that the defendant had specific knowledge of the precise provisions of the federal food stamp law and the specific actions that were prohibited."
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 11900,
+  "subject": "professional_law",
+  "question": "A girlfriend lived with her boyfriend in a small apartment. The boyfriend was a gun enthusiast who kept a collection of antique pistols and firearms in the apartment. The boyfriend was also an avid baseball fan and had a fanatic devotion to his favorite team. One evening, the boyfriend was watching his beloved team play their archrival on television. His favorite team lost in extra innings. After the game, the boyfriend became despondent and told his girlfriend that he was so disgusted that he was going to kill himself. The boyfriend took one of the pistols from his gun collection and shot himself in the head. As the boyfriend fell to the floor, wounded, his girlfriend couldn't believe her eyes. At first she thought that she should call 911 for an ambulance. But she was afraid that the police might think that she was responsible for the shooting. Consequently, she decided to do nothing. She proceeded to leave the apartment and spent the night at her mother's home. The boyfriend did not immediately die from the gunshot wound. A subsequent medical examiner's report concluded that the boyfriend died from loss of blood approximately two hours after the shooting. If the girlfriend had sought immediate medical assistance, the boyfriend would have lived. The girlfriend is subsequently prosecuted for her boyffiend's death. She should be found",
+  "choices": [
+   "guilty of first-degree murder.",
+   "guilty of second-degree murder.",
+   "guilty of involuntary manslaughter.",
+   "not guilty, because she had no legal duty to render assistance."
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 12040,
+  "subject": "professional_law",
+  "question": "A resident lived in a house across the street from a small office building. One of the offices in that building was that of a criminal defense lawyer. The resident hated the idea of the lawyer's office being close to her home. She felt that it meant dangerous criminals were coming and going in her neighborhood. The resident spent a lot of time looking out her window, trying to figure out which people going in and out of the office building were criminals, and imagining what sorts of crimes they had committed. The resident eventually decided that she needed to drive the lawyer out of the neighborhood. She made a telephone call to the lawyer and said, \"You are scum, and so are all of your clients. I know that you're conspiring to commit crimes with all those bad people you represent. The police should arrest you and put you in jail with your clients. \" The lawyer was very upset by what he heard. If the lawyer asserts a claim for defamation against the resident based on the telephone call, he will most likely",
+  "choices": [
+   "succeed, because the resident's remarks constituted slander per Se.",
+   "succeed, because the lawyer found the remarks to be upsetting.",
+   "not succeed, because the resident's remarks were a matter of personal opinion rather than statements of fact.",
+   "not succeed, because the resident's remarks were not published or communicated to anyone but the plaintiff."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 12180,
+  "subject": "professional_medicine",
+  "question": "A 45-year-old limousine driver comes to the office for an initial appointment because he would like you to fill out and sign a legal document at the request of his attorney. The patient states that he is filing a lawsuit against the limousine company that employs him because he developed post-traumatic stress disorder following a motor vehicle collision. He appears irritable and tense as he provides his history. He relays his symptoms by reading them aloud from a written list. At this time, which of the following is the most appropriate approach toward confirming the underlying diagnosis of this patient?",
+  "choices": [
+   "Administer amobarbital and then interview the patient",
+   "Ask the patient to provide a narrative with detailed description of the incident and of his symptoms",
+   "Interview the patient under hypnosis",
+   "Interview the patient while paying close attention to his willingness to make eye contact"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 12320,
+  "subject": "professional_medicine",
+  "question": "A 2-month-old female is brought to the office for her first routine health maintenance examination and for her immunization update. In order to determine whether or not any contraindications exist for diphtheria, tetanus, pertussis (DtaP) immunization, the parents should be questioned regarding",
+  "choices": [
+   "allergy to eggs",
+   "Apgar scores at birth",
+   "gestational age at birth",
+   "previous seizures"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 12460,
+  "subject": "professional_psychology",
+  "question": "Parametric Tests are used when data is interval or ration. When is it used the ONE-WAY ANOVA?",
+  "choices": [
+   "used when there is 1 IV and means of more than 2 groups",
+   "used when there is 2 IV and means of more than 4 groups",
+   "used when there is 3 IV and means of more than 5 groups",
+   "used when there is 4 IV and means of more than 6 groups"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 12600,
+  "subject": "professional_psychology",
+  "question": "The primary function of the psychology licensing board is best described as:",
+  "choices": [
+   "developing laws that govern the practice of psychology.",
+   "providing sanctions for unethical and illegal behavior on the part of psychologists.",
+   "protecting the public welfare.",
+   "accrediting graduate programs in psychology."
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 12740,
+  "subject": "professional_psychology",
+  "question": "The \u201cneeds\u201d of both Murray and Maslow can be considered similar to ___________ from operant conditioning theory.",
+  "choices": [
+   "\u201cOughts\u201d",
+   "Latent conditioners",
+   "Reinforcers",
+   "Latent punishers"
+  ],
+  "answer": 2
+ },
+ {
+  "offset": 12880,
+  "subject": "professional_psychology",
+  "question": "The classic aging pattern is defined as 2 decline on which subtest(s) of the Wechsler Adult Intelligence Scale-Revised",
+  "choices": [
+   "All Verbal subtests",
+   "All Performance subtests",
+   "Vocabulary subtest only",
+   "Block Design subtest only"
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 13020,
+  "subject": "professional_psychology",
+  "question": "Therapists considering working with elderly persons should especially keep in mind that, on most variables, the elderly",
+  "choices": [
+   "seldom make good candidates for psychotherapy",
+   "have very few issues that can be addressed meaningfully in psychotherapy",
+   "usually have great difficulty leaning and remembering things",
+   "show greater within-age-group differences than younger persons"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 13160,
+  "subject": "security_studies",
+  "question": "Can environmental changes be reconciled with national security interests?",
+  "choices": [
+   "Environmental challenges to economic growth, such as natural resource management and employment, leads to diversification and research which may in the long-term result in technological advancements that bolster military programs.",
+   "Environmental changes can undermine national security in many ways; including weakening the economic base that determines military capacity. So if the natural capital base of an economy erodes than so does the long-term capacity of its armed forces. Any developments however, will be 'human' in impact.",
+   "The environmental problems encountered by countries are principally internal. External threats remain within a country's control: external military threats will remain unchanged and a primary concern.",
+   "All of these options."
+  ],
+  "answer": 1
+ },
+ {
+  "offset": 13300,
+  "subject": "security_studies",
+  "question": "Why, in the contemporary studies of security, is the subject of energy security so important?",
+  "choices": [
+   "There exists an array of contemporary challenges to energy security, ranging from resource scarcity concerns to dangers of political instability.",
+   "The existence of reliable supplies of energy determines the ability of a nation to achieve economic development.",
+   "Energy security encompasses a broad range of issues that are both contemporary and fundamental to security, ranging from the local and individual to the global scale.",
+   "All of these options."
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 13440,
+  "subject": "sociology",
+  "question": "Margaret Mead suggested that:",
+  "choices": [
+   "adolescence and gender roles varied between societies and so were culturally determined",
+   "gender roles in three New Guinea societies were identical and so must be biologically determined",
+   "adolescence in the USA is a time of relative calm compared to the experience in Japan and Europe",
+   "anthropological fieldwork can be problematic because the researcher's values affect the way they interpret their observations"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 13580,
+  "subject": "sociology",
+  "question": "The term 'collective consumption' (Castells 1977) refers to:",
+  "choices": [
+   "the privatization of public services by the Conservative government",
+   "the lifestyle practice of shopping in peer groups",
+   "the form of tuberculosis suffered by those who collect stamps",
+   "the provision of health, housing, and education services by the state"
+  ],
+  "answer": 3
+ },
+ {
+  "offset": 13720,
+  "subject": "virology",
+  "question": "How many people globally are currently infected with hepatitis B?",
+  "choices": [
+   "350 million",
+   "2 billion",
+   "100,000",
+   "1 million"
+  ],
+  "answer": 0
+ },
+ {
+  "offset": 13860,
+  "subject": "virology",
+  "question": "What is a virus pandemic?",
+  "choices": [
+   "A sharp and rapid epidemic involving more than one country",
+   "An outbreak which recurs again and again",
+   "A rapid global outbreak starting from a single focus",
+   "A characteristic of common cold virus and HIV"
+  ],
+  "answer": 2
+ }
+]

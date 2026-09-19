@@ -1,0 +1,8 @@
+The following is a multiple choice question about professional psychology.
+
+Parametric Tests are used when data is interval or ration. When is it used the ONE-WAY ANOVA?
+A. used when there is 1 IV and means of more than 2 groups
+B. used when there is 2 IV and means of more than 4 groups
+C. used when there is 3 IV and means of more than 5 groups
+D. used when there is 4 IV and means of more than 6 groups
+Answer:

@@ -1,0 +1,8 @@
+The following is a multiple choice question about elementary mathematics.
+
+What is 836 rounded to the nearest 10?
+A. 800
+B. 830
+C. 840
+D. 870
+Answer:

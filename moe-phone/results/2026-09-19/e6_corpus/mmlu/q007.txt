@@ -1,0 +1,11 @@
+The following is a multiple choice question about college chemistry.
+
+Which of the following procedures tend(s) to minimize the influence of random errors on measured results?
+I. Signal averaging
+II. Use of internal standards
+III. Averaging the results from multiple samples
+A. I only
+B. II only
+C. III only
+D. I and III only
+Answer:

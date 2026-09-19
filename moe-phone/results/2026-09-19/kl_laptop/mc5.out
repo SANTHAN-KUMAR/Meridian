@@ -1,0 +1,20 @@
+ppl-file: /tmp/claude-1000/e6c/mmlu/q000.txt
+ppl: 8.3565  nll: 2.12304  next-token hits: 35/56 (62.5%)  4.72 s
+ppl-choices:  A=-2.6607  B=-1.0753  C=-1.3571  D=-1.5286
+ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted
+ppl-file: /tmp/claude-1000/e6c/mmlu/q001.txt
+ppl: 5.2655  nll: 1.66118  next-token hits: 46/61 (75.4%)  4.56 s
+ppl-choices:  A=-3.1912  B=-2.1756  C=-0.3318  D=-3.0591
+ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted
+ppl-file: /tmp/claude-1000/e6c/mmlu/q002.txt
+ppl: 6.2497  nll: 1.83254  next-token hits: 62/100 (62.0%)  4.58 s
+ppl-choices:  A=-4.0826  B=-0.2667  C=-3.5920  D=-3.2316
+ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted
+ppl-file: /tmp/claude-1000/e6c/mmlu/q003.txt
+ppl: 16.2288  nll: 2.78678  next-token hits: 61/116 (52.6%)  4.77 s
+ppl-choices:  A=-1.2869  B=-2.4499  C=-1.0905  D=-1.5551
+ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted
+ppl-file: /tmp/claude-1000/e6c/mmlu/q004.txt
+ppl: 4.8350  nll: 1.57587  next-token hits: 51/77 (66.2%)  4.59 s
+ppl-choices:  A=-1.8602  B=-0.7577  C=-2.0453  D=-2.3686
+ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted

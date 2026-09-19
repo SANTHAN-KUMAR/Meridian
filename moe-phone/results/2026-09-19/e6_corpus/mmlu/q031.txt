@@ -1,0 +1,8 @@
+The following is a multiple choice question about high school mathematics.
+
+If $a=7$ and $b=13$, what is the number of even positive integers less than $ab$?
+A. 45
+B. 46
+C. 90
+D. 180
+Answer:

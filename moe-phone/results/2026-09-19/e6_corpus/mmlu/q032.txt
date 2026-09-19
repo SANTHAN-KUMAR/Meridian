@@ -1,0 +1,8 @@
+The following is a multiple choice question about high school mathematics.
+
+As the tides change, the water level in a bay varies sinusoidally. At high tide today at 8 A.M., the water level was 15 feet; at low tide, 6 hours later at 2 P.M., it was 3 feet. How fast, in feet per hour, was the water level dropping at noon today?
+A. 3
+B. π\sqrt{3}/2
+C. 3\sqrt{3}
+D. π\sqrt{3}
+Answer:

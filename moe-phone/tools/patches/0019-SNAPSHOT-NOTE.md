@@ -21,3 +21,5 @@ Update 2026-09-19 01:35: engine unchanged; bmoe-i8mm-0022 = this tree + libgx 58
 Update 2026-09-19 06:05: the repack decision comes from libgx (gx_variant_uses_repack: v2, v3), not from variant >= 2; v4 is native layout. Also carries the host-time counters (overflow map/unmap, promotion) of 0023.
 
 Update 2026-09-19 09:00: --repack-dense (DenseWeights::repack_matmul_weights), --experts-prerepacked (marker-checked, no run-time repack) and a guard that refuses a marker-carrying model without that flag. Android bmoe-i8mm-0025, bmoe-cli md5 b3a67ba93503d70aac9575f5158fed5c.
+
+Update 2026-09-19 16:00: --ppl-dump / --ppl-ref / --ppl-kl-out / --ppl-dump-k (E6 fidelity: KL(ref || arm) over the reference's top-k + tail, top-1 flips, alignment-checked). Android bmoe-i8mm-0026, bmoe-cli md5 be978e3969ce1e363b7c5cf902c4d28a (ggml libs unchanged).

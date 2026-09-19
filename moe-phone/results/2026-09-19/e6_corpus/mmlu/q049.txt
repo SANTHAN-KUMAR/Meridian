@@ -1,0 +1,8 @@
+The following is a multiple choice question about machine learning.
+
+Statement 1| In AdaBoost weights of the misclassified examples go up by the same multiplicative factor. Statement 2| In AdaBoost, weighted training error e_t of the tth weak classifier on training data with weights D_t tends to increase as a function of t.
+A. True, True
+B. False, False
+C. True, False
+D. False, True
+Answer:

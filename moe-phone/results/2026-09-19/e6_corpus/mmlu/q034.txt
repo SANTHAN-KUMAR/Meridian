@@ -1,0 +1,8 @@
+The following is a multiple choice question about high school physics.
+
+An electric dipole consists of a pair of equal but opposite point charges of magnitude 4.0 nC separated by a distance of 2.0 cm. What is the electric field strength at the point midway between the charges?
+A. 0
+B. 9.0 × 10^4 N/C
+C. 1.8 × 10^5 N/C
+D. 7.2 × 10^5 N/C
+Answer:
