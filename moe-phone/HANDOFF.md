@@ -18,7 +18,15 @@ Everything needed is in this repository. The chat history is not. **Update this 
   3. Nothing else is built or tested.
 - **Long-term goals of the user** (not blockers): a top-venue paper; a cross-device app/PC product built on the engine.
 
-## 2. Where things stand right now (updated 20:20 IST)
+## 2. Where things stand right now (21:50 IST): THE RESEARCH IS CLOSED
+**Read `research/2026-09-19_CLOSURE.md`.** Verdict: 10 tok/s is not reachable at negligible quality loss on this phone at its sustained
+clock. E6 (Tier A) found no negligible option; E4 killed the GPU helper; E1 put the lossless CPU floor at 71.0 ms, so 127.6 ms / 7.8
+tok/s at best; E7 killed the GPU-main engine (>= ~99 ms by bounds). No chains are running. The phone is idle and restored.
+What remains is optional and only for the paper: CLOSURE §4 (the end-to-end repacked A/B, the head-to-head against BigMoeOnEdge,
+~2 phone-hours).
+
+## 2a. History of the closing phase (kept for the record)
+ (updated 20:20 IST)
 **Latest:** E6 closed (no option negligible). The phone determinism control PASSED (Q4_0 against itself: KL 0.000000, 0/3258 flips,
 `results/2026-09-19/bmoe_e6/bmoe_e6_ident_*`). adb was switched to Wi-Fi (192.168.0.65:5555), the phone was UNPLUGGED at 20:17,
 and `E1_GO` was written. **E4 = KILL** (20:19; `results/2026-09-19/E4_VERDICT.md`: v5 k=2 host 1.47 ms vs kill 0.40), so S_gpu = 0 and the closure needs

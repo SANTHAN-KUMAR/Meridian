@@ -1,5 +1,6 @@
 # moe-phone — beyond-DRAM MoE inference on a 12 GB phone, no retraining
 
+**CLOSED 2026-09-19: [`research/2026-09-19_CLOSURE.md`](research/2026-09-19_CLOSURE.md)** (verdict and evidence).
 **NEW SESSION? Read [`HANDOFF.md`](HANDOFF.md) first** (live state, running chains, how to close).
 
 **Next phase (2026-09-19):** [`research/2026-09-19_RESEARCH_SPEC.md`](research/2026-09-19_RESEARCH_SPEC.md) is the single source of

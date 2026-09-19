@@ -375,6 +375,8 @@ without Tier A**, and the write-up is the negative-results/benchmark-validity pa
 7. **Energy is logged** (current × voltage, caps, skin) on every row from now on.
 8. **One architecture A/B per phone-day**, not five tunings.
 
+## STATUS: CLOSED 2026-09-19 21:50 — see `2026-09-19_CLOSURE.md` (E6 no negligible option; E4, E7 kill; E1: <= 7.8 tok/s lossless)
+
 ## 0. THE CLOSING RULE (the user's decision, 2026-09-19; it overrides every other ordering in this document)
 > "If the tests decide that the quality drop is negligible (with solid evidence and proven that it will promise us the goal speed or
 > beyond when actually implemented on our phone and tested), we can go with Tier A. If not, just run E1 and E4, decide if this
