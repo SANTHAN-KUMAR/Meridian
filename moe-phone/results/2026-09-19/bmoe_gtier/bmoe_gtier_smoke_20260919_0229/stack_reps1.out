@@ -1,0 +1,15 @@
+Write a long detailed essay about the history of computing including its origins its key milestones the people involved and the future directions of the field<think>
+Okay, I need to write a long detailed essay about the history of computing, including its origins, key milestones, the people involved, and future directions. Let me start by breaking down the question. The user wants a comprehensive overview, so I should make sure each section is thorough.
+
+First, the origins.
+
+generation: 64 tokens, 0.155 s/token (6.434 tok/s)
+compute: 91.1% CPU occupancy (0.5666 cpu-s/token over 4 threads), 18.98 major faults/token
+prefill: 34 tokens, 8.488 s (4.0 tok/s) | model load 23.133 s | TTFT 31.622 s
+mode: expert streaming, cache auto, dense anon, overlap
+moe-stream: read 9758.9 MiB (152.48 MiB/token), decode 0.155 s/token (compute 0.087 + cache mgmt 0.024 + flash I/O 0.205 s/token, 744 MiB/s)
+moe-cache: 78.8% hit, resident 4000.1 MiB, budget 4002 MiB (auto)
+moe-cache: 4842 evictions, 3120 re-reads (48.8/token) — bytes the cache had already paid for once
+moe-overlap: stall 0.045 s/token (flash reads overlapped with FFN compute)
+moe-waits: drain 0.000 s/token (inside compute), adopt 0.003 s/token (inside mgmt)
+moe-prefetch: 1647.9 MiB speculative, 417/649 experts useful (64%) [stale-gate]

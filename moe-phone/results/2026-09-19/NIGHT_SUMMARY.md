@@ -28,6 +28,9 @@ artifact named next to it.
 - The GPU tier pays only when a dispatch finishes, as seen from the host, faster than the CPU would compute the same ~2
   experts (~0.2-0.25 ms). Today it takes ~0.6 ms. The gx session's fixed-cost work (fusion, staging, doorbell dispatch) is
   that lever. Even a perfect device is worth ~14 ms/token on this tier.
+- The gx session's timing split (gx_m6_054129, diagnostic only: rows were not held Awake) shows the gap between kernels is ~0.5 µs,
+  so fusing the two kernels is worthless. The fixed cost sits in kernel 1 (~0.23 ms intercept, latency-bound at k=1), plus
+  ~0.22 ms of host time. So both a faster kernel and a cheaper dispatch path are needed.
 - Pinning memory helps only for the hot set. The dense weights (`--dense-weights ahwb`, never measured here) are the
   candidate, and their ceiling is small (~3 ms/token of faults in the node trace).
 - None of tonight's levers reaches 10 tok/s. The honest position is the one in research/2026-09-18_ceiling_handoff.md: the
