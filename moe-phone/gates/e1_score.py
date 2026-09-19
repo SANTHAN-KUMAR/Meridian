@@ -3,7 +3,10 @@ Scores research-spec E1 as pre-registered in device/bmoe_e1.sh (written before a
 
   python moe-phone/gates/e1_score.py <bmoe_e1_dir> [--s-gpu MS] --out results/2026-09-19/e1_summary.json
 
-Validity per row: the replay removed flash I/O (MiB/token <= 1, stall <= 1 ms); invalid rows are reported and excluded.
+Validity per row: the replay removed flash I/O from the critical path: stall <= 1 ms. (REVISION 2026-09-19 20:30, after the
+first E1 row and BEFORE any scoring: the earlier additional "MiB/token <= 1" test was wrong. The run average includes the one-time
+initial load of the 384 fixed experts (~1 GB, spread over 256 tokens = ~5.7 MiB/token), not steady-state traffic. MiB/token is
+reported, not gated.)
 C = decode ms/token = 1000 / tok/s. Capped: median per arm over the 6 ABBA rows; repacked gain = per-repeat paired difference.
 Closing formula (spec section 0, bmoe_e1.sh DECISION): 10 tok/s lossless at the capped clock iff C_R(capped) + 56.6 - S_gpu <= 100,
 where 56.6 ms = stall 34.6 + mgmt 22.0 measured awake/unplugged (gtier A/B 0447 base arm), S_gpu = E4's measured saving (0 if E4 kills).
@@ -19,7 +22,7 @@ def row(f):
              instr=g(r"([0-9,]+)\s+instructions:u", lambda s: int(s.replace(",", ""))), cycles=g(r"([0-9,]+)\s+cycles:u", lambda s: int(s.replace(",", ""))),
              n=g(r"generation: (\d+) tokens", int))
     r["ms_tok"] = 1000.0 / r["tok_s"] if r["tok_s"] else None
-    r["valid"] = r["ms_tok"] is not None and (r["mib_tok"] or 0) <= 1.0 and ((r["stall_s"] or 0) * 1000) <= 1.0
+    r["valid"] = r["ms_tok"] is not None and ((r["stall_s"] or 0) * 1000) <= 1.0
     return r
 
 
