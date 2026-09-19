@@ -33,7 +33,7 @@ python3 "$MP/gates/e6_score.py" --kl "$K" --answers "$R/e6_corpus/mmlu_answers.j
 log "[e6b] KL phase: $(tr '\n' ' ' < "$R/e6_kl_summary.txt")"
 PASS=$(python3 -c "
 import json; d=json.load(open('$R/e6_kl_summary.json'))['verdict']
-print(' '.join(a for a,v in d.items() if v['passes_kl']))" 2>/dev/null)
+print(' '.join(a for a,v in d.items() if v['negligible_kl']))" 2>/dev/null)
 log "[e6b] arms passing the KL criteria: [${PASS}]"
 campaign mc "REF FLOOR $PASS"; MC="$LAST"
 python3 "$MP/gates/e6_score.py" --kl "$K" --mc "$MC" --answers "$R/e6_corpus/mmlu_answers.json" --out "$R/e6_summary.json" > "$R/e6_summary.txt" 2>&1

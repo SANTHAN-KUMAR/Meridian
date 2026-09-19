@@ -8,6 +8,12 @@ KL criteria (all three, per arm, against FLOOR = Q4_0 top-8):
   KL_mean(arm) <= 2 x KL_mean(FLOOR);  KL_p99(arm) <= 2 x KL_p99(FLOOR);  flips(arm) <= 2 x flips(FLOOR)
 Knowledge criterion: MMLU accuracy(arm) >= lower end of FLOOR's 95% Wilson interval (100 questions).
 An arm PASSES only if all four hold. Adoption additionally needs >= 10.0 tok/s in the separate speed A/B (spec section 0).
+
+BINDING RULE since 2026-09-19 18:05 ("negligible", the user's decision, set after the REF and FLOOR rows and BEFORE any arm row
+was scored; it is stricter than the rule above, which is still reported as `passes`):
+  KL_mean(arm) <= 1.10 x KL_mean(FLOOR);  KL_p99(arm) <= 1.10 x KL_p99(FLOOR);  flips(arm) <= flips(FLOOR) + 1% of scored tokens;
+  PPL(arm) <= 1.01 x PPL(FLOOR);  MMLU: the arm picks FLOOR's answer on >= 95 of 100 questions AND correct(arm) >= correct(FLOOR) - 2.
+An arm is `negligible` only if all five hold; only a `negligible` arm can be adopted (spec section 0).
 """
 import argparse, glob, json, math, os, re
 
@@ -70,8 +76,18 @@ def main():
         c4 = None
         if arm in mc and "FLOOR" in mc:
             lo, _ = wilson(mc["FLOOR"]["correct"], mc["FLOOR"]["n"]); c4 = mc[arm]["acc"] >= lo
+        # binding "negligible" rule (see the docstring)
+        n1 = r["kl_mean"] <= 1.10 * fl["kl_mean"]; n2 = r["kl_p99"] <= 1.10 * fl["kl_p99"]
+        n3 = r["flips"] <= fl["flips"] + 0.01 * fl["n"]; n4 = r["ppl"] <= 1.01 * fl["ppl"]
+        n5 = None
+        if arm in mc and "FLOOR" in mc:
+            agree = sum(x == y for x, y in zip(mc[arm]["picks"], mc["FLOOR"]["picks"]))
+            n5 = agree >= 95 and mc[arm]["correct"] >= mc["FLOOR"]["correct"] - 2
+            mc[arm]["agree_with_floor"] = agree
         res[arm] = dict(kl_mean_ok=c1, kl_p99_ok=c2, flips_ok=c3, mmlu_ok=c4,
-                        passes_kl=c1 and c2 and c3, passes=bool(c1 and c2 and c3 and c4))
+                        passes_kl=c1 and c2 and c3, passes=bool(c1 and c2 and c3 and c4),
+                        negl_kl_mean=n1, negl_kl_p99=n2, negl_flips=n3, negl_ppl=n4, negl_mmlu=n5,
+                        negligible_kl=bool(n1 and n2 and n3 and n4), negligible=bool(n1 and n2 and n3 and n4 and n5))
     out = dict(source_kl=os.path.abspath(a.kl), source_mc=[os.path.abspath(x) for x in a.mc], floor=fl, arms=kl, mmlu=mc, verdict=res,
                floor_mmlu_wilson95=wilson(mc["FLOOR"]["correct"], mc["FLOOR"]["n"]) if "FLOOR" in mc else None)
     json.dump(out, open(a.out, "w"), indent=1)

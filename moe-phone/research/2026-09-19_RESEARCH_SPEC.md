@@ -389,6 +389,13 @@ Operationally, fixed before any E6 row:
    management terms, they decide whether this device can reach 10 tok/s at all. Then **the research closes** and is written up at the
    leaf reached (`2026-09-19_paper_framing.md`). E2, E3 and E5 are not run in this branch.
 3. Nothing else is built or tested in either branch.
+4. **"Negligible" is the binding quality bar** (the user's decision, 2026-09-19 18:05). It was set after the REF and FLOOR rows
+   (Q4_0 vs Q8_0: mean KL 0.118, p99 1.76, flips 9.9%, PPL 3.98 vs 3.70) and **before any lossy arm was scored**, and it is
+   stricter than E6 §7's 2x margin. An arm is negligible only if **all five** hold, relative to the Q4_0 file already in use:
+   mean KL ≤ 1.10 × Q4_0's; p99 KL ≤ 1.10 × Q4_0's; flips ≤ Q4_0's + 1% of tokens; PPL ≤ 1.01 × Q4_0's; and on the 100 MMLU questions it
+   picks Q4_0's answer on ≥ 95 and gets at most 2 fewer right. The 2x-margin result is still reported, but only a negligible arm can
+   be adopted. The knowledge probe runs for every arm that is negligible on the four KL/PPL measures (`gates/e6_score.py`,
+   `negligible_kl`).
 
 ## 10. Final recommendation (updated after Tier A was opened)
 **E6 first.** It is the only experiment whose positive outcome reaches 100 ms without an unmeasured conjunction. Then E1 (it fixes the
