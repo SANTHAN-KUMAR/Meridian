@@ -1,0 +1,7 @@
+  mWakefulness=Awake
+Failed to write while dumping service power: Broken pipe
+RESULT shape=gate_up k=2048 rows=768 experts=8 generic_ms=0.3542 repacked_ms=0.2113 ratio=0.596 generic_GBps=20.0 repacked_GBps=33.5 max_abs_diff=1.19e-06 max_abs_out=3.53
+RESULT shape=down k=768 rows=2048 experts=8 generic_ms=0.2657 repacked_ms=0.2088 ratio=0.786 generic_GBps=26.6 repacked_GBps=33.9 max_abs_diff=4.77e-07 max_abs_out=2.26
+VERDICT BUILD (ratios gate_up 0.596 down 0.786; build iff both <= 0.8, dead iff both >= 0.95)
+  mWakefulness=Awake
+Failed to write while dumping service power: Broken pipe
