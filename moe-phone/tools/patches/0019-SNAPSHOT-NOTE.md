@@ -19,3 +19,5 @@ Update 2026-09-19 01:00: repacked layouts for every gx variant >= 2 (the v2-only
 Update 2026-09-19 01:35: engine unchanged; bmoe-i8mm-0022 = this tree + libgx 58b13dd (unrolled kernels), bmoe-cli md5 4263e767a5e1c552820e91683fc71d52.
 
 Update 2026-09-19 06:05: the repack decision comes from libgx (gx_variant_uses_repack: v2, v3), not from variant >= 2; v4 is native layout. Also carries the host-time counters (overflow map/unmap, promotion) of 0023.
+
+Update 2026-09-19 09:00: --repack-dense (DenseWeights::repack_matmul_weights), --experts-prerepacked (marker-checked, no run-time repack) and a guard that refuses a marker-carrying model without that flag. Android bmoe-i8mm-0025, bmoe-cli md5 b3a67ba93503d70aac9575f5158fed5c.

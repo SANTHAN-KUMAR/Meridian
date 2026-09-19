@@ -44,3 +44,11 @@
 2026-09-19T08:36:05+05:30 [night3] [arena3] waiting for CHAIN_V4_DONE
 2026-09-19T08:38:30+05:30 [night3] [arena3] waiting for CHAIN_V4_DONE
 2026-09-19T08:44:32+05:30 [night3] [arena3] repack_bench:   mWakefulness=Awake RESULT shape=gate_up k=2048 rows=768 experts=8 generic_ms=0.3542 repacked_ms=0.2113 ratio=0.596 generic_GBps=20.0 repacked_GBps=33.5 max_abs_diff=1.19e-06 max_abs_out=3.53 RESULT shape=down k=768 rows=2048 experts=8 generic_ms=0.2657 repacked_ms=0.2088 ratio=0.786 generic_GBps=26.6 repacked_GBps=33.9 max_abs_diff=4.77e-07 max_abs_out=2.26 VERDICT BUILD (ratios gate_up 0.596 down 0.786; build iff both <= 0.8, dead iff both >= 0.95)   mWakefulness=Awake 
+2026-09-19T08:47:34+05:30 [night3] pulled /data/local/tmp/moe-stream/bmoe_repack_smoke_20260919_0844/
+2026-09-19T08:47:34+05:30 [night3] [repack] smoke ok=0 :: generation: 64 tokens, 0.209 s/token (4.777 tok/s) generation: 64 tokens, 0.218 s/token (4.592 tok/s) 
+2026-09-19T08:47:34+05:30 [night3] [repack] A/B not started (smoke ok=0, battery 40%)
+2026-09-19T08:51:21+05:30 [night3] pulled /data/local/tmp/moe-stream/bmoe_arena3_smoke_20260919_0847/
+2026-09-19T08:51:21+05:30 [night3] [arena3] smoke ok=1 :: generation: 64 tokens, 0.184 s/token (5.449 tok/s) generation: 64 tokens, 0.184 s/token (5.448 tok/s)  :: bmoe: slot-arena: slots 6112 reused 21481 blocks 191, kgsl 0 MiB
+bmoe: slot-arena: slots 6112 reused 21481 blocks 191, kgsl 0 MiB
+2026-09-19T08:51:22+05:30 [night3] [arena3] A/B start (battery 41%)
+2026-09-19T08:57:06+05:30 [night3] [prerepack] waiting for the arena3 A/B on the phone to finish
