@@ -1,0 +1,258 @@
+{
+ "source": "/run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/bmoe_e1/bmoe_e1_20260919_2022",
+ "rows": [
+  {
+   "tag": "cap_G_r1_1",
+   "tok_s": 12.197,
+   "mib_tok": 5.68,
+   "stall_s": 0.0,
+   "compute_s": 0.081,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 81.98737394441257,
+   "valid": true
+  },
+  {
+   "tag": "cap_G_r1_4",
+   "tok_s": 10.986,
+   "mib_tok": 5.78,
+   "stall_s": 0.0,
+   "compute_s": 0.09,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 91.02494083378845,
+   "valid": true
+  },
+  {
+   "tag": "cap_G_r2_2",
+   "tok_s": 11.065,
+   "mib_tok": 5.8,
+   "stall_s": 0.0,
+   "compute_s": 0.089,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 90.37505648441031,
+   "valid": true
+  },
+  {
+   "tag": "cap_G_r2_3",
+   "tok_s": 10.376,
+   "mib_tok": 5.82,
+   "stall_s": 0.0,
+   "compute_s": 0.095,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 96.37625289128759,
+   "valid": true
+  },
+  {
+   "tag": "cap_G_r3_1",
+   "tok_s": 9.841,
+   "mib_tok": 5.82,
+   "stall_s": 0.0,
+   "compute_s": 0.1,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 101.615689462453,
+   "valid": true
+  },
+  {
+   "tag": "cap_G_r3_4",
+   "tok_s": 10.288,
+   "mib_tok": 5.75,
+   "stall_s": 0.0,
+   "compute_s": 0.096,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 97.20062208398133,
+   "valid": true
+  },
+  {
+   "tag": "cap_R_r1_2",
+   "tok_s": 12.557,
+   "mib_tok": 5.7,
+   "stall_s": 0.0,
+   "compute_s": 0.078,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 79.6368559369276,
+   "valid": true
+  },
+  {
+   "tag": "cap_R_r1_3",
+   "tok_s": 14.07,
+   "mib_tok": 5.75,
+   "stall_s": 0.0,
+   "compute_s": 0.07,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 71.07320540156361,
+   "valid": true
+  },
+  {
+   "tag": "cap_R_r2_1",
+   "tok_s": 14.382,
+   "mib_tok": 5.75,
+   "stall_s": 0.0,
+   "compute_s": 0.068,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 69.53135864274788,
+   "valid": true
+  },
+  {
+   "tag": "cap_R_r2_4",
+   "tok_s": 13.756,
+   "mib_tok": 5.66,
+   "stall_s": 0.0,
+   "compute_s": 0.071,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 72.69555103227682,
+   "valid": true
+  },
+  {
+   "tag": "cap_R_r3_2",
+   "tok_s": 14.093,
+   "mib_tok": 5.72,
+   "stall_s": 0.0,
+   "compute_s": 0.07,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 70.95721280068119,
+   "valid": true
+  },
+  {
+   "tag": "cap_R_r3_3",
+   "tok_s": 14.247,
+   "mib_tok": 5.73,
+   "stall_s": 0.0,
+   "compute_s": 0.069,
+   "hit": 99.6,
+   "instr": null,
+   "cycles": null,
+   "n": 256,
+   "ms_tok": 70.19021548396154,
+   "valid": true
+  },
+  {
+   "tag": "cnt_G",
+   "tok_s": null,
+   "mib_tok": null,
+   "stall_s": null,
+   "compute_s": null,
+   "hit": null,
+   "instr": null,
+   "cycles": null,
+   "n": null,
+   "ms_tok": null,
+   "valid": false
+  },
+  {
+   "tag": "cnt_R",
+   "tok_s": null,
+   "mib_tok": null,
+   "stall_s": null,
+   "compute_s": null,
+   "hit": null,
+   "instr": null,
+   "cycles": null,
+   "n": null,
+   "ms_tok": null,
+   "valid": false
+  },
+  {
+   "tag": "cold_G",
+   "tok_s": 10.655,
+   "mib_tok": 48.91,
+   "stall_s": 0.0,
+   "compute_s": 0.092,
+   "hit": 96.0,
+   "instr": null,
+   "cycles": null,
+   "n": 24,
+   "ms_tok": 93.85265133740029,
+   "valid": true
+  },
+  {
+   "tag": "long_G",
+   "tok_s": 5.531,
+   "mib_tok": 30.92,
+   "stall_s": 0.0,
+   "compute_s": 0.179,
+   "hit": 98.6,
+   "instr": null,
+   "cycles": null,
+   "n": 64,
+   "ms_tok": 180.79913216416563,
+   "valid": true
+  },
+  {
+   "tag": "long_R",
+   "tok_s": 6.929,
+   "mib_tok": 24.96,
+   "stall_s": 0.0,
+   "compute_s": 0.143,
+   "hit": 98.6,
+   "instr": null,
+   "cycles": null,
+   "n": 64,
+   "ms_tok": 144.3209698369173,
+   "valid": true
+  }
+ ],
+ "n_invalid": 2,
+ "C_capped_ms": {
+  "G": 93.70059686253802,
+  "R": 71.0152091011224
+ },
+ "repacked_gain_ms_per_repeat": [
+  11.1511267198549,
+  22.2621998503366,
+  28.83444163089581
+ ],
+ "repacked_gain_ms_mean": 20.749256067029105,
+ "long_ms": {
+  "G": 180.79913216416563,
+  "R": 144.3209698369173
+ },
+ "cold_ms": {
+  "G": 93.85265133740029,
+  "R": null
+ },
+ "cold_labels": [
+  "cold wait 1500s shell_mC=34598 NOT COLD"
+ ],
+ "instr_per_token": {
+  "G": null,
+  "R": null
+ },
+ "s_gpu_ms": 0.0,
+ "closing_ms_per_token": 127.61520910112239,
+ "closing_tok_s": 7.836056587954177,
+ "ten_tok_s_reachable": false,
+ "e1_positive": true,
+ "e1_kill": false
+}

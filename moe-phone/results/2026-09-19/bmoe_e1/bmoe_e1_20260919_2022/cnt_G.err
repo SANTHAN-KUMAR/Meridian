@@ -1,0 +1,2 @@
+simpleperf E event_type.cpp:517] Unknown event_type 'cycles', try `simpleperf list` to list all possible event type names
+simpleperf E event_type.cpp:517] Unknown event_type 'cycles:u', try `simpleperf list` to list all possible event type names

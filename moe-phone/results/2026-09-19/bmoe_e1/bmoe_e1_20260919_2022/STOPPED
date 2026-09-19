@@ -1,0 +1,1 @@
+STOPPED 21:18:47 by the agent before cold_R: the cold precondition (shell <= 30.5 C) was not reached in 25 min while the phone was held awake (34.6 C); cold_G ran NOT COLD. Full-clock rows are not measurable in this setup; E7 takes the phone.

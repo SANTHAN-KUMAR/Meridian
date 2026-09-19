@@ -5,3 +5,7 @@
 2026-09-19T20:19:30+05:30 E4 exit=0: TOL qwen3_L00.bin    v5 down=Q4_1 k=8 max_abs_vs_fp64=3.34e-08 max_out=0.212 rel_vs_fp64=4.63e-07 rel_vs_arm=0.012 arm_rel_vs_fp64=0.012 ok TOL qwen3_L05.bin    v5 down=Q4_1 k=4 max_abs_vs_fp64=4.04e-07 max_out=1.23 rel_vs_fp64=3.29e-07 rel_vs_arm=0.0106 arm_rel_vs_fp64=0.0106 ok TOL qwen3_L06.bin    v5 down=Q4_0 k=8 max_abs_vs_fp64=2.28e-07 max_out=2.09 rel_vs_fp64=2.31e-07 rel_vs_arm=0.0152 arm_rel_vs_fp64=0.0152 ok TOL qwen3_L12.bin    v5 down=Q4_0 k=2 max_abs_vs_fp64=2.56e-07 max_out=1.33 rel_vs_fp64=1.99e-07 rel_vs_arm=0.0144 arm_rel_vs_fp64=0.0144 ok TOL qwen3_L24.bin    v5 down=Q4_0 k=8
 2026-09-19T20:19:31+05:30 Q8_0 reference deleted from the phone (E6 done); free: 47G
 2026-09-19T20:19:35+05:30 converting the pre-repacked Q4_0 on the phone (cp 17 GB + repack)
+2026-09-19T20:22:27+05:30 convert: RESULT repacked_tensors=138 skipped=6 slices=17664 file_size=17379988032 marker=/data/local/tmp/moe-stream/Qwen3-30B-A3B-Q4_0.repacked.gguf.repacked
+2026-09-19T20:22:29+05:30 E1 started
+2026-09-19T21:19:45+05:30 E1 exited without DONE (/data/local/tmp/moe-stream/bmoe_e1_20260919_2022/)
+2026-09-19T21:19:47+05:30 E1 pulled: /run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/bmoe_e1/bmoe_e1_20260919_2022
