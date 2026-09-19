@@ -516,4 +516,98 @@ kernel void gx_down_tiled(global const uchar * w0, global const uchar * w1, glob
     const float v = hsum2(ac0, ac1);
     out[(size_t) s * N_EMBD + row] = dt == DT_Q4_1 ? summs + v : v;
 }
+
+// ---------------------------------------------------------------------------------------------------
+// Variant 4 ("pair"): native GGUF layout, TWO work-items per row, one per NEON accumulator: parity 0 walks
+// the even blocks (sumv0), parity 1 the odd blocks (sumv1), each holding its accumulator's 4 lanes as a
+// float4 and loading whole blocks. Each accumulator sees exactly its blocks in order, as in ggml; the
+// final sum is the same hsum tree, over the two work-items' float4s exchanged through local memory.
+// Motivation (M6 run 6): kernel 1's ~0.23 ms fixed cost with one work-item per row (768 at k = 1) is
+// latency-bound; this doubles the work-items in flight while keeping 16-byte loads.
+// Work-group 128 = 64 rows x 2 parities; the adjacent pair (t, t^1) is one row.
+// ---------------------------------------------------------------------------------------------------
+// Grid (2 * N_FF, k), local (128, 1).
+kernel void gx_gate_up_pair(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
+                            global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
+                            global const uchar * inb, global uchar * hq,
+                            global float * hdbg, int dbg, int dt, global uchar * outb) {
+    local char   lx[NBX * 32];
+    local float  ldx[NBX];
+    local float4 xg[128], xu[128];
+    local float  lh[64];
+    local int    lrisk;
+    global const ulong * offs = (global const ulong *) (inb + IN_OFFS_OFF);
+    global const uchar * xq = inb;
+    const int t = get_local_id(0), s = get_group_id(1), p = t & 1, rr = t >> 1;
+    const int row = get_group_id(0) * 64 + rr;
+    if (t == 0) lrisk = 0;
+    for (int i = t; i < NBX; i += 128) {
+        ldx[i] = h2f(((global const ushort *) (xq + i * YB0))[0]);
+        { global const char * src = (global const char *) (xq + i * YB0 + 2); vstore16(vload16(0, src), 0, lx + i * 32); vstore16(vload16(1, src), 1, lx + i * 32); }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    global const uchar * W = pick(s, w0, w1, w2, w3, w4, w5, w6, w7);
+    global const uchar * G = W + offs[s * 3 + 0] + (size_t) row * NBX * QB0;
+    global const uchar * U = W + offs[s * 3 + 1] + (size_t) row * NBX * QB0;
+    float4 ag = (float4)(0.0f), au = (float4)(0.0f);
+    for (int ib = p; ib < NBX; ib += 2) {
+        const float dy = ldx[ib];
+        global const uchar * gb = G + ib * QB0;
+        global const uchar * ub = U + ib * QB0;
+        row_block(&ag, gb + 2, h2f(((global const ushort *) gb)[0]) * dy, 8, lx + ib * 32);
+        row_block(&au, ub + 2, h2f(((global const ushort *) ub)[0]) * dy, 8, lx + ib * 32);
+    }
+    xg[t] = ag; xu[t] = au;
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (p == 0) {
+        int r = 0;
+        const float h = gx_swiglu_r(hsum2(xg[t], xg[t + 1]), hsum2(xu[t], xu[t + 1]), &r);
+        lh[rr] = h;
+        if (dbg) hdbg[s * N_FF + row] = h;
+        if (r) lrisk = 1;
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (t < 2 && q8_block(lh + 32 * t, hq + ((size_t) s * NBH + get_group_id(0) * 2 + t) * YB1, dt == DT_Q4_1)) lrisk = 1;
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (t == 0) ((global int *) outb)[s * RISK_WG + get_group_id(0)] = lrisk;
+}
+
+// Grid (2 * N_EMBD, k), local (128, 1).
+kernel void gx_down_pair(global const uchar * w0, global const uchar * w1, global const uchar * w2, global const uchar * w3,
+                         global const uchar * w4, global const uchar * w5, global const uchar * w6, global const uchar * w7,
+                         global const uchar * inb, global const uchar * hq, global uchar * outb, int dt) {
+    local char   ly[NBH * 32];
+    local float  ld[NBH], ls[NBH];
+    local float4 xa[128];
+    global const ulong * offs = (global const ulong *) (inb + IN_OFFS_OFF);
+    global float * out = (global float *) (outb + OUT_OFF);
+    const int t = get_local_id(0), s = get_group_id(1), p = t & 1, rr = t >> 1;
+    const int row = get_group_id(0) * 64 + rr;
+    global const uchar * Y = hq + (size_t) s * NBH * YB1;
+    for (int i = t; i < NBH; i += 128) {
+        ld[i] = h2f(((global const ushort *) (Y + i * YB1))[0]);
+        ls[i] = h2f(((global const ushort *) (Y + i * YB1))[1]);
+        { global const char * src = (global const char *) (Y + i * YB1 + 4); vstore16(vload16(0, src), 0, ly + i * 32); vstore16(vload16(1, src), 1, ly + i * 32); }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    const int qb = dt == DT_Q4_1 ? QB1 : QB0, qo = dt == DT_Q4_1 ? 4 : 2, bias = dt == DT_Q4_1 ? 0 : 8;
+    global const uchar * D = pick(s, w0, w1, w2, w3, w4, w5, w6, w7) + offs[s * 3 + 2] + (size_t) row * NBH * qb;
+    float4 ac = (float4)(0.0f);
+    for (int ib = p; ib < NBH; ib += 2) {
+        global const uchar * xb = D + ib * qb;
+        row_block(&ac, xb + qo, h2f(((global const ushort *) xb)[0]) * ld[ib], bias, ly + ib * 32);
+    }
+    xa[t] = ac;
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (p == 0) {
+        float summs = 0.0f;
+        for (int ib = 0; dt == DT_Q4_1 && ib < NBH; ib += 2) {
+            global const uchar * xb = D + ib * qb;
+            const float m0 = h2f(((global const ushort *) xb)[1]), m1 = h2f(((global const ushort *) (xb + QB1))[1]);
+            summs = summs + fma(m0, ls[ib], m1 * ls[ib + 1]);
+        }
+        const float v = hsum2(xa[t], xa[t + 1]);
+        out[(size_t) s * N_EMBD + row] = dt == DT_Q4_1 ? summs + v : v;
+    }
+}
 )GXCL"

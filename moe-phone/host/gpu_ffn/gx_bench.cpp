@@ -109,7 +109,7 @@ int main(int argc, char ** argv) {
     int iters = 300, nslots = 32;
     int memprobe_only = 0;
     std::vector<int> downs = {0, 1};
-    std::vector<int> variants = {0, 1, 2, 3}, ks = {1, 2, 3, 4, 5, 6, 7, 8}, spins = {0, 1};
+    std::vector<int> variants = {0, 1, 2, 3, 4}, ks = {1, 2, 3, 4, 5, 6, 7, 8}, spins = {0, 1};
     for (int i = 1; i + 1 < argc; i += 2) {
         if (!strcmp(argv[i], "--iters")) iters = atoi(argv[i + 1]);
         else if (!strcmp(argv[i], "--variants")) variants = ints(argv[i + 1]);
@@ -151,7 +151,7 @@ int main(int argc, char ** argv) {
                 fill_q4(rng, src.data() + 2 * GU, DN[dt], dt ? 20 : 18);
                 const double t0 = now_ms();
                 uint8_t * p = (uint8_t *) gx_slot_map_write(g, &s);
-                if (variant >= 2) {   // variants 2, 3: slots hold the repacked layout (the engine's promotion path)
+                if (gx_variant_uses_repack(variant)) {   // variants 2, 3: slots hold the repacked layout (the engine's promotion path)
                     gx_repack_expert(g, &s, p, src.data(), src.data() + GU, src.data() + 2 * GU, dt);
                 } else {
                     memcpy(p, src.data(), GU);

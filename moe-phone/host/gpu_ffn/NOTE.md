@@ -323,3 +323,42 @@ Acceptance is unchanged: bit-exact, all negative controls detected, pool test PA
 
 The Android build of this version is `out/android_next`, built with
 `ANDROID_OUT=out/android_next build.sh android`. `out/android` stays the build that M6 run 2 uses.
+
+## 9. Night of 2026-09-18/19: runs 3–6, the spill fix, and where the fixed cost is
+
+All runs are on the phone (Adreno 829, spin-wait where stated). The numbers are medians from each run's
+`bench.out` / `m6_summary.json`, gated by `gx_test` (PASS_WITH_DETECTOR in every run).
+
+| run | question | answer |
+|---|---|---|
+| 3 `gx_m6_001107` | host-overhead levers (e9cf1cc), v2 layout | spin-wait saves ~0.3 ms host per dispatch; v2 ([ib][row] planes) is ~10x slower (0.85 GB/s) |
+| 4 `gx_m6_012604` | why is v2 slow: memory or compute? | memory-only probe reads aos 33, soa 31, tiled 31 GB/s. The page-locality hypothesis is **refuted**; v3 (tiled) is as slow as v2. Every kernel is compute-bound |
+| 5 `gx_m6_020545` | unrolled kernels, explicit float4 accumulators (58b13dd) | **the spill diagnosis holds**: v3 k=3 device 8.70 → 0.64 ms (13.6x), v1 0.90 → 0.70. k=3 host: v1 0.92, v3 1.00, v0 1.07 ms |
+| 6 `gx_m6_054129` | where the fixed device cost is (timing split) | v1 k=3: kernel 1 0.51 + gap 0.0005 + kernel 2 0.20 ms. Kernel 1 carries a ~0.23 ms intercept (0.32 ms at k=1, 768 work-items). The kernel gap is negligible, so **fusing the kernels would save nothing** |
+
+Run 6's thermal_state read `wake=Dozing` before and after, even though the screen was woken (without
+unlocking). Its device times match run 5, but it does not meet the engine A/B's Awake keep-rule. It is
+diagnostic only.
+
+**Engine A/B** (the other session, results under `2026-09-19`, v1 + spin, phone held awake): decode is not
+resolved (6.70 vs 6.76 tok/s); compute is +6.9 ms/token and stall −5.3 ms/token, both decisive. With
+today's kernel the tier is net-neutral: the CPU waits on the device about as long as the device saves it.
+
+**Variant 4** (this commit, laptop only so far): two work-items per row, one per NEON accumulator, on the
+native layout with whole-block loads. That is 2x v1's parallelism in the latency-bound kernel 1.
+- Bit-exact on Qwen3 and OLMoE shapes.
+- Two v4 controls, both detected. One first attempt swapped the operands of the final sum, which is a no-op
+  (X + Y = Y + X), and was replaced.
+- `gx_acceptance gx_m3_054900`. Not yet measured on the phone.
+
+**Honest ceiling, stated before v4 is measured.** For the tier to beat the CPU at k ≈ 2, a dispatch must be
+host-visible in less than the CPU's time for those experts, about 0.2–0.25 ms at capped clocks.
+- Today it takes ~0.76 ms: ~0.22 ms host overhead + ~0.40 ms kernel 1 + ~0.12 ms kernel 2.
+- Even if v4 brought kernel 1 down to v0's k=1 level (~0.27 ms total device), k ≈ 2 lands around
+  ~0.2 host + ~0.3 device, which is still above the target.
+- **v4 alone cannot flip the tier.** The host term must also fall: a pre-enqueued, doorbell-style dispatch
+  that is ready before the layer's router runs. That lever is riskier, because it depends on host-device
+  coherence beyond the verified map/unmap protocol.
+
+`gx_variant_uses_repack(v)` (1 for variants 2 and 3) is now the API's answer to "does this variant need
+repacked slots". `gx_repack_expert` / `gx_unpack_expert` return −4 in a native-layout context.

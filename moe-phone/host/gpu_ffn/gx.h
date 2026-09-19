@@ -46,7 +46,9 @@ typedef struct gx_params {
     int variant;    /* work mapping, identical arithmetic: 0 = 8 work-items per row (lane-mapped),
                        1 = one work-item per row (whole-block loads), 2 = variant 1 on the repacked slot layout
                        (every slot must be written with gx_repack_expert), 3 = variant 2's planes tiled by 64-row
-                       groups (also written with gx_repack_expert). All held to the same bit-exact test. */
+                       groups (also written with gx_repack_expert), 4 = two work-items per row (one per NEON
+                       accumulator) on the NATIVE layout. All held to the same bit-exact test. Whether a variant
+                       needs repacked slots: gx_variant_uses_repack(). */
     int profile;    /* 1: create the dispatch queue with CL_QUEUE_PROFILING_ENABLE and record each dispatch's
                        device time (first kernel start to last kernel end) in gx_stats / gx_last_timing */
     int spin_wait;  /* 1: gx_wait polls the dispatch's last command instead of blocking in clFinish (the waiting
@@ -111,12 +113,17 @@ int  gx_slot_unmap(gx_ctx * g, const gx_slot * s, void * p);
 const void * gx_slot_map_read(gx_ctx * g, const gx_slot * s);
 int  gx_slot_unmap_read(gx_ctx * g, const gx_slot * s, const void * p);
 
+/* 1 if the variant's slots must be written with gx_repack_expert (variants 2 and 3), 0 for the native GGUF
+ * layout (0, 1, 4). Use this rather than comparing variant numbers. */
+int gx_variant_uses_repack(int variant);
+
 /* Under variants 2 and 3, gx_dispatch refuses (CL_INVALID_MEM_OBJECT, counted in layout_refused) any slot that
  * was not written through gx_repack_expert in this context with the dispatch's down type. */
 /* Variants 2 and 3 only: write one expert into a slot in the repacked layout, instead of copying its three GGUF
  * slices. Call between gx_slot_map_write (mapped = the pointer it returned) and gx_slot_unmap. src_* are the
  * expert's slices in GGUF block layout (gate, up: Q4_0; down: down_type). A byte permutation of the same
- * size, so slot sizes and offsets are unchanged. Returns 0, or -1 on bad arguments. Thread-safe. */
+ * size, so slot sizes and offsets are unchanged. Returns 0, -1 on bad arguments, -4 if the context's variant uses
+ * the native layout (see gx_variant_uses_repack). Thread-safe. */
 int gx_repack_expert(const gx_ctx * g, const gx_slot * s, void * mapped, const void * src_gate, const void * src_up,
                      const void * src_down, int down_type);
 

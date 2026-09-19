@@ -36,6 +36,8 @@ controls=(
   "soa_summs_two_roundings|s.replace('            const float m0 = SOA_H(D, NBH, N_EMBD, 1, ib, row), m1 = SOA_H(D, NBH, N_EMBD, 1, ib + 1, row);\n            summs = summs + fma(m0, ls[ib], m1 * ls[ib + 1]);', '            const float m0 = SOA_H(D, NBH, N_EMBD, 1, ib, row), m1 = SOA_H(D, NBH, N_EMBD, 1, ib + 1, row);\n            summs = (summs + m0 * ls[ib]) + m1 * ls[ib + 1];')"
   "tiled_untiled_index|s.replace('#define TIL_I(ib, row, NB) ((((size_t) (row) >> 6) * (size_t) (NB) + (size_t) (ib)) * 64 + ((size_t) (row) & 63))', '#define TIL_I(ib, row, NB) ((((size_t) (row) >> 6) * (size_t) (NB) + (size_t) (ib)) * 64 + ((size_t) ((row) + 1) & 63))')"
   "tiled_wrong_parity|s.replace('row_block_v(&ag1, TIL_Q(G, ib + 1', 'row_block_v(&ag0, TIL_Q(G, ib + 1')"
+  "pair_same_parity|s.replace('    for (int ib = p; ib < NBX; ib += 2) {\n        const float dy = ldx[ib];', '    for (int ib = 0; ib < NBX; ib += 2) {\n        const float dy = ldx[ib];')"
+  "pair_wrong_row_partner|s.replace('const float h = gx_swiglu_r(hsum2(xg[t], xg[t + 1]), hsum2(xu[t], xu[t + 1]), &r);', 'const float h = gx_swiglu_r(hsum2(xg[t], xg[(t + 3) & 127]), hsum2(xu[t], xu[t + 1]), &r);')"
   "one_accumulator_per_lane|s.replace('for (int ib = p; ib < NBX; ib += 2) {', 'for (int ib = p ? NBX : 0; ib < NBX; ib += 1) {')"
 )
 fail=0

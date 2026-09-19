@@ -202,13 +202,14 @@ extern "C" gx_ctx * gx_init(cl_context ctx, cl_device_id dev, gx_params p, char 
         gx_free(g);
         return nullptr;
     }
-    if (p.variant < 0 || p.variant > 3) { seterr(err, errlen, "variant must be 0, 1, 2 or 3"); gx_free(g); return nullptr; }
+    if (p.variant < 0 || p.variant > 4) { seterr(err, errlen, "variant must be 0..4"); gx_free(g); return nullptr; }
     if (p.variant == 3 && (p.n_ff % 64 || p.n_embd % 64 || p.n_ff == p.n_embd)) {
         seterr(err, errlen, "variant 3 needs n_ff, n_embd multiples of 64 and n_ff != n_embd"); gx_free(g); return nullptr;
     }
-    const size_t wg_need = p.variant ? 64 : 256;
-    static const char * kn1[4] = {"gx_gate_up", "gx_gate_up_row", "gx_gate_up_soa", "gx_gate_up_tiled"},
-                      * kn2[4] = {"gx_down", "gx_down_row", "gx_down_soa", "gx_down_tiled"};
+    static const size_t wg_of[5] = {256, 64, 64, 64, 128};
+    const size_t wg_need = wg_of[p.variant];
+    static const char * kn1[5] = {"gx_gate_up", "gx_gate_up_row", "gx_gate_up_soa", "gx_gate_up_tiled", "gx_gate_up_pair"},
+                      * kn2[5] = {"gx_down", "gx_down_row", "gx_down_soa", "gx_down_tiled", "gx_down_pair"};
     g->k1 = p_clCreateKernel(g->prog, kn1[p.variant], &e);
     if (e == CL_SUCCESS) g->k2 = p_clCreateKernel(g->prog, kn2[p.variant], &e);
     for (cl_kernel k : {g->k1, g->k2}) {
@@ -258,7 +259,7 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
         const int e = gx_wait(g);
         if (e) return e;
     }
-    if (g->p.variant >= 2) {   // repacked layouts: refuse a slot not written through gx_repack_expert (or with another down type)
+    if (gx_variant_uses_repack(g->p.variant)) {   // repacked layouts: refuse a slot not written through gx_repack_expert (or with another down type)
         std::lock_guard<std::mutex> lk(g->mu);
         for (int s = 0; s < k; s++) {
             auto it = g->slot_dtype.find({slots[s].block, slots[s].off_gate});
@@ -287,10 +288,13 @@ extern "C" int gx_dispatch(gx_ctx * g, int layer, int down_type, int k, const gx
     if (e == CL_SUCCESS)
         e = p_clEnqueueWriteBuffer(g->q, g->inb, CL_FALSE, 0, g->in_offs_off + 3 * (size_t) k * sizeof(cl_ulong), g->in_host.data(),
                                    0, nullptr, nullptr);
-    // variant 0: 256 work-items = 32 rows x 8 lanes per group; variant 1: 64 work-items = 64 rows per group
-    const size_t l[2] = {(size_t) (g->p.variant ? 64 : 256), 1};
-    const size_t g1[2] = {g->p.variant ? (size_t) nf : (size_t) 256 * (nf / 32), (size_t) k};
-    const size_t g2[2] = {g->p.variant ? (size_t) ne : (size_t) 256 * (ne / 32), (size_t) k};
+    // work-items per row: variant 0 = 8 (256-wide groups of 32 rows), variants 1-3 = 1 (64 rows per group),
+    // variant 4 = 2 (128-wide groups of 64 rows)
+    const int v = g->p.variant;
+    const size_t per_row = v == 0 ? 8 : v == 4 ? 2 : 1;
+    const size_t l[2] = {(size_t) (v == 0 ? 256 : v == 4 ? 128 : 64), 1};
+    const size_t g1[2] = {per_row * (size_t) nf, (size_t) k};
+    const size_t g2[2] = {per_row * (size_t) ne, (size_t) k};
     cl_event * e1 = g->p.profile ? &g->ev_first : nullptr, * e2 = g->p.profile ? &g->ev_last : nullptr;
     if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k1, 2, nullptr, g1, l, 0, nullptr, e1);
     if (e == CL_SUCCESS) e = p_clEnqueueNDRangeKernel(g->q, g->k2, 2, nullptr, g2, l, 0, nullptr, e2);
@@ -541,6 +545,7 @@ extern "C" int gx_debug_h(gx_ctx * g, int k, float * h) {
 extern "C" int gx_repack_expert(const gx_ctx * g, const gx_slot * s, void * mapped, const void * src_gate, const void * src_up,
                                 const void * src_down, int down_type) {
     if (!g || !s || !mapped || (down_type != GX_DOWN_Q4_0 && down_type != GX_DOWN_Q4_1)) return -1;
+    if (!gx_variant_uses_repack(g->p.variant)) return -4;   // this context's slots use the native layout
     const size_t ne = (size_t) g->p.n_embd, nf = (size_t) g->p.n_ff;
     uint8_t * base = (uint8_t *) mapped;
     const int tl = g->p.variant == 3;
@@ -571,6 +576,7 @@ static void unpack_matrix(const uint8_t * src, uint8_t * dst, size_t rows, size_
 extern "C" int gx_unpack_expert(const gx_ctx * g, const gx_slot * s, const void * mapped, void * dst_gate, void * dst_up,
                                 void * dst_down, int down_type) {
     if (!g || !s || !mapped || (down_type != GX_DOWN_Q4_0 && down_type != GX_DOWN_Q4_1)) return -1;
+    if (!gx_variant_uses_repack(g->p.variant)) return -4;
     {   // refuse a slot that was never repacked here, or was repacked with the other down type (would misread)
         gx_ctx * gm = const_cast<gx_ctx *>(g);
         std::lock_guard<std::mutex> lk(gm->mu);
@@ -595,3 +601,5 @@ extern "C" int gx_last_timing_split(const gx_ctx * g, uint64_t * k1_ns, uint64_t
     if (k2_ns) *k2_ns = g->last_k2_ns;
     return 0;
 }
+
+extern "C" int gx_variant_uses_repack(int variant) { return variant == 2 || variant == 3; }
