@@ -1,0 +1,29 @@
+TOL qwen3_L00.bin    v5 down=Q4_1 k=8 max_abs_vs_fp64=3.34e-08 max_out=0.212 rel_vs_fp64=4.63e-07 rel_vs_arm=0.012 arm_rel_vs_fp64=0.012 ok
+TOL qwen3_L05.bin    v5 down=Q4_1 k=4 max_abs_vs_fp64=4.04e-07 max_out=1.23 rel_vs_fp64=3.29e-07 rel_vs_arm=0.0106 arm_rel_vs_fp64=0.0106 ok
+TOL qwen3_L06.bin    v5 down=Q4_0 k=8 max_abs_vs_fp64=2.28e-07 max_out=2.09 rel_vs_fp64=2.31e-07 rel_vs_arm=0.0152 arm_rel_vs_fp64=0.0152 ok
+TOL qwen3_L12.bin    v5 down=Q4_0 k=2 max_abs_vs_fp64=2.56e-07 max_out=1.33 rel_vs_fp64=1.99e-07 rel_vs_arm=0.0144 arm_rel_vs_fp64=0.0144 ok
+TOL qwen3_L24.bin    v5 down=Q4_0 k=8 max_abs_vs_fp64=6.83e-07 max_out=3.31 rel_vs_fp64=2.65e-07 rel_vs_arm=0.0159 arm_rel_vs_fp64=0.0159 ok
+TOL qwen3_L36.bin    v5 down=Q4_0 k=8 max_abs_vs_fp64=1.43e-06 max_out=5.55 rel_vs_fp64=3.32e-07 rel_vs_arm=0.0157 arm_rel_vs_fp64=0.0157 ok
+TOL qwen3_L47.bin    v5 down=Q4_0 k=8 max_abs_vs_fp64=4.66e-06 max_out=27.7 rel_vs_fp64=4.24e-07 rel_vs_arm=0.0213 arm_rel_vs_fp64=0.0213 ok
+TOL rand_00.bin      v5 down=Q4_0 k=1 max_abs_vs_fp64=1.52e-07 max_out=0.573 rel_vs_fp64=2.65e-07 rel_vs_arm=0.0125 arm_rel_vs_fp64=0.0125 ok
+TOL rand_01.bin      v5 down=Q4_0 k=2 max_abs_vs_fp64=0.0711 max_out=3.86e+05 rel_vs_fp64=1.84e-07 rel_vs_arm=0.0105 arm_rel_vs_fp64=0.0105 ok
+TOL rand_02.bin      v5 down=Q4_1 k=3 max_abs_vs_fp64=1.67e-10 max_out=0.000584 rel_vs_fp64=3.19e-07 rel_vs_arm=0.00983 arm_rel_vs_fp64=0.00983 ok
+TOL rand_03.bin      v5 down=Q4_1 k=4 max_abs_vs_fp64=4.69e-07 max_out=1.65 rel_vs_fp64=3.09e-07 rel_vs_arm=0.015 arm_rel_vs_fp64=0.015 ok
+TOL rand_04.bin      v5 down=Q4_0 k=5 max_abs_vs_fp64=0.00671 max_out=3.34e+04 rel_vs_fp64=3e-07 rel_vs_arm=0.0271 arm_rel_vs_fp64=0.0271 ok
+TOL rand_05.bin      v5 down=Q4_0 k=6 max_abs_vs_fp64=1.53e-10 max_out=0.000613 rel_vs_fp64=2.65e-07 rel_vs_arm=0.0102 arm_rel_vs_fp64=0.0102 ok
+TOL rand_06.bin      v5 down=Q4_1 k=7 max_abs_vs_fp64=8.75e-05 max_out=293 rel_vs_fp64=3.46e-07 rel_vs_arm=0.0148 arm_rel_vs_fp64=0.0148 ok
+TOL rand_07.bin      v5 down=Q4_1 k=8 max_abs_vs_fp64=0.000218 max_out=667 rel_vs_fp64=3.77e-07 rel_vs_arm=0.0158 arm_rel_vs_fp64=0.0158 ok
+TOL rand_08.bin      v5 down=Q4_0 k=1 max_abs_vs_fp64=2.28e-10 max_out=0.000987 rel_vs_fp64=2.31e-07 rel_vs_arm=0.0146 arm_rel_vs_fp64=0.0146 ok
+TOL rand_09.bin      v5 down=Q4_0 k=2 max_abs_vs_fp64=6.19e-06 max_out=29.5 rel_vs_fp64=2.93e-07 rel_vs_arm=0.0265 arm_rel_vs_fp64=0.0265 ok
+TOL rand_10.bin      v5 down=Q4_1 k=3 max_abs_vs_fp64=0.000344 max_out=775 rel_vs_fp64=5.5e-07 rel_vs_arm=0.0155 arm_rel_vs_fp64=0.0155 ok
+TOL rand_11.bin      v5 down=Q4_1 k=4 max_abs_vs_fp64=3.24e-08 max_out=0.0868 rel_vs_fp64=4.7e-07 rel_vs_arm=0.0145 arm_rel_vs_fp64=0.0145 ok
+TOL rand_12.bin      v5 down=Q4_0 k=5 max_abs_vs_fp64=1.36e-07 max_out=0.537 rel_vs_fp64=2.89e-07 rel_vs_arm=0.0138 arm_rel_vs_fp64=0.0138 ok
+TOL rand_13.bin      v5 down=Q4_0 k=6 max_abs_vs_fp64=0.00034 max_out=1.66e+03 rel_vs_fp64=2.76e-07 rel_vs_arm=0.0166 arm_rel_vs_fp64=0.0166 ok
+TOL rand_14.bin      v5 down=Q4_1 k=7 max_abs_vs_fp64=6.29e-09 max_out=0.0247 rel_vs_fp64=4.34e-07 rel_vs_arm=0.0304 arm_rel_vs_fp64=0.0304 ok
+TOL rand_15.bin      v5 down=Q4_1 k=8 max_abs_vs_fp64=2.8e-07 max_out=0.818 rel_vs_fp64=3.6e-07 rel_vs_arm=0.0148 arm_rel_vs_fp64=0.0148 ok
+TOL rand_16.bin      v5 down=Q4_0 k=1 max_abs_vs_fp64=0.0163 max_out=9.72e+04 rel_vs_fp64=1.68e-07 rel_vs_arm=0.0113 arm_rel_vs_fp64=0.0113 ok
+TOL rand_17.bin      v5 down=Q4_0 k=2 max_abs_vs_fp64=9.71e-11 max_out=0.000448 rel_vs_fp64=2.23e-07 rel_vs_arm=0.0169 arm_rel_vs_fp64=0.0169 ok
+TOL rand_18.bin      v5 down=Q4_1 k=3 max_abs_vs_fp64=4.74e-07 max_out=1.63 rel_vs_fp64=4.11e-07 rel_vs_arm=0.0135 arm_rel_vs_fp64=0.0135 ok
+TOL rand_19.bin      v5 down=Q4_1 k=4 max_abs_vs_fp64=0.00724 max_out=2.87e+04 rel_vs_fp64=3.65e-07 rel_vs_arm=0.0242 arm_rel_vs_fp64=0.0242 ok
+TOLSUMMARY variant=5 cases=27 gate=1e-05 fails=0 gx_errors=0 stats_errors=0 worst_rel_vs_fp64=5.5e-07 worst_abs_vs_fp64=0.0711 worst_rel_vs_arm=0.0304
+exit=0

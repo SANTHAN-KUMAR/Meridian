@@ -1,0 +1,111 @@
+/run/media/santhankumar/New Volume/identifying-variation/moe-phone/host/gpu_ffn/out/android_e4/gx_tol_test: 1 file pushed, 0 skipped. 136.5 MB/s (1431360 bytes in 0.010s)
+/run/media/santhankumar/New Volume/identifying-variation/moe-phone/host/gpu_ffn/out/android_e4/gx_bench: 1 file pushed, 0 skipped. 166.5 MB/s (2115656 bytes in 0.012s)
+2 files pushed, 0 skipped. 8.3 MB/s (3547016 bytes in 0.409s)
+/tmp/claude-1000/gxcases/rand_00.bin: 1 file pushed, 0 skipped. 299.5 MB/s (2662424 bytes in 0.008s)
+/tmp/claude-1000/gxcases/rand_01.bin: 1 file pushed, 0 skipped. 24.7 MB/s (5316636 bytes in 0.205s)
+/tmp/claude-1000/gxcases/rand_02.bin: 1 file pushed, 0 skipped. 15.3 MB/s (8265760 bytes in 0.517s)
+/tmp/claude-1000/gxcases/rand_03.bin: 1 file pushed, 0 skipped. 13.9 MB/s (11018276 bytes in 0.754s)
+/tmp/claude-1000/gxcases/rand_04.bin: 1 file pushed, 0 skipped. 14.0 MB/s (13279272 bytes in 0.907s)
+/tmp/claude-1000/gxcases/rand_05.bin: 1 file pushed, 0 skipped. 12.2 MB/s (15933484 bytes in 1.251s)
+/tmp/claude-1000/gxcases/rand_06.bin: 1 file pushed, 0 skipped. 12.9 MB/s (19275824 bytes in 1.425s)
+/tmp/claude-1000/gxcases/rand_07.bin: 1 file pushed, 0 skipped. 13.0 MB/s (22028340 bytes in 1.616s)
+/tmp/claude-1000/gxcases/rand_08.bin: 1 file pushed, 0 skipped. 364.8 MB/s (2662424 bytes in 0.007s)
+/tmp/claude-1000/gxcases/rand_09.bin: 1 file pushed, 0 skipped. 21.8 MB/s (5316636 bytes in 0.232s)
+/tmp/claude-1000/gxcases/rand_10.bin: 1 file pushed, 0 skipped. 16.4 MB/s (8265760 bytes in 0.479s)
+/tmp/claude-1000/gxcases/rand_11.bin: 1 file pushed, 0 skipped. 14.8 MB/s (11018276 bytes in 0.708s)
+/tmp/claude-1000/gxcases/rand_12.bin: 1 file pushed, 0 skipped. 12.3 MB/s (13279272 bytes in 1.033s)
+/tmp/claude-1000/gxcases/rand_13.bin: 1 file pushed, 0 skipped. 14.0 MB/s (15933484 bytes in 1.086s)
+/tmp/claude-1000/gxcases/rand_14.bin: 1 file pushed, 0 skipped. 12.5 MB/s (19275824 bytes in 1.467s)
+/tmp/claude-1000/gxcases/rand_15.bin: 1 file pushed, 0 skipped. 13.8 MB/s (22028340 bytes in 1.517s)
+/tmp/claude-1000/gxcases/rand_16.bin: 1 file pushed, 0 skipped. 349.6 MB/s (2662424 bytes in 0.007s)
+/tmp/claude-1000/gxcases/rand_17.bin: 1 file pushed, 0 skipped. 32.1 MB/s (5316636 bytes in 0.158s)
+/tmp/claude-1000/gxcases/rand_18.bin: 1 file pushed, 0 skipped. 18.4 MB/s (8265760 bytes in 0.428s)
+/tmp/claude-1000/gxcases/rand_19.bin: 1 file pushed, 0 skipped. 14.3 MB/s (11018276 bytes in 0.735s)
+/tmp/claude-1000/gxcases/qwen3_L00.bin: 1 file pushed, 0 skipped. 14.1 MB/s (22028340 bytes in 1.489s)
+/tmp/claude-1000/gxcases/qwen3_L05.bin: 1 file pushed, 0 skipped. 17.1 MB/s (11018276 bytes in 0.613s)
+/tmp/claude-1000/gxcases/qwen3_L06.bin: 1 file pushed, 0 skipped. 12.4 MB/s (21241908 bytes in 1.635s)
+/tmp/claude-1000/gxcases/qwen3_L12.bin: 1 file pushed, 0 skipped. 36.8 MB/s (5316636 bytes in 0.138s)
+/tmp/claude-1000/gxcases/qwen3_L24.bin: 1 file pushed, 0 skipped. 14.0 MB/s (21241908 bytes in 1.443s)
+/tmp/claude-1000/gxcases/qwen3_L36.bin: 1 file pushed, 0 skipped. 13.8 MB/s (21241908 bytes in 1.470s)
+/tmp/claude-1000/gxcases/qwen3_L47.bin: 1 file pushed, 0 skipped. 13.0 MB/s (21241908 bytes in 1.555s)
+TOL qwen3_L00.bin    v5 down=Q4_1 k=8 max_abs_vs_fp64=3.34e-08 max_out=0.212 rel_vs_fp64=4.63e-07 rel_vs_arm=0.012 arm_rel_vs_fp64=0.012 ok
+TOL qwen3_L05.bin    v5 down=Q4_1 k=4 max_abs_vs_fp64=4.04e-07 max_out=1.23 rel_vs_fp64=3.29e-07 rel_vs_arm=0.0106 arm_rel_vs_fp64=0.0106 ok
+TOL qwen3_L06.bin    v5 down=Q4_0 k=8 max_abs_vs_fp64=2.28e-07 max_out=2.09 rel_vs_fp64=2.31e-07 rel_vs_arm=0.0152 arm_rel_vs_fp64=0.0152 ok
+TOL qwen3_L12.bin    v5 down=Q4_0 k=2 max_abs_vs_fp64=2.56e-07 max_out=1.33 rel_vs_fp64=1.99e-07 rel_vs_arm=0.0144 arm_rel_vs_fp64=0.0144 ok
+TOL qwen3_L24.bin    v5 down=Q4_0 k=8 max_abs_vs_fp64=6.83e-07 max_out=3.31 rel_vs_fp64=2.65e-07 rel_vs_arm=0.0159 arm_rel_vs_fp64=0.0159 ok
+TOL qwen3_L36.bin    v5 down=Q4_0 k=8 max_abs_vs_fp64=1.43e-06 max_out=5.55 rel_vs_fp64=3.32e-07 rel_vs_arm=0.0157 arm_rel_vs_fp64=0.0157 ok
+TOL qwen3_L47.bin    v5 down=Q4_0 k=8 max_abs_vs_fp64=4.66e-06 max_out=27.7 rel_vs_fp64=4.24e-07 rel_vs_arm=0.0213 arm_rel_vs_fp64=0.0213 ok
+TOL rand_00.bin      v5 down=Q4_0 k=1 max_abs_vs_fp64=1.52e-07 max_out=0.573 rel_vs_fp64=2.65e-07 rel_vs_arm=0.0125 arm_rel_vs_fp64=0.0125 ok
+TOL rand_01.bin      v5 down=Q4_0 k=2 max_abs_vs_fp64=0.0711 max_out=3.86e+05 rel_vs_fp64=1.84e-07 rel_vs_arm=0.0105 arm_rel_vs_fp64=0.0105 ok
+TOL rand_02.bin      v5 down=Q4_1 k=3 max_abs_vs_fp64=1.67e-10 max_out=0.000584 rel_vs_fp64=3.19e-07 rel_vs_arm=0.00983 arm_rel_vs_fp64=0.00983 ok
+TOL rand_03.bin      v5 down=Q4_1 k=4 max_abs_vs_fp64=4.69e-07 max_out=1.65 rel_vs_fp64=3.09e-07 rel_vs_arm=0.015 arm_rel_vs_fp64=0.015 ok
+TOL rand_04.bin      v5 down=Q4_0 k=5 max_abs_vs_fp64=0.00671 max_out=3.34e+04 rel_vs_fp64=3e-07 rel_vs_arm=0.0271 arm_rel_vs_fp64=0.0271 ok
+TOL rand_05.bin      v5 down=Q4_0 k=6 max_abs_vs_fp64=1.53e-10 max_out=0.000613 rel_vs_fp64=2.65e-07 rel_vs_arm=0.0102 arm_rel_vs_fp64=0.0102 ok
+TOL rand_06.bin      v5 down=Q4_1 k=7 max_abs_vs_fp64=8.75e-05 max_out=293 rel_vs_fp64=3.46e-07 rel_vs_arm=0.0148 arm_rel_vs_fp64=0.0148 ok
+TOL rand_07.bin      v5 down=Q4_1 k=8 max_abs_vs_fp64=0.000218 max_out=667 rel_vs_fp64=3.77e-07 rel_vs_arm=0.0158 arm_rel_vs_fp64=0.0158 ok
+TOL rand_08.bin      v5 down=Q4_0 k=1 max_abs_vs_fp64=2.28e-10 max_out=0.000987 rel_vs_fp64=2.31e-07 rel_vs_arm=0.0146 arm_rel_vs_fp64=0.0146 ok
+TOL rand_09.bin      v5 down=Q4_0 k=2 max_abs_vs_fp64=6.19e-06 max_out=29.5 rel_vs_fp64=2.93e-07 rel_vs_arm=0.0265 arm_rel_vs_fp64=0.0265 ok
+TOL rand_10.bin      v5 down=Q4_1 k=3 max_abs_vs_fp64=0.000344 max_out=775 rel_vs_fp64=5.5e-07 rel_vs_arm=0.0155 arm_rel_vs_fp64=0.0155 ok
+TOL rand_11.bin      v5 down=Q4_1 k=4 max_abs_vs_fp64=3.24e-08 max_out=0.0868 rel_vs_fp64=4.7e-07 rel_vs_arm=0.0145 arm_rel_vs_fp64=0.0145 ok
+TOL rand_12.bin      v5 down=Q4_0 k=5 max_abs_vs_fp64=1.36e-07 max_out=0.537 rel_vs_fp64=2.89e-07 rel_vs_arm=0.0138 arm_rel_vs_fp64=0.0138 ok
+TOL rand_13.bin      v5 down=Q4_0 k=6 max_abs_vs_fp64=0.00034 max_out=1.66e+03 rel_vs_fp64=2.76e-07 rel_vs_arm=0.0166 arm_rel_vs_fp64=0.0166 ok
+TOL rand_14.bin      v5 down=Q4_1 k=7 max_abs_vs_fp64=6.29e-09 max_out=0.0247 rel_vs_fp64=4.34e-07 rel_vs_arm=0.0304 arm_rel_vs_fp64=0.0304 ok
+TOL rand_15.bin      v5 down=Q4_1 k=8 max_abs_vs_fp64=2.8e-07 max_out=0.818 rel_vs_fp64=3.6e-07 rel_vs_arm=0.0148 arm_rel_vs_fp64=0.0148 ok
+TOL rand_16.bin      v5 down=Q4_0 k=1 max_abs_vs_fp64=0.0163 max_out=9.72e+04 rel_vs_fp64=1.68e-07 rel_vs_arm=0.0113 arm_rel_vs_fp64=0.0113 ok
+TOL rand_17.bin      v5 down=Q4_0 k=2 max_abs_vs_fp64=9.71e-11 max_out=0.000448 rel_vs_fp64=2.23e-07 rel_vs_arm=0.0169 arm_rel_vs_fp64=0.0169 ok
+TOL rand_18.bin      v5 down=Q4_1 k=3 max_abs_vs_fp64=4.74e-07 max_out=1.63 rel_vs_fp64=4.11e-07 rel_vs_arm=0.0135 arm_rel_vs_fp64=0.0135 ok
+TOL rand_19.bin      v5 down=Q4_1 k=4 max_abs_vs_fp64=0.00724 max_out=2.87e+04 rel_vs_fp64=3.65e-07 rel_vs_arm=0.0242 arm_rel_vs_fp64=0.0242 ok
+TOLSUMMARY variant=5 cases=27 gate=1e-05 fails=0 gx_errors=0 stats_errors=0 worst_rel_vs_fp64=5.5e-07 worst_abs_vs_fp64=0.0711 worst_rel_vs_arm=0.0304
+exit=0
+DEVICE name="QUALCOMM Adreno(TM) 829" iters=300 slots_per_type=32
+POOL variant=4 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=4 n=64 median_ms=1.009 p90_ms=2.082
+MEMPROBE pass=0 order=aos n=300 device_median_ms=0.0247 device_p90_ms=0.0261 GBps=31.84
+MEMPROBE pass=0 order=soa n=300 device_median_ms=0.0262 device_p90_ms=0.0269 GBps=30.02
+MEMPROBE pass=0 order=tiled n=300 device_median_ms=0.0260 device_p90_ms=0.0268 GBps=30.25
+MEMPROBE pass=1 order=aos n=300 device_median_ms=0.0246 device_p90_ms=0.0258 GBps=31.97
+MEMPROBE pass=1 order=soa n=300 device_median_ms=0.0264 device_p90_ms=0.0279 GBps=29.79
+MEMPROBE pass=1 order=tiled n=300 device_median_ms=0.0262 device_p90_ms=0.0271 GBps=30.02
+BENCH spin=0 variant=4 down=Q4_0 k=1 n=300 median_ms=0.9230 p10_ms=0.4805 p90_ms=1.0231 GBps_at_median=2.88 device_median_ms=0.2725 device_p90_ms=0.2738 k1_median_ms=0.2082 gap_median_ms=0.0005 k2_median_ms=0.0638
+BENCH spin=0 variant=4 down=Q4_0 k=2 n=300 median_ms=0.9988 p10_ms=0.5824 p90_ms=1.1015 GBps_at_median=5.31 device_median_ms=0.3816 device_p90_ms=0.3837 k1_median_ms=0.2628 gap_median_ms=0.0005 k2_median_ms=0.1182
+BENCH spin=0 variant=4 down=Q4_0 k=3 n=300 median_ms=1.2509 p10_ms=0.7919 p90_ms=1.3398 GBps_at_median=6.37 device_median_ms=0.5851 device_p90_ms=0.5898 k1_median_ms=0.4156 gap_median_ms=0.0005 k2_median_ms=0.1689
+BENCH spin=0 variant=4 down=Q4_0 k=4 n=300 median_ms=1.3832 p10_ms=0.9102 p90_ms=1.4714 GBps_at_median=7.68 device_median_ms=0.6907 device_p90_ms=0.6981 k1_median_ms=0.4708 gap_median_ms=0.0005 k2_median_ms=0.2194
+BENCH spin=0 variant=4 down=Q4_1 k=1 n=300 median_ms=0.9511 p10_ms=0.4870 p90_ms=1.0559 GBps_at_median=2.89 device_median_ms=0.2916 device_p90_ms=0.2939 k1_median_ms=0.2090 gap_median_ms=0.0005 k2_median_ms=0.0821
+BENCH spin=0 variant=4 down=Q4_1 k=2 n=300 median_ms=1.0866 p10_ms=0.6150 p90_ms=1.1672 GBps_at_median=5.07 device_median_ms=0.4154 device_p90_ms=0.4182 k1_median_ms=0.2636 gap_median_ms=0.0005 k2_median_ms=0.1509
+BENCH spin=0 variant=4 down=Q4_1 k=3 n=300 median_ms=1.3140 p10_ms=0.8457 p90_ms=1.3849 GBps_at_median=6.28 device_median_ms=0.6350 device_p90_ms=0.6420 k1_median_ms=0.4181 gap_median_ms=0.0005 k2_median_ms=0.2165
+BENCH spin=0 variant=4 down=Q4_1 k=4 n=300 median_ms=1.4461 p10_ms=0.9936 p90_ms=1.5443 GBps_at_median=7.61 device_median_ms=0.7575 device_p90_ms=0.7642 k1_median_ms=0.4745 gap_median_ms=0.0005 k2_median_ms=0.2822
+STATS variant=4 dispatches=3175 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=12200
+POOL variant=5 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=5 n=64 median_ms=1.013 p90_ms=1.213
+BENCH spin=0 variant=5 down=Q4_0 k=1 n=300 median_ms=1.4713 p10_ms=1.0439 p90_ms=1.5615 GBps_at_median=1.80 device_median_ms=0.8047 device_p90_ms=0.8063 k1_median_ms=0.6170 gap_median_ms=0.0005 k2_median_ms=0.1871
+BENCH spin=0 variant=5 down=Q4_0 k=2 n=300 median_ms=1.7948 p10_ms=1.3725 p90_ms=1.9177 GBps_at_median=2.96 device_median_ms=1.1244 device_p90_ms=1.1259 k1_median_ms=0.7825 gap_median_ms=0.0005 k2_median_ms=0.3414
+BENCH spin=0 variant=5 down=Q4_0 k=3 n=300 median_ms=2.3627 p10_ms=2.0229 p90_ms=2.5758 GBps_at_median=3.37 device_median_ms=1.7146 device_p90_ms=1.7165 k1_median_ms=1.2223 gap_median_ms=0.0005 k2_median_ms=0.4917
+BENCH spin=0 variant=5 down=Q4_0 k=4 n=300 median_ms=2.6869 p10_ms=2.3129 p90_ms=2.8129 GBps_at_median=3.95 device_median_ms=2.0418 device_p90_ms=2.0437 k1_median_ms=1.3995 gap_median_ms=0.0005 k2_median_ms=0.6417
+BENCH spin=0 variant=5 down=Q4_1 k=1 n=300 median_ms=1.4836 p10_ms=1.0790 p90_ms=1.5748 GBps_at_median=1.86 device_median_ms=0.8170 device_p90_ms=0.8190 k1_median_ms=0.6175 gap_median_ms=0.0005 k2_median_ms=0.1989
+BENCH spin=0 variant=5 down=Q4_1 k=2 n=300 median_ms=1.8047 p10_ms=1.4044 p90_ms=1.8905 GBps_at_median=3.05 device_median_ms=1.1477 device_p90_ms=1.1495 k1_median_ms=0.7833 gap_median_ms=0.0005 k2_median_ms=0.3638
+BENCH spin=0 variant=5 down=Q4_1 k=3 n=300 median_ms=2.3827 p10_ms=2.0231 p90_ms=2.4797 GBps_at_median=3.47 device_median_ms=1.7480 device_p90_ms=1.7502 k1_median_ms=1.2232 gap_median_ms=0.0005 k2_median_ms=0.5241
+BENCH spin=0 variant=5 down=Q4_1 k=4 n=300 median_ms=2.7266 p10_ms=2.3388 p90_ms=2.8713 GBps_at_median=4.04 device_median_ms=2.0853 device_p90_ms=2.0875 k1_median_ms=1.4009 gap_median_ms=0.0005 k2_median_ms=0.6840
+STATS variant=5 dispatches=2741 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=8728
+POOL variant=4 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=4 n=64 median_ms=1.016 p90_ms=1.094
+BENCH spin=1 variant=4 down=Q4_0 k=1 n=300 median_ms=0.5844 p10_ms=0.4717 p90_ms=0.6910 GBps_at_median=4.54 device_median_ms=0.2726 device_p90_ms=0.2739 k1_median_ms=0.2082 gap_median_ms=0.0005 k2_median_ms=0.0639
+BENCH spin=1 variant=4 down=Q4_0 k=2 n=300 median_ms=0.7071 p10_ms=0.5871 p90_ms=0.9536 GBps_at_median=7.51 device_median_ms=0.3814 device_p90_ms=0.3839 k1_median_ms=0.2625 gap_median_ms=0.0005 k2_median_ms=0.1183
+BENCH spin=1 variant=4 down=Q4_0 k=3 n=300 median_ms=0.9181 p10_ms=0.8006 p90_ms=1.1836 GBps_at_median=8.67 device_median_ms=0.5856 device_p90_ms=0.5915 k1_median_ms=0.4158 gap_median_ms=0.0005 k2_median_ms=0.1689
+BENCH spin=1 variant=4 down=Q4_0 k=4 n=300 median_ms=0.9757 p10_ms=0.9120 p90_ms=1.3127 GBps_at_median=10.88 device_median_ms=0.6905 device_p90_ms=0.6954 k1_median_ms=0.4706 gap_median_ms=0.0005 k2_median_ms=0.2193
+BENCH spin=1 variant=4 down=Q4_1 k=1 n=300 median_ms=0.5468 p10_ms=0.4864 p90_ms=0.8429 GBps_at_median=5.03 device_median_ms=0.2914 device_p90_ms=0.2931 k1_median_ms=0.2088 gap_median_ms=0.0005 k2_median_ms=0.0820
+BENCH spin=1 variant=4 down=Q4_1 k=2 n=300 median_ms=0.7421 p10_ms=0.6171 p90_ms=1.0099 GBps_at_median=7.42 device_median_ms=0.4151 device_p90_ms=0.4177 k1_median_ms=0.2634 gap_median_ms=0.0005 k2_median_ms=0.1509
+BENCH spin=1 variant=4 down=Q4_1 k=3 n=300 median_ms=0.9729 p10_ms=0.8435 p90_ms=1.2329 GBps_at_median=8.49 device_median_ms=0.6348 device_p90_ms=0.6411 k1_median_ms=0.4176 gap_median_ms=0.0005 k2_median_ms=0.2164
+BENCH spin=1 variant=4 down=Q4_1 k=4 n=300 median_ms=1.1103 p10_ms=0.9754 p90_ms=1.3848 GBps_at_median=9.92 device_median_ms=0.7557 device_p90_ms=0.7629 k1_median_ms=0.4730 gap_median_ms=0.0005 k2_median_ms=0.2820
+STATS variant=4 dispatches=3296 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=13168
+POOL variant=5 blocks=64/64 :: max_mem_alloc=2147483648 global_mem=5819543552
+SLOTWRITE variant=5 n=64 median_ms=1.023 p90_ms=1.250
+BENCH spin=1 variant=5 down=Q4_0 k=1 n=300 median_ms=1.1277 p10_ms=1.1079 p90_ms=1.3776 GBps_at_median=2.35 device_median_ms=0.8054 device_p90_ms=0.8068 k1_median_ms=0.6175 gap_median_ms=0.0005 k2_median_ms=0.1873
+BENCH spin=1 variant=5 down=Q4_0 k=2 n=300 median_ms=1.4678 p10_ms=1.4424 p90_ms=1.7209 GBps_at_median=3.62 device_median_ms=1.1246 device_p90_ms=1.1258 k1_median_ms=0.7825 gap_median_ms=0.0005 k2_median_ms=0.3415
+BENCH spin=1 variant=5 down=Q4_0 k=3 n=300 median_ms=2.1010 p10_ms=2.0487 p90_ms=2.3506 GBps_at_median=3.79 device_median_ms=1.7150 device_p90_ms=1.7165 k1_median_ms=1.2225 gap_median_ms=0.0005 k2_median_ms=0.4920
+BENCH spin=1 variant=5 down=Q4_0 k=4 n=300 median_ms=2.6150 p10_ms=2.3998 p90_ms=2.7047 GBps_at_median=4.06 device_median_ms=2.0422 device_p90_ms=2.0439 k1_median_ms=1.3997 gap_median_ms=0.0005 k2_median_ms=0.6419
+BENCH spin=1 variant=5 down=Q4_1 k=1 n=300 median_ms=1.1446 p10_ms=1.1198 p90_ms=1.3976 GBps_at_median=2.40 device_median_ms=0.8170 device_p90_ms=0.8185 k1_median_ms=0.6174 gap_median_ms=0.0005 k2_median_ms=0.1990
+BENCH spin=1 variant=5 down=Q4_1 k=2 n=300 median_ms=1.5070 p10_ms=1.4690 p90_ms=1.7722 GBps_at_median=3.65 device_median_ms=1.1472 device_p90_ms=1.1486 k1_median_ms=0.7827 gap_median_ms=0.0005 k2_median_ms=0.3639
+BENCH spin=1 variant=5 down=Q4_1 k=3 n=300 median_ms=2.1321 p10_ms=2.0840 p90_ms=2.3895 GBps_at_median=3.87 device_median_ms=1.7475 device_p90_ms=1.7495 k1_median_ms=1.2228 gap_median_ms=0.0005 k2_median_ms=0.5242
+BENCH spin=1 variant=5 down=Q4_1 k=4 n=300 median_ms=2.6748 p10_ms=2.4478 p90_ms=2.7721 GBps_at_median=4.12 device_median_ms=2.0848 device_p90_ms=2.0868 k1_median_ms=1.4002 gap_median_ms=0.0005 k2_median_ms=0.6841
+STATS variant=5 dispatches=2726 errors=0 map_errors=0 risk_dispatches=0 risk_slots=0 experts=8608
+results in /run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/gx_e4_phone_201740
