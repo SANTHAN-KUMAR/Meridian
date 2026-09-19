@@ -1,0 +1,8 @@
+stall_plus_mgmt_ms {'n_repeats': 6, 'mean_diff': -16.5, 'se': 1.317, 'se_over_abs_mean': 0.08, 'sign_holds_in': 6, 'decisive': True, 'base_mean': 74.75, 'stack_mean': 58.25}
+compute_ms {'n_repeats': 6, 'mean_diff': -16.083, 'se': 1.89, 'se_over_abs_mean': 0.118, 'sign_holds_in': 6, 'decisive': True, 'base_mean': 108.167, 'stack_mean': 92.083}
+decode_tok_s {'n_repeats': 6, 'mean_diff': 1.205, 'se': 0.119, 'se_over_abs_mean': 0.099, 'sign_holds_in': 6, 'decisive': True, 'base_mean': 5.461, 'stack_mean': 6.666}
+read_MiB_per_token {'n_repeats': 6, 'mean_diff': -56.971, 'se': 0.835, 'se_over_abs_mean': 0.015, 'sign_holds_in': 6, 'decisive': True, 'base_mean': 183.59, 'stack_mean': 126.619}
+hit_pct {'n_repeats': 6, 'mean_diff': 8.442, 'se': 0.087, 'se_over_abs_mean': 0.01, 'sign_holds_in': 6, 'decisive': True, 'base_mean': 79.0, 'stack_mean': 87.442}
+stall_ms {'n_repeats': 6, 'mean_diff': -19.0, 'se': 1.103, 'se_over_abs_mean': 0.058, 'sign_holds_in': 6, 'decisive': True, 'base_mean': 53.667, 'stack_mean': 34.667}
+mgmt_ms {'n_repeats': 6, 'mean_diff': 2.5, 'se': 0.258, 'se_over_abs_mean': 0.103, 'sign_holds_in': 6, 'decisive': True, 'base_mean': 21.083, 'stack_mean': 23.583}
+{'stack_flags': '', 'n_rows': 24, 'n_kept': 24, 'n_stall_missing': 0, 'decode_ratio': 1.2205539024948502, 'text_match_ok': 12, 'text_match_differs': 12}

@@ -1,0 +1,6 @@
+stack_flags=[--experts-prerepacked --repack-dense] binary=bmoe-i8mm-0027 md5=3c8adf7119496f38a14229fa8673ec60
+ppl_base exit=0 ppl: 8.1332  nll: 2.09596  next-token hits: 378/616 (61.4%)  53.03 s
+ppl_stack exit=0 ppl: 8.1060  nll: 2.09261  next-token hits: 379/616 (61.5%)  46.02 s
+text_reference=ppl_base.out
+text_match ppl_base.out OK
+text_match ppl_stack.out DIFFERS

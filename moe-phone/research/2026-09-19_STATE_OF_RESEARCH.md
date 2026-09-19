@@ -13,7 +13,8 @@ on the OnePlus 15R"*. Every number below carries its source: a claim id from `CL
   selective predictive prefetch) on the phone, awake and unplugged
   (`results/2026-09-19/bmoe_gtier/bmoe_gtier_ab_20260919_0447`, base arm, 12 rows).
 - **Published baseline on the same phone:** BigMoeOnEdge's documented run reproduces at **3.98 tok/s**
-  (`bmoe_reproduced_decode`). We are about **1.7x** faster, but that comparison is **not controlled** (different sessions and thermal
+  (`bmoe_reproduced_decode`). **In a controlled same-session head-to-head we are 1.22x faster** (6.67 vs 5.46 tok/s, 6/6 repeats;
+  `results/2026-09-19/H2H_VERDICT.md`). The earlier uncontrolled estimate is retracted: it compared different sessions and thermal
   and charging states). The same-session head-to-head was written and queued (`device/bmoe_h2h.sh`) and not run.
 - **Goal gap:** 10 tok/s needs 100 ms/token against today's ~148. **Not reached.**
 - **The largest untested lever is the one found last.** On the phone, ggml's repacked (i8mm) kernels run Qwen3's expert matmuls at
@@ -113,7 +114,7 @@ unplugged this morning. That is consistent with a charging penalty, but it is a 
 
 ### Evidence that it is WRONG, or only partly right
 1. **The engine is already the fastest lossless Qwen3-30B-A3B we know of on this phone class:** 6.76 against the published
-   3.98 on the same phone. That is ~1.7x, uncontrolled, but large. Day-one engineering was driven by measurement (the thread cliff
+   3.98 on the same phone; in the controlled head-to-head (`results/2026-09-19/H2H_VERDICT.md`) ours is 1.22x (6.67 vs 5.46). Day-one engineering was driven by measurement (the thread cliff
    was diagnosed, not guessed).
 2. **The tests prevented false claims.** Several would otherwise have shipped:
    - resident-first +6% (`order2_residentfirst_decode`, a rotation artifact);
@@ -150,7 +151,7 @@ and GPU items, or the clock headroom (unresolved cap mechanism). That is a conju
 1. The pre-repacked A/B (`host/chain_prerepack.sh`, ~1.5 h: conversion, fidelity gate, smoke, ABBA x6). It is the one
    measurement that decides whether the compute wall moves.
 2. The same-session head-to-head against BigMoeOnEdge (`device/bmoe_h2h.sh`, ~1 h). It is the one measurement that makes
-   the "~1.7x the published result" claim defensible.
+   the speed claim against the published engine defensible (since run: 1.22x, `results/2026-09-19/H2H_VERDICT.md`).
 3. Stop. Write up with `research/2026-09-19_paper_framing.md` (negative-results catalogue plus benchmark validity,
    and the speed result if steps 1-2 are positive).
 

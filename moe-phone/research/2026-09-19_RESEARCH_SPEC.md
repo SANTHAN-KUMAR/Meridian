@@ -274,7 +274,7 @@ caps and skin temperature logged every second, unplugged unless stated. Each is 
 ### E5. The controlled head-to-head against the published engine (for the claim, not the goal)
 Same session, same Q4_0 file, BigMoeOnEdge's documented command vs our best Tier-E configuration, ABBA ×6, held Awake, unplugged.
 Already pre-registered in `device/bmoe_h2h.sh`. Positive: ratio decisive by the rule. It is the only experiment that makes
-"1.7× the published result on the same phone" a claim.
+the speed claim against the published engine a controlled claim (run 2026-09-19: 1.22x, 6/6 repeats; `results/2026-09-19/H2H_VERDICT.md`).
 
 ### E6. The Tier-A frontier: how much speed does a quality loss no larger than Q4_0's own buy? (added 2026-09-19 after the user opened Tier A)
 1. **Question.** For each lossy routing change the engine already implements, what is its quality cost measured against the

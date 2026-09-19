@@ -1,0 +1,10 @@
+2026-09-19T21:46:58+05:30 start (serial 192.168.0.65:5555, power:  AC powered: false  USB powered: false  level: 68  Capacity level: 3 )
+2026-09-19T21:50:05+05:30 pulled /data/local/tmp/moe-stream/bmoe_prerepack_fidelity_20260919_2146/
+2026-09-19T21:50:05+05:30 [prerepack] fidelity: base 8.1332 (378/616), repacked 8.1060 (379/616) -> FAIL dppl=0.3344% dhits=1/616
+2026-09-19T21:50:05+05:30 [prerepack] fidelity gate failed: no smoke, no A/B; h2h uses the plain stack
+2026-09-19T21:50:05+05:30 [h2h] ours=plain
+2026-09-19T21:55:12+05:30 pulled /data/local/tmp/moe-stream/bmoe_h2h_smoke_20260919_2150/
+2026-09-19T21:55:12+05:30 [h2h] smoke ok=1 :: generation: 64 tokens, 0.178 s/token (5.625 tok/s) generation: 64 tokens, 0.190 s/token (5.251 tok/s) 
+2026-09-19T22:45:33+05:30 pulled /data/local/tmp/moe-stream/bmoe_h2h_ab_20260919_2155/
+2026-09-19T22:45:34+05:30 [h2h] A/B: decode_tok_s {'n_repeats': 6, 'mean_diff': 1.205, 'se': 0.119, 'se_over_abs_mean': 0.099, 'sign_holds_in': 6, 'decisive': True, 'base_mean': 5.461, 'stack_mean': 6.666} {'stack_flags': '', 'n_rows': 24, 'n_kept': 24, 'n_stall_missing': 0, 'decode_ratio': 1.2205539024948502, 'text_match_ok': 12, 'text_match_differs': 12} 
+2026-09-19T22:45:35+05:30 done
