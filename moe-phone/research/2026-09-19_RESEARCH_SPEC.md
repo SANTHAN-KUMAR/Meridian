@@ -1,6 +1,6 @@
 # Research specification: why 10 tok/s has not been reached, and the decisive experiments that settle it
 
-**Date:** 2026-09-19. **Status:** v1, before the hostile review (§12 records the review and what it changed).
+**Date:** 2026-09-19. **Status:** v2, after the hostile review (`2026-09-19_HOSTILE_REVIEW.md`; §12 lists each objection and what changed). **This is the single source of truth for the next phase.**
 **Goal under test:** Qwen3-30B-A3B, weights unmodified, Q4_0 GGUF, single-stream greedy decode at ≥ 10 tok/s on the OnePlus 15R,
 fidelity Tier E (`ESTIMAND.md` §3: bit-for-bit, **or within a floating-point reordering tolerance declared in advance**).
 **Sources.** Every number is from `CLAIMS.md` (claim id in backticks), `results/2026-09-18/ceiling_ledger.json` (`[CL: …]`), or a
@@ -15,17 +15,19 @@ named results path. Arithmetic on those numbers is marked **[T]**. Anything else
 | quantity | value | source |
 |---|---|---|
 | expert weights touched per token | 48 layers × 8 experts × 3 slices × (2048·768·18/32 B) = **1.02 GB** | model shape; `results/2026-09-18/gguf_expert_types.json` |
-| dense weights touched per token | **~0.95 GB** (the anon copy the engine makes) | `bmoe: dense-weights=anon — 945 MiB` in every run log |
-| weight bytes per token, total | **~2.0 GB** | [T] |
+| dense weights touched per token | **0.78 GB** (active bytes 1.84 GB − expert bytes 1.02 GB). The engine's anon copy is 945 MiB, but that includes tables not touched per token (embeddings) | `results/2026-09-18/gguf_active_qwen_olmoe.json`; the 945 MiB log line |
+| weight bytes per token, total | **1.84 GB** | `gguf_active_qwen_olmoe.json: active_bytes_per_token` |
 | CPU kernel throughput, generic Q4_0, 4 threads | **31.0 GB/s** resident; 20.0 (gate/up) / 26.6 (down) GB/s on the expert shapes | `device_ceiling_qwen3_cpu`; `results/2026-09-19/repack_bench` |
 | CPU kernel throughput, repacked i8mm | **33.5 / 33.9 GB/s** on the expert shapes | `results/2026-09-19/repack_bench` |
 | Adreno, memory-only read of the slot layout | 31-33 GB/s | `gx_m6_012604` MEMPROBE |
-| Adreno, bit-exact gx kernel | 7-11 GB/s (compute-bound) | `gx_m6_020545`, `gx_m6_082901` |
+| Adreno, bit-exact gx kernel | 3.7-4.4 GB/s at k=1, 7.2 at k=2, 8.6 at k=3, 10 at k=4 (compute-bound, strongly k-dependent) | `gx_m6_020545`, `gx_m6_082901` |
 | DRAM, 4 threads, app process | 59.7 GB/s | `dram_app_gbps` |
 | flash, 1 MB random reads, 8 lanes | ~2.8-3.2 GB/s | `byte_budget_measured.json: flash_gbps`; G1 |
 | expert cache | 5000 MiB budget, **88% hit** | `stack_hit`; gtier A/B 0447 |
 | flash bytes per token at 88% hit | **120-127 MiB** | `read_MiB_per_token` in every stacked run |
-| CPU clock, sustained | policy0 1.9-2.27 GHz, policy6 1.65 GHz (hardware 3.32 / 3.80) in 96% of samples | `[CL: clock_state]`; `results/2026-09-19/thermal_caps.json` |
+| CPU clock, sustained | policy0 1.9-2.27 GHz, policy6 1.65 GHz (hardware 3.32 / 3.80) in 96% of samples. The "full clock" reference run below was at 3.03 / 3.44, ~91% of hardware max | `[CL: clock_state]`; `results/2026-09-19/thermal_caps.json` |
+| GPU dispatch size in the engine | **~2.1 experts per dispatch** (the misses of a layer at 88% hit) | `bmoe_gtier_ab_20260919_0447/README.md` |
+| context length of every number here | 512-class prompts, ≤ 300 tokens of KV. `ESTIMAND.md` §5 requires 512 and 4096; **4096 is unmeasured** | ESTIMAND §5 |
 
 ### 1.2 The lower bound, term by term [T]
 
@@ -35,14 +37,15 @@ router(L) has run. So a miss at layer L is paid **serially** unless the miss was
 | term | floor | derivation |
 |---|---|---|
 | expert matmuls | 1.02 GB / 33.5 GB/s = **30 ms** | repacked CPU kernel rate, if it holds at the capped clock |
-| dense matmuls | 0.95 GB / 33 GB/s = **29 ms** | same kernel class; not measured on these shapes [H] |
+| dense matmuls | 0.78 GB at 33 GB/s = **24 ms**; but the node ledger shows attention shapes at 9-28 GB/s generic (Kcur 9.0, Vcur 17.1, Qcur 28.3 `[CL: node_ledger.median_GB_s]`), i.e. partly overhead-bound, which repacking does not fix. Range **24-45 ms** [H] |
 | attention, norms, router, small ops | **~20 ms** | node ledger: small ops 14 + flash-attn 4 + head 8 typical at full clock, more when capped `[CL: node_ledger]` |
-| **compute floor** | **~80 ms at capped clock** | sum; **~50 ms at full clock** (compute scales with clock: 77 vs 121-124 ms `[CL: trace_runs.plain, capped_terms]`) |
-| stall floor | 0.12 × 1.02 GB / 3.2 GB/s = **38 ms** | miss bytes serial at flash rate. Measured stall: 35-48 ms. **The stall is the miss rate times the flash rate, and nothing else** |
+| **compute floor** | **75-95 ms at capped clock** | sum; **~50-60 ms at the 3.0/3.4 GHz reference** (compute scales with clock: 77 vs 121-124 ms `[CL: trace_runs.plain, capped_terms]`). The range is the dense uncertainty; E1 measures it |
+| stall floor | 0.12 × 1.02 GB / 3.2 GB/s = **38 ms** | miss bytes serial at flash rate. Measured stall: 35-48 ms. This matches numerically, but one measured fact contradicts the simple model: computing resident experts first (which should hide ~0.9 ms of hit compute under each ~0.8 ms miss read) had **no effect** (`order3_balanced_residentfirst`). So the per-layer miss cost is not a single read latency; E2 must show the per-layer stall histogram, not only the total |
 | cache management | **22-24 ms** measured; floor unknown | `mgmt_ms` in every stacked run; the arena cut it to 9 ms but compute rose 12 and stall 4 (§4.3 of the state report) |
-| **token floor at capped clock** | **80 + 38 + 22 = 140 ms → 7.1 tok/s** | today's best measured: 148 ms (6.76 tok/s) |
-| token floor at full clock | 50 + 38 + 22 = 110 ms → 9.1 tok/s | |
-| token floor at full clock, 95% hit, mgmt 10 | 50 + 16 + 10 = 76 ms → 13 tok/s | every term at its floor simultaneously |
+| **token floor at capped clock** | **135-155 ms → 6.5-7.4 tok/s** | today's best measured: 148 ms (6.76 tok/s), i.e. the engine is already at the floor of its architecture at this clock |
+| token floor at the 3.0/3.4 GHz reference | 110-120 ms → 8.3-9.1 tok/s | |
+
+**These floors are NOT additive across levers** (§2.1 and §3.1): the table says what each term cannot go below, not that savings in two terms add. The arena is the measured counterexample (mgmt −15 → wall 0).
 
 **Reading.** At the capped clock, 10 tok/s (100 ms) is **below the sum of the floors** of the current architecture, even with the best
 kernels measured. Compute can, at most, fall from 92 to ~80 ms. The other 60 ms are I/O terms whose floors are set by the miss rate,
@@ -60,7 +63,7 @@ change in the *structure* of a term (its floor) does.
 | minus kernel inefficiency (generic vs repacked, ×1.5 on gate/up) | ~6.5 | `repack_bench` |
 | **measured** | **6.76** | gtier A/B 0447 |
 
-The reconstruction accounts for the measured number to within 5%. There is **no hidden ceiling**; there are four visible ones, and the
+The reconstruction accounts for the measured number to within 5% for the awake, unplugged condition; the same stack measured 5.3-6.3 on the charger and 5.48 on USB power, so the anchor carries a ±20% condition effect that E3 must control. There is **no hidden ceiling**; there are four visible ones, and the
 project spent most of its effort on the smallest (I/O bookkeeping) and on a fifth that is not in the table (a GPU tier whose
 ceiling is bounded by the expert term it could take, ~14 ms).
 
@@ -148,12 +151,14 @@ Tier.
 | G. cooling (external) | compute 92 → ~55 | ~37 | E | rejected by the user as a deliverable; still the largest single lever measured |
 | H. top-6 routing / expert pruning / 2-3-bit experts | all terms ×0.75 | ~35 | **A** | rejected by the user |
 | I. self-speculation (Medusa/EAGLE heads) | ×(accepted/verify cost) | ≤ 0 with measured verify costs | A | dead: `verify_cost_n2` = 1.71× |
-| J. attention/KV on GPU | dense compute | negative | E | dead: 192 crossings/token cost more (`why_levers_flip` §4) |
-| K. NPU experts | expert compute | negative | E | dead: 0.39-0.68× CPU (`msweep_htp_*`) |
+| J. attention/KV on GPU | dense compute | negative | E | dead on an in-engine measurement (`gpu_dense_cpu_experts` slower than CPU-only, `why_levers_flip` §4) |
+| K. NPU experts | expert compute | negative | E | dead on a microbenchmark only (`msweep_htp_*`, 0.39-0.68× with caps unlogged); no in-engine transfer test. The effect size (≥ 1.5× slower) makes a reversal implausible, but this is the one closure that rests on a proxy |
 
-**Arithmetic of the Tier-E route [T].** A + E + C at their ceilings: 148 − 19 − 17 − 22 = 90 ms → 11 tok/s. **A + C alone:** 107 ms → 9.3.
-**A alone:** 129-136 ms → 7.4-7.8. So 10 tok/s at the capped clock requires **three** of {A, B, C, E, F} to land near their ceilings, and
-each has a decisive test below. That is not a plan with a known outcome; it is a conjunction with four measurable branches.
+**Arithmetic of the Tier-E route.** The ceilings in the table cannot be summed: they share one wall clock, one power budget and
+one memory (§2.1, §3.1), and E's ceiling has already been measured at **~0 net** (the arena, twice). What can be said [T]:
+- A alone, at its measured kernel rate: 148 → ~130-136 ms (7.4-7.7 tok/s), **if** the rate holds inside the engine at the capped clock (E1).
+- A + C, where C is bounded by an oracle that has not been run: at best 148 − 15 − 20 = ~113 ms (8.8), only if the two do not interact (they touch different resources: CPU instructions vs flash queue; the interaction is unmeasured).
+- 10 tok/s at the capped clock needs A + C **and** either a working GPU split (B, whose realistic-k rate is unmeasured, E4) or a clock response to lower power (F, E3). **No combination whose parts are all measured reaches 100 ms.** That is the honest state: 10 tok/s Tier E is *not excluded* and *not supported*; E1-E4 decide which.
 
 ### 5.1 Unconventional paths with the arithmetic that keeps or kills them [T unless marked]
 
@@ -246,20 +251,23 @@ caps and skin temperature logged every second, unplugged unless stated. Each is 
 
 ### E4. Is the Adreno memory-bound under a reordering-tolerant kernel?
 1. **Question.** With the bit-exact requirement replaced by a declared tolerance (fp32 accumulation, fp16 decode by the hardware),
-   does the expert FFN kernel reach ≥ 25 GB/s on the Qwen3 shapes at k = 8, and is its output within the tolerance?
+   is the expert FFN dispatch, **at the sizes the engine actually dispatches (k = 1-3, ~2.1 on average)**, faster end-to-end (host-visible)
+   than the repacked CPU computing the same experts (~0.08-0.1 ms per expert at 33 GB/s), and is its output within the tolerance?
 2. **Why it matters.** Mechanism B's ceiling (~13 ms) exists only if the GPU adds bandwidth (memprobe says 31-33 GB/s is available;
    the bit-exact kernel uses 7-11). Together with the CPU at 33 GB/s the expert term could halve.
-3. **Hypothesis.** H4: device time at k=8 ≤ 0.85 ms (≥ 25 GB/s) and max |Δ| vs ggml ≤ the tolerance that the repacked CPU kernel
-   itself shows (~1e-6 relative on the outputs, `repack_bench`) with teacher-forced PPL within 0.2%.
+3. **Hypothesis.** H4: host-visible dispatch time at k=2 ≤ 0.25 ms and at k=1 ≤ 0.15 ms (the CPU's time for the same experts), with
+   max |Δ| vs ggml within the declared tolerance (the repacked CPU kernel's own ~1e-6 relative, `repack_bench`) and teacher-forced PPL within 0.2%.
+   The k=8 rate is reported but is NOT the criterion: the engine never dispatches k=8 at 88% hit.
 4. **Construction.** In the existing gx harness (`host/gpu_ffn`), a variant that uses native fp16 loads, fp32 fma, and no Q8
    quantisation of x (x in fp32). Same bench (`gx_bench`, warm-up, interleaved), same test cases, tolerance gate instead of bit-exact
    gate, PPL gate in the engine on `defer_ppl_text.txt`. ~15 min of phone time.
 5. **Measure.** device ms at k=1..8, host ms, GB/s, max abs/rel error on real cases, PPL.
 6. **Not a proxy.** MEMPROBE (no arithmetic); k=1 timings (fixed cost dominates).
-7. **Positive.** ≥ 25 GB/s at k=8 within tolerance: build the split (CPU + GPU concurrently over the shared cache; the zcbench
-   aggregate 1.535× is the model) and measure it as one wall-time A/B.
-8. **Kills.** < 15 GB/s: the Adreno cannot beat the repacked CPU per byte; the GPU branch is closed permanently, including every
-   dispatch-overhead lever, because the device term itself would not pay.
+7. **Positive.** k=2 host-visible ≤ 0.25 ms within tolerance: build the split and measure it as ONE wall-time A/B (E4b, ~1 h); the
+   miss-weighted expected saving is then ≤ 48 layers × (CPU time − dispatch time) ≈ ≤ 10 ms/token [T], which bounds what E4b can show.
+8. **Kills.** k=2 host-visible ≥ 0.40 ms (today: 0.72): the fixed dispatch cost exceeds the CPU's whole cost for the experts it would take;
+   the GPU branch is closed permanently, including every dispatch-overhead lever, since at k≈2 the fixed cost is the whole cost.
+   **Middle (0.25-0.40 ms):** treat as kill; the ceiling (≤ 10 ms/token) is below the resolution of any A/B the project can run.
 9. **Conclusions.** Fixes the expert-compute floor: 30 ms (CPU only) or ~17 ms (split).
 10. **Branches closed.** gx fixed-cost work (fusion, doorbell, staging) if null; if positive, the bit-exact kernel line is retired.
 
@@ -268,7 +276,9 @@ Same session, same Q4_0 file, BigMoeOnEdge's documented command vs our best Tier
 Already pre-registered in `device/bmoe_h2h.sh`. Positive: ratio decisive by the rule. It is the only experiment that makes
 "1.7× the published result on the same phone" a claim.
 
-**Total phone time for E1-E5: ~5 hours.** Nothing else runs until they are done.
+**Total phone time for E1-E5: ~6 hours** (E4b adds ~1 h if E4 is positive). E5 runs LAST, against the final configuration the tree
+selects, so the head-to-head compares the engine we would actually report. Every experiment reports at context 512 **and** one
+4096-context row (ESTIMAND §5): a floor that only holds at short context is not a floor.
 
 ## 7. Decision tree (terminates; every leaf is a decision, not an experiment)
 
@@ -288,7 +298,11 @@ E3 → cap response
  ├─ none ──► all planning at the capped row; software cannot change the clock.
  └─ ≥ 1 step ──► J/token becomes a gate; re-derive §1.2 at the observed clock.
 ```
-Every path ends in one of three states within ~5 phone-hours: **(a) 10 tok/s Tier E is reachable and the architecture is named** (A +
+**Middle-range rule for every experiment:** a result between the positive and the kill threshold is resolved by 3 more interleaved rows; if
+it is still in the middle, it is a **kill** (the lever's ceiling is then below the resolution of any campaign this project can afford).
+E1 middle (80-95 ms): plan on C = the measured value and require the other terms to close the gap in the tree below; no compute campaign.
+
+Every path ends in one of three states within ~6 phone-hours: **(a) 10 tok/s Tier E is reachable and the architecture is named** (A +
 predictor + split, with measured floors summing ≤ 100), **(b) reachable only at a clock we do not control**, or **(c) not reachable
 without Tier A**, and the write-up is the negative-results/benchmark-validity paper (`2026-09-19_paper_framing.md`).
 
@@ -319,5 +333,20 @@ Then stop and write up according to the leaf reached. Do not build anything not 
 - Whether the replay mode of E1 perturbs the compute path (the ids are fixed but the graph is the same; a check is that stall and mgmt read ~0).
 - The GPU's power draw; the split of E4/H-B could lower the clock (E3's logging covers it when the split is measured).
 
-## 12. Hostile review
-(Filled after the independent review: the objections, which were accepted, and what changed. v1 has none.)
+## 12. Hostile review (independent Sonnet reviewer, no project context; `2026-09-19_HOSTILE_REVIEW.md`)
+
+| # | objection | accepted? | change in v2 |
+|---|---|---|---|
+| 1 | §5 summed ceilings across terms that share a resource, which §3.1 forbids; mechanism E was already measured net-neutral | **yes, the most important one** | the additive arithmetic is deleted; §1.2 states the floors are not additive; §5 now says "not excluded and not supported" and names the decisive tests |
+| 2 | E4 tested the GPU at k=8; the engine dispatches at k≈2, where the bit-exact kernel is 3-4× slower per byte | **yes** | E4's criterion is now host-visible time at k=1-2 against the CPU's time for the same experts; k=8 is reported, not judged; the split's ceiling is bounded (≤ 10 ms) |
+| 3 | dense bytes: 945 MiB (anon copy) vs 778 MiB (active per token); total 1.97 vs 1.84 GB | **yes** | §1.1 uses the active bytes (1.84 GB) and explains the 945 |
+| 4 | the 29 ms dense floor assumed 33 GB/s on attention shapes that run at 9-28 GB/s generic (overhead-bound) | **yes** | the dense floor is a range (24-45 ms); E1 measures it |
+| 5 | "full clock" was 3.03/3.44 GHz, ~91% of hardware max | **yes** | labelled as the reference clock throughout |
+| 6 | no rule for middle-range outcomes | **yes** | the middle-range rule in §7 (3 more rows, else kill) |
+| 7 | the 6.76 anchor has a ±20% condition effect the "within 5%" hid | **yes** | stated in §1.3; E3 controls it |
+| 8 | no context-length term (ESTIMAND §5 requires 512 and 4096) | **yes** | every experiment reports a 4096-context row |
+| 9 | J and K were closed on microbenchmarks | partly | J has an in-engine measurement; K is labelled as proxy-only, with the reason it is still closed |
+| 10 | E5 must run against the final configuration | **yes** | E5 is last, stated |
+
+The reviewer's own verdict on v1: the negative branches would stop work; the positive branches would have re-opened the cycle.
+v2 removes the positive branch's arithmetic; the only positive claims left are conditional on E1-E4's measured outcomes.
