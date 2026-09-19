@@ -1,5 +1,8 @@
 # moe-phone — beyond-DRAM MoE inference on a 12 GB phone, no retraining
 
+**Current state (2026-09-19, testing stopped):** [`research/2026-09-19_STATE_OF_RESEARCH.md`](research/2026-09-19_STATE_OF_RESEARCH.md)
+covers what was reached, what failed and why, whether the direction was right, and the ranked remaining route.
+
 **Start here:** [`POSITION.md`](POSITION.md) — the claim, the baselines, the plan, and what each
 failure would mean. **Definitions:** [`ESTIMAND.md`](ESTIMAND.md).
 This file is the **gate record and script index**. No number is transcribed into it.

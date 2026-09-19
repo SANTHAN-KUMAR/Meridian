@@ -23,3 +23,10 @@ nothing here is a claim of this project until it is measured on the 15R and ente
 |---|---|
 | `2026-09-18_why_levers_flip.md` | why the speed levers came back neutral: A/B power, self-cancelling prefetch, arena regression |
 | `2026-09-18_ceiling_handoff.md` | **handoff and execution plan**: the 10 tok/s ceiling is capped-clock arithmetic, not I/O; two lossless compute levers, a best case near 8 tok/s, and the five decision experiments. Numbers from `gates/ceiling_ledger.py` -> `results/2026-09-18/ceiling_ledger.json` |
+
+## 2026-09-18/19 additions (not literature memos)
+- `2026-09-18_ceiling_handoff.md`: the 10 tok/s ceiling at capped clocks, and the decision plan.
+- `2026-09-18_gpu_expert_path_design.md`: GPU expert tier design (M1-M6, R1-R8).
+- `2026-09-19_novelty_search.md`: a dated search protocol (a Sonnet subagent); topics "not found", none "verified absent".
+- `2026-09-19_paper_framing.md`: three candidate paper framings (a Sonnet subagent), with contributions tied to artifacts.
+- `2026-09-19_STATE_OF_RESEARCH.md`: **the current state of the project**. Read it first.
