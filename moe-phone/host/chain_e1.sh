@@ -9,6 +9,11 @@ H=/data/local/tmp/moe-stream; LOG="$R/chain_e1.log"; log() { echo "$(date -Iseco
 A() { adb shell "$@" </dev/null; }
 log "waiting for CHAIN_E6_IDENT_DONE"
 while [ ! -f "$R/CHAIN_E6_IDENT_DONE" ]; do sleep 60; done
+# the user unplugs for E4/E1 (deployment condition): wait for the agent to switch adb to wireless and write E1_GO (serial inside)
+log "E6 done; waiting for E1_GO (wireless adb + phone unplugged)"
+while [ ! -f "$R/E1_GO" ]; do sleep 20; done
+export ANDROID_SERIAL=$(cat "$R/E1_GO" | tr -d ' \n')
+log "E1_GO: serial $ANDROID_SERIAL, power: $(A 'dumpsys battery | grep -E "AC powered|USB powered"' | tr -s ' ' | tr '\n' ' ')"
 # E4 (gx v5, the peer's pre-registered run, ~15 min) before E1, while the phone is otherwise idle
 log "E4: running host/gpu_ffn/run_phone_e4.sh"
 bash "$MP/host/gpu_ffn/run_phone_e4.sh" /tmp/claude-1000/gxcases > "$R/e4_run.log" 2>&1
