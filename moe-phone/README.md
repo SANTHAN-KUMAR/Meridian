@@ -1,5 +1,8 @@
 # moe-phone — beyond-DRAM MoE inference on a 12 GB phone, no retraining
 
+**Next phase (2026-09-19):** [`research/2026-09-19_RESEARCH_SPEC.md`](research/2026-09-19_RESEARCH_SPEC.md) is the single source of
+truth: the reconstructed budget, the diagnosis, five decisive experiments and a terminating decision tree, revised after an
+independent hostile review ([`research/2026-09-19_HOSTILE_REVIEW.md`](research/2026-09-19_HOSTILE_REVIEW.md)).
 **Current state (2026-09-19, testing stopped):** [`research/2026-09-19_STATE_OF_RESEARCH.md`](research/2026-09-19_STATE_OF_RESEARCH.md)
 covers what was reached, what failed and why, whether the direction was right, and the ranked remaining route.
 

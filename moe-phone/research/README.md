@@ -30,3 +30,4 @@ nothing here is a claim of this project until it is measured on the 15R and ente
 - `2026-09-19_novelty_search.md`: a dated search protocol (a Sonnet subagent); topics "not found", none "verified absent".
 - `2026-09-19_paper_framing.md`: three candidate paper framings (a Sonnet subagent), with contributions tied to artifacts.
 - `2026-09-19_STATE_OF_RESEARCH.md`: **the current state of the project**. Read it first.
+- `2026-09-19_RESEARCH_SPEC.md` (v2) + `2026-09-19_HOSTILE_REVIEW.md`: **the next phase's single source of truth** and the review that shaped it.
