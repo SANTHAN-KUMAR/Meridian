@@ -375,6 +375,21 @@ without Tier A**, and the write-up is the negative-results/benchmark-validity pa
 7. **Energy is logged** (current × voltage, caps, skin) on every row from now on.
 8. **One architecture A/B per phone-day**, not five tunings.
 
+## 0. THE CLOSING RULE (the user's decision, 2026-09-19; it overrides every other ordering in this document)
+> "If the tests decide that the quality drop is negligible (with solid evidence and proven that it will promise us the goal speed or
+> beyond when actually implemented on our phone and tested), we can go with Tier A. If not, just run E1 and E4, decide if this
+> device will ever get 10 tok/s or not, and close the research. This is it."
+
+Operationally, fixed before any E6 row:
+1. **Run E6.** Tier A is adopted **only if** one configuration (a) passes all four quality criteria of E6 §7 against the reference,
+   **and** (b) measures **≥ 10.0 tok/s** median decode on the phone, in the deployment condition: awake, unplugged, steady state
+   (tokens 65-256), ABBA ×6 against the best Tier-E configuration, with the pre-registered rule of `gates/stack_summary.py`
+   (`--require-awake`). A projection, a microbenchmark or a single row does not count.
+2. **Otherwise**, run **E1 and E4 only**. Their outcomes fix the compute floor and the GPU's worth. With the measured stall and
+   management terms, they decide whether this device can reach 10 tok/s at all. Then **the research closes** and is written up at the
+   leaf reached (`2026-09-19_paper_framing.md`). E2, E3 and E5 are not run in this branch.
+3. Nothing else is built or tested in either branch.
+
 ## 10. Final recommendation (updated after Tier A was opened)
 **E6 first.** It is the only experiment whose positive outcome reaches 100 ms without an unmeasured conjunction. Then E1 (it fixes the
 compute row that every other branch uses), E4, E2, E3, and E5 last. If E6 passes with `--route-ahead` or drop-cold, E2 is largely
