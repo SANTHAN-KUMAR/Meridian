@@ -9,7 +9,7 @@ thing needed is to make the phone reachable again:
 * **plug the phone in over USB** and run `adb tcpip 5555` (then the cable can come out), **or**
 * **turn Wireless debugging off and on** in Developer options and, if it hands out a different port,
   run `adb connect 192.168.0.65:<port>` and restart the resume chain with
-  `ANDROID_SERIAL=192.168.0.65:<port> BMOE_PIN=147853 bash moe-phone/host/chain_resume.sh &`.
+  `ANDROID_SERIAL=192.168.0.65:<port> BMOE_PIN=<the unlock PIN, kept in ~/.config/moe-phone/phone_pin> bash moe-phone/host/chain_resume.sh &`.
 
 Nothing was lost: `/data/local/tmp/moe-stream` is persistent, every completed campaign is already
 pulled and committed, and the resume chain re-pushes the scripts before it starts.

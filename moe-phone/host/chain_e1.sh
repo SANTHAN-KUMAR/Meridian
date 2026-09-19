@@ -10,6 +10,7 @@ A() { adb shell "$@" </dev/null; }
 log "waiting for CHAIN_E6_IDENT_DONE"
 while [ ! -f "$R/CHAIN_E6_IDENT_DONE" ]; do sleep 60; done
 # the user unplugs for E4/E1 (deployment condition): wait for the agent to switch adb to wireless and write E1_GO (serial inside)
+SP="/run/media/santhankumar/New Volume/moe-work/stage"; PINF="$HOME/.config/moe-phone/phone_pin"  # persistent (moved from /tmp 2026-09-19)
 log "E6 done; waiting for E1_GO (wireless adb + phone unplugged)"
 while [ ! -f "$R/E1_GO" ]; do sleep 20; done
 export ANDROID_SERIAL=$(cat "$R/E1_GO" | tr -d ' \n')
@@ -37,7 +38,7 @@ A "rm -f $H/.phone_busy" >/dev/null
 grep -q "^repacked_tensors 138$" "$R/bmoe_e1/marker.txt" || { log "FATAL marker: $(head -4 "$R/bmoe_e1/marker.txt" | tr '\n' ' ')"; exit 1; }
 adb push "$MP/device/bmoe_e1.sh" "$H/" >/dev/null 2>&1 </dev/null
 A "svc power stayon true; settings put system screen_off_timeout 1800000; dumpsys deviceidle disable" >/dev/null 2>&1
-A "cd $H && (GT_PIN=$(cat "$SP/phone_pin") setsid nohup sh bmoe_e1.sh > bmoe_e1_nohup.log 2>&1 < /dev/null &)" >/dev/null 2>&1
+A "cd $H && (GT_PIN=$(cat "$PINF") setsid nohup sh bmoe_e1.sh > bmoe_e1_nohup.log 2>&1 < /dev/null &)" >/dev/null 2>&1
 log "E1 started"; sleep 60
 while :; do
   d=$(A "ls -d $H/bmoe_e1_2*/ | tail -1" | tr -d '\r')
