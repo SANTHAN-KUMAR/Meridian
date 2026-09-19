@@ -24,8 +24,18 @@ if [ -n "$busy" ]; then echo "phone busy: $busy"; exit 1; fi
 LOCK=/data/local/tmp/moe-stream/.phone_busy
 holder=$(adb shell "cat $LOCK 2>/dev/null" | tr -d '\r')
 if [ -n "$holder" ]; then echo "phone locked by: $holder"; exit 1; fi
+bat=$(adb shell "dumpsys battery | grep level" | tr -dc '0-9')
+if [ "${bat:-0}" -lt 30 ]; then echo "battery ${bat}% < 30%: not running"; exit 1; fi
 adb shell "echo 'gx run_phone_m6 $(date +%H:%M:%S)' > $LOCK"
-trap 'adb shell "rm -f $LOCK" >/dev/null 2>&1' EXIT
+# GX_HOLD_AWAKE=1: keep the phone out of Doze for the run (screen on, lock screen left as it is; no PIN is
+# typed): the screen timeout is raised for the run and restored, and the screen turned off, at exit
+if [ "${GX_HOLD_AWAKE:-0}" = 1 ]; then
+  TO=$(adb shell "settings get system screen_off_timeout" | tr -dc '0-9')
+  adb shell "settings put system screen_off_timeout 1800000; dumpsys power | grep -q 'mWakefulness=Awake' || input keyevent KEYCODE_WAKEUP"
+  trap 'adb shell "rm -f $LOCK; settings put system screen_off_timeout ${TO:-30000}; input keyevent KEYCODE_SLEEP" >/dev/null 2>&1' EXIT
+else
+  trap 'adb shell "rm -f $LOCK" >/dev/null 2>&1' EXIT
+fi
 mkdir -p "$R"
 adb shell "mkdir -p $D/cases"
 # GX_ANDROID_DIR: which Android build to push (default out/android; out/android_next = the host-overhead levers)
