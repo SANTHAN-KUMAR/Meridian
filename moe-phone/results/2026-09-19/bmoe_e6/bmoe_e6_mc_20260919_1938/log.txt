@@ -1,0 +1,2 @@
+binary=bmoe-i8mm-0026 md5=be978e3969ce1e363b7c5cf902c4d28a q4=17379988032 q8=32483932736
+STOPPED 19:39:02 by the agent: this knowledge probe was launched from the stale 2x list (the chain had buffered its old lines); under the binding negligible bar no arm qualifies on KL/PPL, so the probe cannot change the verdict

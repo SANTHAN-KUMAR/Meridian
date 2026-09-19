@@ -1,0 +1,3 @@
+ppl: 4.1842  nll: 1.43131  next-token hits: 2166/3258 (66.5%)  549.28 s
+ppl-kl: mean 0.208608  p99 3.097457  max 6.899507  flips 398/3258 (12.22%)  ref_tail_max 0.0524
+ppl-policy: 159946/1254088 routed experts dropped, 0/0 reranked slots substituted

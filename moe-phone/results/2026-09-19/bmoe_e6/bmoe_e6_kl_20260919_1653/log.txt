@@ -1,0 +1,21 @@
+binary=bmoe-i8mm-0026 md5=be978e3969ce1e363b7c5cf902c4d28a q4=17379988032 q8=32483932736
+=== REF 16:54:20 batt=94% wake_start=Awake mem_ready=6996MiB waited=0s
+exit=0 AFTER wake=Awake status=3 cap0=1152000 cap6=1017600 hw0=3321600 hw6=3801600 shell_front_mC=49121 ppl: 3.7049  nll: 1.30966  next-token hits: 2302/3258 (70.7%)  2439.37 s ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted 
+=== FLOOR 17:36:31 batt=94% wake_start=Awake mem_ready=6963MiB waited=0s
+STOPPED FLOOR at 17:37:42 (not scored): heat mitigation, see the script REVISION 17:40; resuming with klresume
+binary=bmoe-i8mm-0026 md5=be978e3969ce1e363b7c5cf902c4d28a q4=17379988032 q8=32483932736
+klresume 17:37:59
+=== FLOOR 17:44:52 batt=94% wake_start=Dozing mem_ready=6930MiB waited=0s cooldown waited=360s status=2 shell_front_mC=42956
+exit=0 AFTER wake=Dozing status=3 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=49836 ppl: 3.9774  nll: 1.38063  next-token hits: 2236/3258 (68.6%)  631.94 s ppl-kl: mean 0.118093  p99 1.762346  max 5.485559  flips 323/3258 (9.91%)  ref_tail_max 0.0524 ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted 
+=== T7 18:02:51 batt=89% wake_start=Awake mem_ready=6642MiB waited=0s cooldown waited=360s status=2 shell_front_mC=42954
+exit=0 AFTER wake=Awake status=3 cap0=1401600 cap6=1248000 hw0=3321600 hw6=3801600 shell_front_mC=47910 ppl: 4.0434  nll: 1.39708  next-token hits: 2219/3258 (68.1%)  711.25 s ppl-kl: mean 0.145751  p99 2.313754  max 6.827616  flips 347/3258 (10.65%)  ref_tail_max 0.0524 ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted 
+=== T6 18:21:37 batt=88% wake_start=Awake mem_ready=6901MiB waited=0s cooldown waited=330s status=2 shell_front_mC=42837
+exit=0 AFTER wake=Awake status=3 cap0=1401600 cap6=1248000 hw0=3321600 hw6=3801600 shell_front_mC=47705 ppl: 4.1960  nll: 1.43412  next-token hits: 2187/3258 (67.1%)  672.23 s ppl-kl: mean 0.210188  p99 2.869803  max 5.995528  flips 423/3258 (12.98%)  ref_tail_max 0.0524 ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted 
+=== RA1 18:39:47 batt=87% wake_start=Awake mem_ready=6940MiB waited=0s cooldown waited=330s status=2 shell_front_mC=42901
+exit=0 AFTER wake=Awake status=3 cap0=1152000 cap6=1017600 hw0=3321600 hw6=3801600 shell_front_mC=48022 ppl: 4.0801  nll: 1.40612  next-token hits: 2213/3258 (67.9%)  770.93 s ppl-kl: mean 0.168032  p99 2.601984  max 7.360110  flips 352/3258 (10.80%)  ref_tail_max 0.0524 ppl-policy: 0/0 routed experts dropped, 0/0 reranked slots substituted 
+=== DC05 18:57:26 batt=86% wake_start=Dozing mem_ready=6608MiB waited=0s cooldown waited=210s status=2 shell_front_mC=42927
+exit=0 AFTER wake=Dozing status=2 cap0=2188800 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=42991 ppl: 4.0150  nll: 1.39004  next-token hits: 2229/3258 (68.4%)  853.61 s ppl-kl: mean 0.126398  p99 2.057798  max 7.214184  flips 315/3258 (9.67%)  ref_tail_max 0.0524 ppl-policy: 23411/1254088 routed experts dropped, 0/0 reranked slots substituted 
+=== DC10 19:13:00 batt=85% wake_start=Awake mem_ready=6574MiB waited=0s cooldown waited=0s status=2 shell_front_mC=42991
+exit=0 AFTER wake=Dozing status=3 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=47946 ppl: 4.1842  nll: 1.43131  next-token hits: 2166/3258 (66.5%)  549.28 s ppl-kl: mean 0.208608  p99 3.097457  max 6.899507  flips 398/3258 (12.22%)  ref_tail_max 0.0524 ppl-policy: 159946/1254088 routed experts dropped, 0/0 reranked slots substituted 
+=== SUB 19:28:30 batt=85% wake_start=Dozing mem_ready=6923MiB waited=0s cooldown waited=300s status=2 shell_front_mC=42907
+exit=0 AFTER wake=Dozing status=3 cap0=1747200 cap6=1651200 hw0=3321600 hw6=3801600 shell_front_mC=49451 ppl: 4.0483  nll: 1.39829  next-token hits: 2222/3258 (68.2%)  516.44 s ppl-kl: mean 0.163276  p99 2.600566  max 9.834703  flips 369/3258 (11.33%)  ref_tail_max 0.0524 ppl-policy: 0/0 routed experts dropped, 126544/1251072 reranked slots substituted 
