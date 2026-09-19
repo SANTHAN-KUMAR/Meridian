@@ -9,7 +9,8 @@ Everything needed is in this repository. The chat history is not. **Update this 
 - **Goal.** Qwen3-30B-A3B, unmodified (Q4_0 GGUF, unsloth, 17,379,988,032 B), ≥ 10 tok/s decode on a OnePlus 15R phone, by
   streaming experts from flash (engine: a fork of BigMoeOnEdge + patched llama.cpp/ggml).
 - **Best measured:** 6.76 tok/s, lossless, awake and unplugged (`results/2026-09-19/bmoe_gtier/bmoe_gtier_ab_20260919_0447`).
-  BigMoeOnEdge's published engine reproduces at 3.98 on the same phone (claim `bmoe_reproduced_decode`; not a controlled head-to-head).
+  Controlled same-session head-to-head against BigMoeOnEdge's published engine: ours 6.67 vs 5.46 tok/s, **1.22x**, 6/6 repeats
+  (`results/2026-09-19/H2H_VERDICT.md`). The earlier uncontrolled "~1.7x" is retracted.
 - **The single source of truth for this phase:** `research/2026-09-19_RESEARCH_SPEC.md` (v2, after a hostile review). **§0 there
   is the user's CLOSING RULE:**
   1. Tier A (lossy routing) is adopted only if some option is "negligible" on all five quality measures (§0 item 4) **and**
@@ -22,8 +23,9 @@ Everything needed is in this repository. The chat history is not. **Update this 
 **Read `research/2026-09-19_CLOSURE.md`.** Verdict: 10 tok/s is not reachable at negligible quality loss on this phone at its sustained
 clock. E6 (Tier A) found no negligible option; E4 killed the GPU helper; E1 put the lossless CPU floor at 71.0 ms, so 127.6 ms / 7.8
 tok/s at best; E7 killed the GPU-main engine (>= ~99 ms by bounds). No chains are running. The phone is idle and restored.
-What remains is optional and only for the paper: CLOSURE §4 (the end-to-end repacked A/B, the head-to-head against BigMoeOnEdge,
-~2 phone-hours).
+The paper-only runs finished after the closure (CLOSURE §4): the head-to-head is decisive at 1.22x; the repacked engine FAILED its
+±0.2% PPL fidelity gate (−0.33%), so its A/B was not run and its next step is the E6 KL bar; the OnePlus Nord (SD765G) sustains
+1.67 tok/s (`results/2026-09-19/nord/README.md`). Both phones are idle. The next phase is the paper plan (`research/2026-09-19_PAPER_PLAN.md`).
 
 ## 2a. History of the closing phase (kept for the record)
  (updated 20:20 IST)
