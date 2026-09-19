@@ -34,10 +34,11 @@ MMLU same answer as Q4_0 on ≥ 95/100 and ≤ 2 fewer correct.
 | RA1 (route-ahead 1) | 4.08 | 0.168 | 2.60 | 10.8% | no |
 | DC05 (drop-cold 0.5) | 4.015 | 0.126 | **2.06** | 9.7% | no (p99 only) |
 | DC10 (drop-cold 1.0) | 4.18 | 0.209 | 3.10 | 12.2% | no |
-| SUB (substitute 0.15) | running at handoff | | | | |
+| SUB (substitute 0.15) | 4.048 | 0.163 | 2.60 | 11.3% | no |
 Reading: the only options that could reach 10 tok/s (top-k cuts, route-ahead) are clearly non-negligible. Drop-cold 0.5 nearly
 passes, but it touches ~2% of experts, worth ~5 ms/token (est.), so it cannot reach 10 even if it passed.
-**Unless SUB passes all five AND then measures ≥ 10 tok/s (very unlikely: its ceiling is small), Tier A is closed.**
+**E6 VERDICT (19:45): no option is negligible — Tier A is CLOSED** under the user's bar. Per §0 the remaining work is E4 + E1, then close.
+(The E6 scoring by `gates/e6_score.py` and the phone determinism control confirm these numbers formally; see the chain log.)
 
 ### Running unattended (detached processes on the laptop; they survive this session)
 1. `host/chain_e6b.sh` finishes E6: SUB, then scoring (`gates/e6_score.py` → `results/2026-09-19/e6_kl_summary.json`). It runs the
