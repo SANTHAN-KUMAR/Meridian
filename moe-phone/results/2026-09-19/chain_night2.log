@@ -34,3 +34,4 @@
 2026-09-19T05:39:40+05:30 [night3] pulled /data/local/tmp/moe-stream/bmoe_gtier_ab_20260919_0447/
 2026-09-19T05:39:40+05:30 [night3] [awake] A/B pulled: /run/media/santhankumar/New Volume/identifying-variation/moe-phone/results/2026-09-19/bmoe_gtier/bmoe_gtier_ab_20260919_0447
 2026-09-19T05:39:46+05:30 [night3] phone restored
+2026-09-19T08:29:07+05:30 [night3] [v4] start: waiting for the gx v4 bench (lock appears within 10 min, then clears)
