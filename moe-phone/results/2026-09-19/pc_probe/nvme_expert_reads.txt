@@ -1,0 +1,8 @@
+RESULT file_GB=32.5 lanes=1 read_bytes=884736 reads=6051 GBps=0.67 p50_ms=1.19 p99_ms=2.67
+RESULT file_GB=32.5 lanes=4 read_bytes=884736 reads=4290 GBps=0.47 p50_ms=7.16 p99_ms=11.40
+RESULT file_GB=32.5 lanes=8 read_bytes=884736 reads=4020 GBps=0.44 p50_ms=15.53 p99_ms=21.27
+RESULT file_GB=32.5 lanes=16 read_bytes=884736 reads=3983 GBps=0.44 p50_ms=31.76 p99_ms=43.73
+btrfs RESULT file_GB=4.3 lanes=1 read_bytes=884736 reads=7910 GBps=1.17 p50_ms=0.75 p99_ms=1.11
+btrfs RESULT file_GB=4.3 lanes=4 read_bytes=884736 reads=29327 GBps=4.32 p50_ms=0.79 p99_ms=1.30
+btrfs RESULT file_GB=4.3 lanes=8 read_bytes=884736 reads=41999 GBps=6.19 p50_ms=1.11 p99_ms=1.82
+btrfs RESULT file_GB=4.3 lanes=16 read_bytes=884736 reads=43597 GBps=6.42 p50_ms=2.17 p99_ms=2.97
