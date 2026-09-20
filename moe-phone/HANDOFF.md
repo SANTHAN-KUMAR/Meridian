@@ -19,6 +19,13 @@ Everything needed is in this repository. The chat history is not. **Update this 
   3. Nothing else is built or tested.
 - **Long-term goals of the user** (not blockers): a top-venue paper; a cross-device app/PC product built on the engine.
 
+## 1b. Next phase (2026-09-20): the platform architecture
+The research goal closed; the **product** direction is now specified in [`platform/`](platform/) — generalising the engine into a
+hardware-adaptive mobile AI compute + agent platform (device profiling, a falsifiable performance model, a configuration planner,
+a tiered engine with the streamed MoE path as the escalation tier, an on-device agent runtime, and the Android app). No code yet.
+Read [`platform/README.md`](platform/README.md) first. Every number in those documents is checked against an artifact by
+`python moe-phone/platform/tools/evidence.py` (also run by `tests/test_gates.py`).
+
 ## 2. Where things stand right now (21:50 IST): THE RESEARCH IS CLOSED
 **Read `research/2026-09-19_CLOSURE.md`.** Verdict: 10 tok/s is not reachable at negligible quality loss on this phone at its sustained
 clock. E6 (Tier A) found no negligible option; E4 killed the GPU helper; E1 put the lossless CPU floor at 71.0 ms, so 127.6 ms / 7.8

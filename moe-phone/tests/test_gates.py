@@ -757,3 +757,54 @@ def test_prefetch_with_zero_recall_never_reduces_flash_reads():
     base = prefetch_sim.replay(ev, E, cap, recall0, 0.0, 1e-3, prefetch=False)
     pf = prefetch_sim.replay(ev, E, cap, recall0, 0.0, 1e-3, prefetch=True)
     assert pf["flash_reads_per_tok"] >= base["flash_reads_per_tok"]
+
+
+# ---- platform design documents: every number matches its artifact -----------
+
+def test_platform_documents_do_not_drift_from_their_artifacts():
+    """CLAUDE.md §7.1 for the platform/ design documents.
+
+    Each number in platform/**.md is written as `value [E:id]` and read from an
+    artifact by platform/tools/evidence.py. This asserts the documents still agree
+    with the artifacts, so re-running a gate and forgetting to update a design
+    document is a test failure rather than a stale number in a handed-off spec.
+    """
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "platform", "tools"))
+    import evidence
+
+    evidence.CLAIMS = evidence._claims()
+    table = evidence.build()
+    bad, seen = evidence.check(table)
+    assert not bad, "platform documents drifted from their artifacts:\n" + "\n".join(bad)
+    assert seen, "no [E:id] markers found — the check is not actually running"
+
+
+def test_platform_evidence_table_is_regenerable_and_current():
+    """EVIDENCE.md is generated, so it must match what the generator produces now."""
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "platform", "tools"))
+    import evidence
+
+    evidence.CLAIMS = evidence._claims()
+    fresh = evidence.emit(evidence.build())
+    with open(os.path.join(os.path.dirname(HERE), "platform", "EVIDENCE.md"),
+              encoding="utf-8") as f:
+        assert f.read() == fresh, "platform/EVIDENCE.md is stale: re-run evidence.py --emit"
+
+
+def test_platform_internal_links_resolve():
+    """A handed-off document set whose cross-references are broken is not handed off."""
+    import re
+    root = os.path.join(os.path.dirname(HERE), "platform")
+    broken = []
+    for name in sorted(os.listdir(root)):
+        if not name.endswith(".md"):
+            continue
+        with open(os.path.join(root, name), encoding="utf-8") as f:
+            text = f.read()
+        for m in re.finditer(r"\]\(([^)#][^)]*)\)", text):
+            target = m.group(1)
+            if target.startswith("http"):
+                continue
+            if not os.path.exists(os.path.normpath(os.path.join(root, target))):
+                broken.append("%s -> %s" % (name, target))
+    assert not broken, "broken links:\n" + "\n".join(broken)

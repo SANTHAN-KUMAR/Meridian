@@ -1,6 +1,9 @@
 # moe-phone — beyond-DRAM MoE inference on a 12 GB phone, no retraining
 
 **CLOSED 2026-09-19: [`research/2026-09-19_CLOSURE.md`](research/2026-09-19_CLOSURE.md)** (verdict and evidence).
+**NEXT PHASE 2026-09-20: [`platform/`](platform/) — the architecture for generalising this engine into a device-adaptive mobile
+AI compute and agent platform.** Start at [`platform/README.md`](platform/README.md), then
+[`platform/00_PROBLEM.md`](platform/00_PROBLEM.md), which states what the closure's measurements do and do not support.
 **NEW SESSION? Read [`HANDOFF.md`](HANDOFF.md) first** (live state, running chains, how to close).
 
 **Next phase (2026-09-19):** [`research/2026-09-19_RESEARCH_SPEC.md`](research/2026-09-19_RESEARCH_SPEC.md) is the single source of
