@@ -136,7 +136,7 @@ bytes by alignment padding (D-6, fixed).
 | id | what | current state | removed when |
 |---|---|---|---|
 | `PL-E21` | engine working-set bytes | excluded from tier need (makes need a lower bound; verdicts stay sound) | measured from a real engine session |
-| `PL-E22` | qwen3moe/other registry rows | refused `ArchitectureUnsupported` | a real checkpoint's expert pattern is observed |
+| `PL-E22` | further registry rows | qwen3moe added (observed); others refused `ArchitectureUnsupported` | a real checkpoint's expert pattern is observed |
 | ~~`PL-E10`~~ | L0 engine + session protocol | **closed**: engine bundled in the APK and driven over its session protocol (`app/src/com/meridian/Engine.java`) | - |
 | `PL-E11` | per-cluster `matmul_gbps` (T2 compute probe) | `Measured.unknown` in every `CpuCluster`; requires `host/app/ggml_matmul_bench.cpp`, which needs a ggml build this pass did not attempt | the ggml-based compute probe is cross-compiled and wired in |
 | ~~`PL-E12`~~ | thread-placement A/B | **closed for the compute mask** (I/O mask still unknown): app `Placement.java` A/Bs masks with the real engine (ABBA, 2 reps). On the Nord, olmoe: cores 6-7 = 17.3 tok/s vs default unpinned-4 = 8.3 (results in the app's `profile.json`, `cpu.recommended_compute_mask.arms`) | - |

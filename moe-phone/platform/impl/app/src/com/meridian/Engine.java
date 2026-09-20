@@ -17,6 +17,9 @@ public final class Engine {
     }
     public static final class Config {
         public File model; public int threads = 4, ctx = 2048, ubatch = 512; public String cpuMask = null; public boolean chatml = true;
+        // streamed tier (experts read from flash through a per-layer cache); all values are derived by PlanV2 from measurements
+        public boolean moeStream; public int cacheFloorMb, cacheCeilMb, ioThreads = 4; public String ioMask = null;
+        public String describe() { return (moeStream ? "streamed" : "resident") + " threads=" + threads + " mask=" + cpuMask + " ctx=" + ctx + (moeStream ? " cache=[" + cacheFloorMb + "," + cacheCeilMb + "]MiB io=" + ioThreads + "@" + ioMask : ""); }
     }
 
     private final Context ctx; private final Config cfg; private Process proc; private Listener listener;
@@ -35,6 +38,11 @@ public final class Engine {
                 "-t", String.valueOf(cfg.threads), "-c", String.valueOf(cfg.ctx), "--ubatch", String.valueOf(cfg.ubatch)));
         if (cfg.chatml) a.add("--chatml");
         if (cfg.cpuMask != null) { a.add("--cpu-mask"); a.add(cfg.cpuMask); }
+        if (cfg.moeStream) {   // flags adopted by the research project (results/2026-09-19); values come from the plan
+            a.addAll(Arrays.asList("--moe-stream", "--cache-mb", "auto", "--cache-floor-mb", String.valueOf(cfg.cacheFloorMb), "--cache-ceil-mb", String.valueOf(cfg.cacheCeilMb),
+                "--overlap", "--dense-weights", "anon", "--expert-slru", "--predict-prefetch", "--spec-adopt-selective", "--io-threads", String.valueOf(cfg.ioThreads)));
+            if (cfg.ioMask != null) { a.add("--io-cpu-mask"); a.add(cfg.ioMask); }
+        }
         proc = Native.builder(ctx, "bmoe_cli", a).start();
         stdin = new BufferedWriter(new OutputStreamWriter(proc.getOutputStream(), "UTF-8"));
         Thread out = new Thread(this::readStdout, "engine-stdout"), err = new Thread(this::readStderr, "engine-stderr");

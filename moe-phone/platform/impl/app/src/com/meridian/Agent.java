@@ -11,6 +11,7 @@ public final class Agent {
     public interface UI { void log(String line); boolean consent(String tool, String args); void token(String t); }
     private final Context ctx; private final Chat chat; private final Tools tools; private final Recorder rec; private final String modelId;
     private long taskCounter = System.currentTimeMillis();
+    public final List<String> trace = new ArrayList<>();   // tools executed by the last run, in order (for task predicates)
 
     public Agent(Context c, Chat chat, Tools tools, Recorder rec, String modelId) { ctx = c; this.chat = chat; this.tools = tools; this.rec = rec; this.modelId = modelId; }
 
@@ -36,7 +37,7 @@ public final class Agent {
 
     /** Plan -> act (one grammar-constrained call per planned tool, each verified) -> answer. */
     public String run(String task, int maxSteps, UI ui) throws Exception {
-        String taskId = "t" + (taskCounter++);
+        trace.clear(); String taskId = "t" + (taskCounter++);
         if (!chat.engine().supportsGrammar()) return "EngineUnsupported: this engine build has no grammar-constrained decoding, which the agent requires.";
         ui.log("decoding: grammar-constrained (plan, calls and answer are valid by construction)");
         String prefix = "You control an Android phone through tools. Work in steps.\nTools:\n" + tools.schemaText()
@@ -62,7 +63,7 @@ public final class Agent {
                     rec.write(new JSONObject().put("turn_id", taskId + ".gate:" + name).put("task_id", taskId).put("outcome", "ConsentRequired").put("action", act.put("accepted", false)));
                     return "ConsentRequired: you declined '" + name + "'; nothing was changed by it.";
                 }
-                JSONObject result; boolean verified;
+                JSONObject result; boolean verified; trace.add(name);
                 try { result = tool.execute(args); verified = tool.verify(args, result); } catch (Exception e) { result = new JSONObject().put("error", String.valueOf(e.getMessage())); verified = false; }
                 ui.log("tool " + name + args + " -> " + result + (verified ? "  [verified: " + tool.postcondition + "]" : "  [NOT verified]"));
                 rec.write(new JSONObject().put("turn_id", taskId + ".act:" + name).put("task_id", taskId).put("outcome", verified ? "ok" : "NoProgress").put("action", act.put("accepted", true).put("verified", verified)));
@@ -75,5 +76,32 @@ public final class Agent {
         String ans = fin == null ? "" : fin.optString("final").trim();
         if (ans.length() < 4) return "NoProgress: the model returned an empty answer. Verified results: " + results;
         return ans;
+    }
+
+    /** Ablation: the earlier free-form loop (no grammar, no planning step): one JSON reply per step, validated and verified, but the model chooses
+     *  tools, arguments and when to stop on its own. Kept to measure what the plan/act/answer structure buys (baseline in Eval). */
+    public String runFreeForm(String task, int maxSteps, UI ui) throws Exception {
+        trace.clear(); String taskId = "ff" + (taskCounter++);
+        String prompt = "You control an Android phone through tools. Reply with exactly one JSON object and nothing else.\n"
+            + "A tool call looks like {\"tool\":\"<name>\",\"args\":{<argument name>:<value>}}. Call ONE tool per reply and wait for its result. When the task is done, reply {\"final\":\"<your answer to the user>\"}.\nTools:\n" + tools.schemaText()
+            + "\nExample 1\nUser: Remember to call mom.\nAssistant: {\"tool\":\"notes_add\",\"args\":{\"text\":\"call mom\"}}\nTool result: {\"count\":1}\nAssistant: {\"final\":\"Saved the note: call mom.\"}\n"
+            + "Example 2\nUser: How much battery do I have?\nAssistant: {\"tool\":\"battery_status\",\"args\":{}}\nTool result: {\"level_pct\":57,\"charging\":false}\nAssistant: {\"final\":\"Your battery is at 57% and not charging.\"}\n"
+            + "\nNow the real task.\nUser: " + task + "\nAssistant:";
+        boolean first = true; int bad = 0; String lastCall = null;
+        for (int step = 1; step <= maxSteps; step++) {
+            JSONObject call = ask(prompt, 96, first, null, taskId, "ff" + step, ui); first = false;
+            if (call == null) { if (++bad > 2) return "NoProgress: invalid JSON"; prompt = "Error: reply with exactly one JSON object."; continue; }
+            if (call.has("final")) { String f = call.optString("final").trim(); return f.length() < 4 ? "NoProgress: empty answer" : f; }
+            String name = call.optString("tool", ""); JSONObject args = call.optJSONObject("args"); if (args == null) args = new JSONObject(); Tools.Tool tool = tools.registry.get(name);
+            String problem = tool == null ? "unknown tool '" + name + "'" : Tools.validate(tool, args);
+            if (problem != null) { if (++bad > 2) return "NoProgress: " + problem; prompt = "Error: " + problem + ". Try again."; continue; }
+            String sig = name + args; if (sig.equals(lastCall)) return "NoProgress: repeated call " + name; lastCall = sig;
+            if (!tool.consent.equals("none") && !ui.consent(name, args.toString())) return "ConsentRequired: declined " + name;
+            JSONObject result; boolean verified; trace.add(name);
+            try { result = tool.execute(args); verified = tool.verify(args, result); } catch (Exception e) { result = new JSONObject().put("error", String.valueOf(e.getMessage())); verified = false; }
+            ui.log("tool " + name + args + " -> " + result + (verified ? " [verified]" : " [NOT verified]"));
+            prompt = "Tool result: " + result + (verified ? "" : "\nWARNING: postcondition not verified.");
+        }
+        return "NoProgress: step budget exhausted";
     }
 }

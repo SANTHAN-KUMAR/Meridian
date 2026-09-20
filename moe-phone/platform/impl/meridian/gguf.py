@@ -63,7 +63,7 @@ class _R:
         raise GgufError(f"unknown value type {t}")
 
 
-def read(path: str) -> dict:
+def read(path: str, verify_layout: bool = True) -> dict:
     """Returns {"version", "alignment", "kv": {...}, "tensors": [{name, dims, type, offset, bytes}], "file_bytes"}."""
     size = os.path.getsize(path)
     with open(path, "rb") as f:
@@ -104,7 +104,7 @@ def read(path: str) -> dict:
         gap = end - start
         # independent cross-check: file layout must leave room for the tensor,
         # with slack of less than one alignment unit (padding).
-        if not (0 <= gap - t["bytes"] < align):
+        if verify_layout and not (0 <= gap - t["bytes"] < align):
             raise GgufError(f"tensor {t['name']}: computed {t['bytes']} B disagrees with file layout gap {gap} B "
                             f"(truncated/corrupt file or wrong block table)")
     return {"version": version, "alignment": align, "kv": kv, "tensors": tensors, "file_bytes": size}

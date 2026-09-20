@@ -25,10 +25,10 @@ from . import gguf
 # Architecture registry (03_INTERFACES.md section 2): one row per family, the
 # expert-tensor name pattern. Rows are added only after the pattern is
 # observed in a real checkpoint of that family (tools: gguf.read). Observed
-# 2026-09-20 in local files: olmoe, gpt-oss, granitemoe.
+# 2026-09-20 in local files: olmoe, gpt-oss, granitemoe, qwen3moe (the last from the device copy of Qwen3-30B-A3B-Q4_0).
 EXPERT_SUFFIXES = ("ffn_gate_exps.weight", "ffn_up_exps.weight", "ffn_down_exps.weight",
                    "ffn_gate_exps.bias", "ffn_up_exps.bias", "ffn_down_exps.bias")
-ARCH_REGISTRY = {"olmoe": EXPERT_SUFFIXES, "gpt-oss": EXPERT_SUFFIXES, "granitemoe": EXPERT_SUFFIXES}
+ARCH_REGISTRY = {"olmoe": EXPERT_SUFFIXES, "gpt-oss": EXPERT_SUFFIXES, "granitemoe": EXPERT_SUFFIXES, "qwen3moe": EXPERT_SUFFIXES}
 
 # ggml block formats (ggml-common.h): Q8_0 = 32 elems in 34 bytes, Q4_0 = 32 in 18.
 KV_BYTES_PER_ELEM = {"f16": 2.0, "q8": 34 / 32, "q4": 18 / 32}

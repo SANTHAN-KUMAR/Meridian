@@ -18,7 +18,7 @@ public final class Planner {
     // Registry rows only after the pattern was observed in a real checkpoint (olmoe, gpt-oss, granitemoe).
     static final String[] EXPERT_SUFFIXES = {"ffn_gate_exps.weight", "ffn_up_exps.weight", "ffn_down_exps.weight",
             "ffn_gate_exps.bias", "ffn_up_exps.bias", "ffn_down_exps.bias"};
-    static final Set<String> REGISTRY = new HashSet<>(Arrays.asList("olmoe", "gpt-oss", "granitemoe"));
+    static final Set<String> REGISTRY = new HashSet<>(Arrays.asList("olmoe", "gpt-oss", "granitemoe", "qwen3moe"));
 
     public static final class Card {
         public String modelId, arch; public int nLayer, nExpert, nUsed; public long contextLimit;

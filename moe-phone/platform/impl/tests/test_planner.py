@@ -57,7 +57,7 @@ def test_tied_head_counts_embedding_as_active():
 
 def test_unknown_architecture_is_refused_not_guessed():
     with tempfile.TemporaryDirectory() as d:
-        p = os.path.join(d, "m.gguf"); build_gguf(p, arch="qwen3moe")
+        p = os.path.join(d, "m.gguf"); build_gguf(p, arch="mystery-moe")
         try: planner.derive_card(p); assert False
         except planner.Refusal as r: assert r.reason == "ArchitectureUnsupported"
 
