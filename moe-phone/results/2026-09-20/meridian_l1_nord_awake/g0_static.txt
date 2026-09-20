@@ -1,0 +1,267 @@
+
+== identity ==
+ro.product.manufacturer=OnePlus
+ro.product.model=AC2001
+ro.soc.manufacturer=Qualcomm
+ro.soc.model=SM7250
+ro.board.platform=lito
+ro.build.version.release=12
+ro.build.version.sdk=31
+ro.build.fingerprint=OnePlus/Nord_IND/Nord:12/RKQ1.211119.001/Q.202510131819:user/release-keys
+Linux localhost 4.19.157-perf+ #1 SMP PREEMPT Mon Oct 13 18:42:23 CST 2025 aarch64
+context: uid=2000(shell) gid=2000(shell) groups=2000(shell),1004(input),1007(log),1011(adb),1015(sdcard_rw),1028(sdcard_r),1078(ext_data_rw),1079(ext_obb_rw),3001(net_bt_admin),3002(net_bt),3003(inet),3006(net_bw_stats),3009(readproc),3011(uhid),3012 context=u:r:shell:s0
+probe_epoch_s: 1789912790
+
+== memory ==
+MemTotal:       11655080 kB
+MemAvailable:    7864788 kB
+Cached:          3583736 kB
+SwapTotal:       5242876 kB
+SwapFree:        4169192 kB
+oom_score_adj=-1000
+zram0_disksize_bytes=DENIED_OR_ABSENT
+ro.lmk.use_minfree_levels=
+ro.config.low_ram=
+dalvik.vm.heapgrowthlimit=384m
+
+== storage ==
+/dev/block/dm-45 /data f2fs rw,lazytime,seclabel,nosuid,nodev,noatime,background_gc=on,discard,no_heap,user_xattr,inline_xattr,acl,inline_data,inline_dentry,extent_cache,mode=adaptive,active_logs=6,reserve_root=32768,resuid=0,resgid=1065,noatgc,inlinecrypt,alloc_mode=default,fsync_mode=nobarrier 0 0
+/dev/block/dm-45 /data/user/0 f2fs rw,lazytime,seclabel,nosuid,nodev,noatime,background_gc=on,discard,no_heap,user_xattr,inline_xattr,acl,inline_data,inline_dentry,extent_cache,mode=adaptive,active_logs=6,reserve_root=32768,resuid=0,resgid=1065,noatgc,inlinecrypt,alloc_mode=default,fsync_mode=nobarrier 0 0
+data_mount=/data/user/0
+data_device=/dev/block/dm-45
+Filesystem       Size Used Avail Use% Mounted on
+/dev/block/dm-45 220G  49G  171G  23% /data/user/0
+/sys/block/dm-45/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/dm-45/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/dm-45/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/dm-45/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/dm-45/queue/rotational=DENIED_OR_ABSENT
+/sys/block/dm-45/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sda/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sda/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sda/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sda/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sda/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sda/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sdb/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sdb/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sdb/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sdb/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sdb/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sdb/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sdc/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sdc/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sdc/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sdc/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sdc/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sdc/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sdd/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sdd/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sdd/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sdd/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sdd/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sdd/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sde/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sde/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sde/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sde/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sde/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sde/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/sdf/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/sdf/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/sdf/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/sdf/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/sdf/queue/rotational=DENIED_OR_ABSENT
+/sys/block/sdf/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/scheduler=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/nr_requests=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/read_ahead_kb=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/max_sectors_kb=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/rotational=DENIED_OR_ABSENT
+/sys/block/dm-0/queue/logical_block_size=DENIED_OR_ABSENT
+/sys/class/scsi_host/host0
+/sys/devices/platform/soc/1d84000.ufshc
+
+== npu (Hexagon) presence ==
+present: /vendor/lib64/libcdsprpc.so
+absent: /system/lib64/libcdsprpc.so
+present: /vendor/lib64/libadsprpc.so
+FAILED rc=1: ls /vendor/lib/rfsa/adsp /vendor/dsp /vendor/dsp/cdsp 2>/dev/null
+  msg: capi_v2_aptX_CLHDADV_Encoder.so
+capi_v2_aptX_CLHDAD_Speech_Decoder.so
+capi_v2_dap_cpdp.so
+libBeautyShot_skel.so
+libSuperSensor_skel.so
+libVDHexagonBlurless_v2_skel.so
+libapps_mem_heap.so
+libarc_hta_driver_skel.so
+libarcnn_hvx_1_1_skel.so
+libarcsoft_dualcam_refocus_skel.so
+libarcsoft_hdrplus_hvx_skel.so
+libbitml_nsp_skel.so
+libcamera_nn_skel.so
+libcvpdsp_skel.so
+libdspCV_skel.so
+libdsp_streamer_binning.so
+libfastcvadsp.so
+libfastcvdsp_skel.so
+libhdr_skel.so
+libhexagon_nn_skel.so
+libhta_dsp_skel.so
+libproxy_skel.so
+libscveObjectSegmentation_skel.so
+libscveT2T_skel.so
+libsnpe_dsp_domains_skel.so
+libsnpe_dsp_skel.so
+libsnpe_dsp_v65_domains_v2_skel.so
+libsnpe_dsp_v66_domains_v2_skel.so
+libsns_device_mode_skel.so
+libsns_low_lat_stream_skel.so
+FAILED rc=1: ls -l /dev/fastrpc-cdsp /dev/fastrpc-adsp /dev/adsprpc-smd 2>/dev/null
+  msg: crw-rw-r-- 1 system system 491,   0 1970-05-17 11:49 /dev/adsprpc-smd
+FAILED rc=1: grep -l -E 'nsph' /sys/class/thermal/thermal_zone*/type 2>/dev/null
+
+== gpu ==
+FAILED rc=1: ls /sys/class/kgsl/kgsl-3d0/
+  msg: ls: /sys/class/kgsl/kgsl-3d0/: Permission denied
+gpu_model=Adreno620v1
+
+== power measurement ==
+battery/current_now=DENIED_OR_ABSENT
+battery/voltage_now=DENIED_OR_ABSENT
+battery/charge_counter=DENIED_OR_ABSENT
+battery/status=DENIED_OR_ABSENT
+battery/capacity=DENIED_OR_ABSENT
+iio:device0
+iio:device1
+iio:device2
+EMPTY rc=0: dumpsys powerstats
+
+== thermal zones ==
+thermal_zone0 modem-lte-sub6-pa1 35000
+thermal_zone1 modem-lte-sub6-pa2 27000
+thermal_zone10 modem-1-usr 36000
+thermal_zone100 battery 33200
+thermal_zone11 modem-streamer-usr -273000
+thermal_zone12 modem-mmw0-mod-usr 
+thermal_zone13 modem-mmw1-mod-usr 
+thermal_zone14 modem-mmw2-mod-usr 
+thermal_zone15 modem-mmw3-mod-usr 
+thermal_zone16 aoss0-usr 35600
+thermal_zone17 cpu-0-0-usr 36600
+thermal_zone18 cpu-0-1-usr 36300
+thermal_zone19 cpu-0-2-usr 36900
+thermal_zone2 modem-mmw0-usr -273000
+thermal_zone20 cpu-0-3-usr 36600
+thermal_zone21 cpu-0-4-usr 36900
+thermal_zone22 cpu-0-5-usr 36300
+thermal_zone23 cpuss-0-usr 36900
+thermal_zone24 cpuss-1-usr 37600
+thermal_zone25 cpu-1-0-usr 37600
+thermal_zone26 cpu-1-1-usr 36300
+thermal_zone27 cpu-1-2-usr 35900
+thermal_zone28 cpu-1-3-usr 35900
+thermal_zone29 gpuss-0-usr 35600
+thermal_zone3 modem-mmw1-usr -273000
+thermal_zone30 gpuss-1-usr 35600
+thermal_zone31 min-temp-0-lowf 35600
+thermal_zone32 min-temp-0-lowc 35300
+thermal_zone33 aoss-1-usr 35400
+thermal_zone34 cwlan-usr 35100
+thermal_zone35 video-usr 35100
+thermal_zone36 ddr-usr 35400
+thermal_zone37 q6-hvx-usr 35100
+thermal_zone38 cmpss-usr 35100
+thermal_zone39 npu-usr 35100
+thermal_zone4 modem-mmw2-usr -273000
+thermal_zone40 camera-usr 35700
+thermal_zone41 mdm-vec-usr 35100
+thermal_zone42 mdm-scl-usr 35100
+thermal_zone43 mdm-core-0-usr 34700
+thermal_zone44 mdm-core-1-usr 34400
+thermal_zone45 gpuss-max-step 35900
+thermal_zone46 cpu-0-max-step 37600
+thermal_zone47 cpu-1-max-step 36600
+thermal_zone48 cpu-0-0-step 38300
+thermal_zone49 cpu-0-1-step 36900
+thermal_zone5 modem-mmw3-usr 
+thermal_zone50 cpu-0-2-step 37900
+thermal_zone51 cpu-0-3-step 36300
+thermal_zone52 cpu-0-4-step 36300
+thermal_zone53 cpu-0-5-step 35900
+thermal_zone54 cpu-1-0-step 35900
+thermal_zone55 cpu-1-1-step 36600
+thermal_zone56 cpu-1-2-step 35900
+thermal_zone57 cpu-1-3-step 35900
+thermal_zone58 q6-hvx-step 35400
+thermal_zone59 min-temp-1-lowf 34400
+thermal_zone6 modem-skin-usr 36000
+thermal_zone60 min-temp-1-lowc 34700
+thermal_zone61 npu-step 34700
+thermal_zone62 mdm-vec-step 34700
+thermal_zone63 mdm-scl-step 35100
+thermal_zone64 mdm-core-0-step 34400
+thermal_zone65 mdm-core-1-step 34400
+thermal_zone66 pm8150_tz 38593
+thermal_zone67 pm7250b-tz 36419
+thermal_zone68 pm7250b-ibat-lvl0 390
+thermal_zone69 pm7250b-ibat-lvl1 312
+thermal_zone7 modem-wifi-usr 27000
+thermal_zone70 pm7250b-vbat-lvl0 4185
+thermal_zone71 pm7250b-vbat-lvl1 4185
+thermal_zone72 pm7250b-vbat-lvl2 4185
+thermal_zone73 pm7250b-bcl-lvl0 0
+thermal_zone74 pm7250b-bcl-lvl1 0
+thermal_zone75 pm7250b-bcl-lvl2 0
+thermal_zone76 soc 97
+thermal_zone77 pm8150l_tz 40150
+thermal_zone78 pm8150l-vph-lvl0 0
+thermal_zone79 pm8150l-vph-lvl1 0
+thermal_zone8 modem-ambient-usr 27000
+thermal_zone80 pm8150l-vph-lvl2 0
+thermal_zone81 pm8150l-bcl-lvl0 -274000
+thermal_zone82 pm8150l-bcl-lvl1 -274000
+thermal_zone83 pm8150l-bcl-lvl2 -274000
+thermal_zone84 skin-therm 35693
+thermal_zone85 charger-therm-usr -40000
+thermal_zone86 usb-tem2-therm-usr 1300367
+thermal_zone87 usb-tem1-therm-usr 5644
+thermal_zone88 mmw-pa2-usr 
+thermal_zone89 camera-therm-usr 10958
+thermal_zone9 modem-0-usr 35000
+thermal_zone90 xo-therm-usr 36710
+thermal_zone91 pa-therm1-usr 36311
+thermal_zone92 mmw-pa3-usr -40000
+thermal_zone93 pa-therm2-usr 36723
+thermal_zone94 msm-therm 37156
+thermal_zone95 mmw-pa1-usr 
+thermal_zone96 mmw-pa4-usr 81584
+thermal_zone97 shell_front 33300
+thermal_zone98 shell_frame 33300
+thermal_zone99 shell_back 33300
+
+== cpu ==
+processor	: 0	CPU part	: 0x805
+processor	: 1	CPU part	: 0x805
+processor	: 2	CPU part	: 0x805
+processor	: 3	CPU part	: 0x805
+processor	: 4	CPU part	: 0x805
+processor	: 5	CPU part	: 0x805
+processor	: 6	CPU part	: 0x804
+processor	: 7	CPU part	: 0x804
+cpu0 max_khz=1804800
+cpu1 max_khz=1804800
+cpu2 max_khz=1804800
+cpu3 max_khz=1804800
+cpu4 max_khz=1804800
+cpu5 max_khz=1804800
+cpu6 max_khz=2208000
+cpu7 max_khz=2400000
+
+== root ==
+NOT_ROOT: no su on PATH
+ro.boot.verifiedbootstate=orange
+ro.boot.flash.locked=0
+ro.secure=1
+
+== done ==

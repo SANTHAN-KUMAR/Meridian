@@ -52,12 +52,12 @@ live).
   `dumpsys power` to attach real `ValidityConditions` to every measurement,
   and gates `measured` on power=unplugged, foreground=none and
   wakefulness=awake. Any other state downgrades to `prior` with an interval
-  from real repeats. The current run (`meridian_l1_nord_wireless`) is
-  unplugged with the launcher foreground but the screen was off, so it is
-  `prior`; a screen-on idle re-run is the outstanding step.
+  from real repeats. The current run (`meridian_l1_nord_awake`) was unplugged, awake, launcher
+  foreground, and is `measured`; the earlier `_wireless` run (screen off) is
+  `prior` and kept only as evidence for D-5.
 
 Raw artifacts and the assembled profile:
-[`../../results/2026-09-20/meridian_l1_nord_wireless/`](../../results/2026-09-20/meridian_l1_nord_wireless/).
+[`../../results/2026-09-20/meridian_l1_nord_awake/`](../../results/2026-09-20/meridian_l1_nord_awake/).
 
 ## Defects found in this code after the first commit, and how they were fixed
 
@@ -118,7 +118,7 @@ not one. Timeout raised to 90 s.
 | `PL-E13` | per-accelerator decode/prefill rate, dispatch overhead | `Measured.unknown` for CPU/GPU/NPU; requires an engine (`PL-E10`) | T2 profiling ships |
 | `PL-E14` | thermal derate curve, time-to-throttle, recovery (T3) | not attempted; would need a sustained decode load this pass has no engine to generate | T3 profiling ships, per `04_DEVICE_PROFILING.md` §3.5 |
 | `PL-E15` | thermal-status OS field in `ValidityConditions` | left `None`; only wakefulness/power/battery are read from `dumpsys` | a thermal-status API call is added to `validity.py` |
-| `PL-E16` | ISA feature detection (`i8mm`, `dotprod`, etc.) per cluster | `isa_features: []` in every `CpuCluster` | `/proc/cpuinfo` `Features:` line or `getauxval(AT_HWCAP)` is parsed |
+| `PL-E16` | ISA features per cluster | parsed from `/proc/cpuinfo` (intersection over cluster cores); captured in `meridian_l1_nord_awake` (cpuinfo read after the run; static file) | done | |
 | `PL-E17` | sequential write throughput | `Measured.unknown`; `ufsbench` was only run in random-read mode | a `--patterns seq --modes buffered` sweep is added to the T1 run |
 | `PL-E18` | swap/zram fault cost | `Measured.unknown`; `memprobe --file` mode (file-backed residency) was not run | the file-backed regime is added and its fault cost measured |
 | `PL-S2` | foreground-coexistence memory grant (`grantable_foreground`) | still never measured anywhere in this project, per `01_RESEARCH.md`/`10_EXTENSION_POINTS.md` — this pass does not change that, since it needs a real target app foregrounded and no app exists | experiment X1 runs, per the docs' own priority order in §7 |

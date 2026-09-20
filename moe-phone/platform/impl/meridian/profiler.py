@@ -52,6 +52,10 @@ def run_probes(device: AdbDevice, bin_dir: str, out_dir: str) -> dict:
     with open(os.path.join(out_dir, "g0_static.txt"), "w") as f:
         f.write(g0_text)
 
+    cpuinfo_text = device.shell("cat /proc/cpuinfo", timeout=30)
+    with open(os.path.join(out_dir, "cpuinfo.txt"), "w") as f:
+        f.write(cpuinfo_text)
+
     devprobe_text = device.shell(f"{REMOTE_DIR}/devprobe", timeout=15)
     with open(os.path.join(out_dir, "devprobe.txt"), "w") as f:
         f.write(devprobe_text)
@@ -135,6 +139,13 @@ def build_profile(out_dir: str) -> DeviceProfile:
     identity = Identity(**ident)
 
     clusters_raw = static_inventory.parse_cpu_topology(g0_text)
+    cpuinfo_path = os.path.join(out_dir, "cpuinfo.txt")
+    isa = static_inventory.parse_isa_features(read("cpuinfo.txt")) if os.path.exists(cpuinfo_path) else {}
+    for c in clusters_raw:
+        per_core = [set(isa[i]) for i in c["core_ids"] if i in isa]
+        # features common to every core in the cluster: a feature only some
+        # cores have cannot be assumed by a kernel pinned to the cluster.
+        c["isa_features"] = sorted(set.intersection(*per_core)) if per_core else []
     clusters = [
         CpuCluster(
             name=c["name"], core_ids=c["core_ids"], max_khz=c["max_khz"],

@@ -116,3 +116,20 @@ def parse_accelerator_nodes(devprobe_text: str) -> dict:
             path, mode, result = m.groups()
             nodes.setdefault(path, {})[mode.strip()] = result.strip()
     return nodes
+
+
+def parse_isa_features(cpuinfo_text: str) -> dict:
+    """Per-core ISA features from /proc/cpuinfo `Features:` lines, returned as
+    {core_id: [feature, ...]}. Kernel-reported HWCAP names (e.g. asimddp =
+    dotprod, i8mm, fphp/asimdhp = fp16, sve). Returns {} if the file has no
+    Features lines (unreadable is not the same as "no features")."""
+    out, core = {}, None
+    for line in cpuinfo_text.splitlines():
+        m = re.match(r"processor\s*:\s*(\d+)", line)
+        if m:
+            core = int(m.group(1))
+            continue
+        m = re.match(r"Features\s*:\s*(.*)$", line)
+        if m and core is not None:
+            out[core] = m.group(1).split()
+    return out

@@ -145,6 +145,13 @@ def test_storage_interval_is_real_spread_not_fabricated_multiplier():
     assert p["mbps_range"] != (500.0 * 0.7, 500.0 * 1.3)
 
 
+def test_parse_isa_features_per_core():
+    txt = "processor\t: 0\nFeatures\t: fp asimd asimddp\n\nprocessor\t: 1\nFeatures\t: fp asimd i8mm\n"
+    f = static_inventory.parse_isa_features(txt)
+    assert f == {0: ["fp", "asimd", "asimddp"], 1: ["fp", "asimd", "i8mm"]}
+    assert static_inventory.parse_isa_features("no features here") == {}
+
+
 def test_reject_descheduled_pure_function():
     rows = [{"r": 0.95}, {"r": 0.5}, {"r": 0.91}]
     clean, rejected, reasons = reject_descheduled(rows, "r", threshold=0.9)
