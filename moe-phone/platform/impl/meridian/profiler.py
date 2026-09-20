@@ -44,7 +44,11 @@ def run_probes(device: AdbDevice, bin_dir: str, out_dir: str) -> dict:
     g0_script_local = os.path.join(os.path.dirname(__file__), "..", "..", "..", "device", "g0_probe.sh")
     g0_script_local = os.path.normpath(g0_script_local)
     device.push(g0_script_local, f"{REMOTE_DIR}/g0_probe.sh")
-    g0_text = device.shell(f"sh {REMOTE_DIR}/g0_probe.sh", timeout=30)
+    # g0_probe.sh forks dozens of subshells (one per `try`/`kv` call); this
+    # measured ~37s over wireless adb against <1s over USB on the same
+    # script and device -- not a hang, just higher per-exec latency on the
+    # TCP transport. Timeout generous enough to cover that.
+    g0_text = device.shell(f"sh {REMOTE_DIR}/g0_probe.sh", timeout=90)
     with open(os.path.join(out_dir, "g0_static.txt"), "w") as f:
         f.write(g0_text)
 
@@ -59,15 +63,24 @@ def run_probes(device: AdbDevice, bin_dir: str, out_dir: str) -> dict:
     with open(os.path.join(out_dir, "power_state.txt"), "w") as f:
         f.write(power_text)
 
+    fg_before = device.shell("dumpsys activity activities | grep -i resumed", timeout=15)
+    with open(os.path.join(out_dir, "foreground_before.txt"), "w") as f:
+        f.write(fg_before)
+
     device.shell(
         f"{REMOTE_DIR}/dramprobe --mb 512 --threads 1,2,4,6,8 --seconds 1.5 "
         f"--repeats 3 --out {REMOTE_DIR}/dram.csv", timeout=90)
     device.pull(f"{REMOTE_DIR}/dram.csv", os.path.join(out_dir, "dram.csv"))
 
+    # repeats=3, not 1: a single-shot read at each (size, threads) config
+    # gives no real basis for an uncertainty interval when this run turns
+    # out to be out-of-regime. Real repeats let storage.py report the
+    # actual observed min/max instead of the fabricated +/-30% band an
+    # earlier version of this profiler invented to satisfy the schema.
     device.shell(
         f"{REMOTE_DIR}/ufsbench --file {REMOTE_DIR}/ufs_test.bin --size-mb 2048 --create "
-        f"--seconds 2 --repeats 1 --sizes-kb 4,64,256,1024,4096 --threads 1,4,8 "
-        f"--modes buffered --patterns rand --out {REMOTE_DIR}/ufs.csv", timeout=120)
+        f"--seconds 1.5 --repeats 3 --sizes-kb 4,64,256,1024,4096 --threads 1,4,8 "
+        f"--modes buffered --patterns rand --out {REMOTE_DIR}/ufs.csv", timeout=300)
     device.pull(f"{REMOTE_DIR}/ufs.csv", os.path.join(out_dir, "ufs.csv"))
 
     device.shell(
@@ -76,9 +89,21 @@ def run_probes(device: AdbDevice, bin_dir: str, out_dir: str) -> dict:
         f"--patterns rand --out {REMOTE_DIR}/ufs_direct.csv", timeout=60)
     device.pull(f"{REMOTE_DIR}/ufs_direct.csv", os.path.join(out_dir, "ufs_direct.csv"))
 
-    mem_text = device.shell(f"{REMOTE_DIR}/memprobe --oom-adj 0", timeout=60)
+    # Two independent memprobe runs, not one: same reasoning as above --
+    # grantable_quiesced needs a real min/max across repeated allocate-and-
+    # verify passes, not an invented [0, observed] band.
+    mem_texts = []
+    for i in range(2):
+        t = device.shell(f"{REMOTE_DIR}/memprobe --oom-adj 0", timeout=90)
+        mem_texts.append(t)
+        with open(os.path.join(out_dir, f"memprobe_{i}.txt"), "w") as f:
+            f.write(t)
     with open(os.path.join(out_dir, "memprobe.txt"), "w") as f:
-        f.write(mem_text)
+        f.write(mem_texts[0])  # kept for backward-compatible single-run readers
+
+    fg_after = device.shell("dumpsys activity activities | grep -i resumed", timeout=15)
+    with open(os.path.join(out_dir, "foreground_after.txt"), "w") as f:
+        f.write(fg_after)
 
     return {"out_dir": out_dir}
 
@@ -95,7 +120,15 @@ def build_profile(out_dir: str) -> DeviceProfile:
     devprobe_text = read("devprobe.txt")
     battery_text = read("battery_dumpsys.txt")
     power_text = read("power_state.txt")
-    mem_text = read("memprobe.txt")
+    fg_before = read("foreground_before.txt") if os.path.exists(os.path.join(out_dir, "foreground_before.txt")) else ""
+    fg_after = read("foreground_after.txt") if os.path.exists(os.path.join(out_dir, "foreground_after.txt")) else ""
+    mem_texts = []
+    for i in range(2):
+        p = os.path.join(out_dir, f"memprobe_{i}.txt")
+        if os.path.exists(p):
+            mem_texts.append(read(f"memprobe_{i}.txt"))
+    if not mem_texts:
+        mem_texts = [read("memprobe.txt")]  # older single-run artifact directory
 
     now = time.time()
     ident = static_inventory.parse_identity(g0_text)
@@ -116,33 +149,55 @@ def build_profile(out_dir: str) -> DeviceProfile:
         recommended_io_mask=Measured.unknown("thread_placement_ab:not_implemented_L1"),
     )
 
-    conditions = build_conditions(battery_text, power_text, foreground="none")
+    # Use the worse of the two samples: if a third-party app was foreground
+    # at either end of the T1 window, the whole window is not quiesced
+    # (04_DEVICE_PROFILING.md section 4 -- a contaminant anywhere in the
+    # run invalidates the run, it is not diluted by the clean parts).
+    from .validity import classify_foreground
+    fg_before_cls, fg_before_pkg = classify_foreground(fg_before) if fg_before else ("unknown", None)
+    fg_after_cls, fg_after_pkg = classify_foreground(fg_after) if fg_after else ("unknown", None)
+    if "other-app" in (fg_before_cls, fg_after_cls):
+        worst_text = fg_before if fg_before_cls == "other-app" else fg_after
+    else:
+        worst_text = fg_before or fg_after
+    conditions = build_conditions(battery_text, power_text, resumed_activity_text=worst_text)
     conditions_dict = {
         "wakefulness": conditions.wakefulness, "foreground": conditions.foreground,
         "power": conditions.power, "thermal_status": conditions.thermal_status,
-        "battery_pct": conditions.battery_pct,
+        "battery_pct": conditions.battery_pct, "concurrent_load": conditions.concurrent_load,
     }
+    # D4 (02_ARCHITECTURE.md): the deployment regime is awake, UNPLUGGED,
+    # thermally settled, and for T1's "quiesced" measurements, no foreground
+    # app. Both power and foreground must hold or every affected value is
+    # downgraded from measured to prior with a widened interval -- this is
+    # not diluted by only one of the two conditions being clean.
+    in_regime = (conditions.power == "unplugged" and conditions.foreground == "none"
+                 and conditions.wakefulness == "awake")
 
     dram_csv = os.path.join(out_dir, "dram.csv")
     dram_result = dram.parse(dram_csv)
     dram_measured = Measured(
         value=dram_result.get("gbps_median"),
-        provenance="measured" if conditions.power == "unplugged" else "prior",
-        confidence=0.7 if conditions.power == "unplugged" else 0.4,
-        interval=None if conditions.power == "unplugged" else
+        provenance="measured" if in_regime else "prior",
+        confidence=0.7 if in_regime else 0.4,
+        interval=None if in_regime else
             [dram_result.get("gbps_min"), dram_result.get("gbps_max")],
         observed_at=now, conditions=conditions_dict,
         source=f"dramprobe:{dram_csv}",
     ) if dram_result.get("gbps_median") is not None else Measured.unknown("dramprobe:no_clean_rows")
 
-    mem_result = memory.parse(mem_text)
+    mem_result = memory.parse_multi(mem_texts)
+    lo_mb, hi_mb = mem_result.get("range_mb", (None, None))
     grant_quiesced = Measured(
         value=(mem_result["max_vmrss_mb"] * 1024 * 1024) if mem_result.get("max_vmrss_mb") else None,
-        provenance="measured" if conditions.power == "unplugged" else "prior",
-        confidence=0.7 if conditions.power == "unplugged" else 0.4,
-        interval=None if conditions.power == "unplugged" else [0, mem_result.get("max_vmrss_mb", 0) * 1024 * 1024],
+        provenance="measured" if in_regime else "prior",
+        confidence=0.7 if in_regime else 0.4,
+        # real min/max across mem_result["n_runs"] independent memprobe
+        # runs, not the [0, value] placeholder an earlier version used.
+        interval=None if in_regime else [lo_mb * 1024 * 1024, hi_mb * 1024 * 1024],
         observed_at=now, conditions=conditions_dict,
-        source=f"memprobe:{os.path.join(out_dir, 'memprobe.txt')} stop_reason={mem_result.get('stop_reason')}",
+        source=f"memprobe:{out_dir}/memprobe_*.txt n_runs={mem_result.get('n_runs')} "
+               f"stop_reason={mem_result.get('stop_reason')}",
     ) if mem_result.get("max_vmrss_mb") else Measured.unknown("memprobe:parse_failed")
 
     total_kb = None
@@ -175,25 +230,30 @@ def build_profile(out_dir: str) -> DeviceProfile:
         RandomReadPoint(
             size_bytes=p["size_bytes"], threads=p["threads"],
             mbps=Measured(
-                value=p["mbps"],
-                provenance="measured" if conditions.power == "unplugged" else "prior",
-                confidence=0.7 if conditions.power == "unplugged" else 0.4,
-                interval=None if conditions.power == "unplugged" else [p["mbps"] * 0.7, p["mbps"] * 1.3],
+                value=p["mbps_median"],
+                provenance="measured" if in_regime else "prior",
+                confidence=0.7 if in_regime else 0.4,
+                # real min/max across p["n_repeats"] repeats of this exact
+                # (size, threads) config, not an invented +/-30% band.
+                interval=None if in_regime else list(p["mbps_range"]),
                 observed_at=now, conditions=conditions_dict,
-                source=f"ufsbench:{os.path.join(out_dir, 'ufs.csv')}",
+                source=f"ufsbench:{os.path.join(out_dir, 'ufs.csv')} n_repeats={p['n_repeats']}",
             ),
             p50_us=p["p50_us"], p99_us=p["p99_us"],
         )
         for p in points_raw
     ]
     knee = storage.efficient_request_size(ufs_rows)
+    knee_lo, knee_hi = knee.get("size_bytes_range", (None, None))
     efficient_size = Measured(
         value=knee.get("size_bytes"),
-        provenance="measured" if conditions.power == "unplugged" else "prior",
-        confidence=0.7 if conditions.power == "unplugged" else 0.4,
-        interval=None if conditions.power == "unplugged" else [knee.get("size_bytes"), knee.get("size_bytes")],
+        provenance="measured" if in_regime else "prior",
+        confidence=0.7 if in_regime else 0.4,
+        # real range of the knee found independently per repeat, not a
+        # degenerate [x, x] "interval".
+        interval=None if in_regime else [knee_lo, knee_hi],
         observed_at=now, conditions=conditions_dict,
-        source=f"ufsbench:{os.path.join(out_dir, 'ufs.csv')} bulk_mbps={knee.get('bulk_mbps')}",
+        source=f"ufsbench:{os.path.join(out_dir, 'ufs.csv')} n_repeats={knee.get('n_repeats')}",
     ) if knee.get("size_bytes") else Measured.unknown("ufsbench:no_data")
 
     direct_ok = storage.direct_io_supported(

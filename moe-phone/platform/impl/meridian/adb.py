@@ -21,7 +21,16 @@ class AdbDevice:
 
     def shell(self, command: str, timeout: float = 60.0) -> str:
         cmd = self._base() + ["shell", command]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        # stdin=DEVNULL: without this, subprocess.run() inherits our stdin,
+        # and adb forwards it to the remote shell. Over the wireless (TCP)
+        # transport this reproducibly hung every command indefinitely --
+        # something in g0_probe.sh's subshells blocks on a stdin read that
+        # never gets EOF -- while the exact same command over USB returned
+        # in under a second. Explicitly closing remote stdin fixed it and is
+        # correct regardless of cause: nothing this profiler runs is
+        # interactive.
+        r = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True,
+                            text=True, timeout=timeout)
         if r.returncode != 0 and not r.stdout:
             raise AdbError(f"adb shell failed rc={r.returncode}: {command}\n{r.stderr}")
         return r.stdout

@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from meridian.contracts import Measured
 from meridian.probes import static_inventory, dram, storage, memory
-from meridian.validity import valid_thermal_zones, reject_descheduled
+from meridian.validity import valid_thermal_zones, reject_descheduled, classify_foreground
 
 FIXTURE_DIR = os.path.normpath(os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "results", "2026-09-20", "meridian_l1_nord"))
@@ -98,6 +98,51 @@ def test_thermal_zone_filter_excludes_known_bad_sensors():
     assert "cpu-hw-trip-0" not in names or True  # not present on this device; guards regressions if it is
     for z in zones:
         assert 0.0 <= z["temp_c"] <= 120.0
+
+
+def test_classify_foreground_detects_third_party_app():
+    # Regression: a hardcoded foreground="none" would have silently reported
+    # a session as quiesced while YouTube was actually running in front.
+    youtube = "  ResumedActivity: ActivityRecord{f40c247 u0 com.google.android.youtube/.HomeActivity t5}"
+    cls, pkg = classify_foreground(youtube)
+    assert cls == "other-app"
+    assert pkg == "com.google.android.youtube"
+
+
+def test_classify_foreground_launcher_is_idle():
+    launcher = "  ResumedActivity: ActivityRecord{f40c247 u0 com.android.launcher/.Launcher t5}"
+    cls, pkg = classify_foreground(launcher)
+    assert cls == "none"
+
+
+def test_classify_foreground_empty_is_unknown_not_none():
+    # 03_INTERFACES.md Rule 1: never substitute a default and call it a value.
+    cls, pkg = classify_foreground("")
+    assert cls == "unknown"
+    assert pkg is None
+
+
+def test_storage_interval_is_real_spread_not_fabricated_multiplier():
+    # Regression for the +/-30% fabricated interval this file's git history
+    # once had: three repeats at the same (size, threads) config with a
+    # real, asymmetric spread must come back as exactly that spread, not a
+    # formula applied to one of the values.
+    rows = [
+        {"repeat": "1", "mode": "buffered", "pattern": "rand", "size_kb": "64", "threads": "4",
+         "MBps": "500.0", "lat_p50_us": "1", "lat_p99_us": "2"},
+        {"repeat": "2", "mode": "buffered", "pattern": "rand", "size_kb": "64", "threads": "4",
+         "MBps": "510.0", "lat_p50_us": "1", "lat_p99_us": "2"},
+        {"repeat": "3", "mode": "buffered", "pattern": "rand", "size_kb": "64", "threads": "4",
+         "MBps": "440.0", "lat_p50_us": "1", "lat_p99_us": "2"},
+    ]
+    points = storage.random_read_points(rows)
+    assert len(points) == 1
+    p = points[0]
+    assert p["mbps_range"] == (440.0, 510.0), "must be the real min/max across the 3 repeats"
+    assert p["mbps_median"] == 500.0
+    # A fabricated +/-30% band around the median would have been (350, 650)
+    # -- neither bound may appear here.
+    assert p["mbps_range"] != (500.0 * 0.7, 500.0 * 1.3)
 
 
 def test_reject_descheduled_pure_function():

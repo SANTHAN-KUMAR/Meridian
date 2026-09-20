@@ -17,6 +17,21 @@ from __future__ import annotations
 import re
 
 
+def parse_multi(stdout_texts: list) -> dict:
+    """Aggregate several independent memprobe runs into a real observed
+    min/max, instead of one run plus an invented [0, value] band."""
+    runs = [parse(t) for t in stdout_texts]
+    values = [r["max_vmrss_mb"] for r in runs if r.get("max_vmrss_mb")]
+    if not values:
+        return {"max_vmrss_mb": None, "range_mb": (None, None), "n_runs": 0}
+    return {
+        "max_vmrss_mb": sorted(values)[len(values) // 2],  # median run
+        "range_mb": (min(values), max(values)),
+        "n_runs": len(values),
+        "stop_reason": runs[0].get("stop_reason"),
+    }
+
+
 def parse(stdout_text: str) -> dict:
     m = re.search(r"max_VmRSS_MB=(\d+)\s+chunks=(\d+)\s+mode=(\w+)", stdout_text)
     if not m:

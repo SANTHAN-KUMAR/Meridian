@@ -1,0 +1,14 @@
+/dev/fastrpc-cdsp          O_RDONLY  No such file or directory
+/dev/fastrpc-cdsp          O_RDWR    No such file or directory
+/dev/fastrpc-cdsp-secure   O_RDONLY  No such file or directory
+/dev/fastrpc-cdsp-secure   O_RDWR    No such file or directory
+/dev/fastrpc-nsp1000       O_RDONLY  No such file or directory
+/dev/fastrpc-nsp1000       O_RDWR    No such file or directory
+/dev/fastrpc-adsp-secure   O_RDONLY  No such file or directory
+/dev/fastrpc-adsp-secure   O_RDWR    No such file or directory
+/dev/kgsl-3d0              O_RDONLY  OPEN_OK
+/dev/kgsl-3d0              O_RDWR    OPEN_OK
+/dev/dma_heap/system       O_RDONLY  No such file or directory
+/dev/dma_heap/system       O_RDWR    No such file or directory
+/dev/dma_heap/qcom,system  O_RDONLY  No such file or directory
+/dev/dma_heap/qcom,system  O_RDWR    No such file or directory

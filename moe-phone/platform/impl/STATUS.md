@@ -68,6 +68,55 @@ Raw artifacts: [`../../results/2026-09-20/meridian_l1_nord/`](../../results/2026
 (every CSV/text file the parsers above read, plus the assembled
 `DeviceProfile.json` and `capability_report.md`).
 
+## Defects found in this code after the first commit, and how they were fixed
+
+These are recorded as defects, not as "limitations", because each one was a
+mistake in code this pass wrote — not an inherent constraint of the device.
+
+**D-1. Fabricated uncertainty intervals (commit `2fc6e48`).** When a
+measurement was out of the deployment regime, `profiler.py` downgraded it
+from `measured` to `prior` and attached an interval — because
+`contracts.Measured` refuses a non-`measured` value without one. The
+intervals were invented to satisfy that check: `[mbps * 0.7, mbps * 1.3]`
+for every storage read point (a made-up ±30%, no measurement behind it),
+`[knee, knee]` for `efficient_request_size` (a zero-width "interval"), and
+`[0, observed]` for `grantable_quiesced` (a lower bound of zero says nothing).
+This is the CLAUDE.md §0/§6.4 failure exactly: a plausible substitute that
+made a check pass, with nothing asking whether it was the quantity. It also
+meant the capability report displayed intervals that looked like uncertainty
+quantification and were not. **Fix:** `ufsbench` now runs 3 repeats and
+`memprobe` 2 independent runs, and every interval is the real observed
+min/max across those repeats (`probes/storage.py`, `probes/memory.py`
+`parse_multi`). Regression test:
+`test_storage_interval_is_real_spread_not_fabricated_multiplier`. The
+committed `results/2026-09-20/meridian_l1_nord/` directory was produced by
+the defective version and its `DeviceProfile.json` was deleted
+(retraction is deletion, CLAUDE.md 7.6); raw artifacts remain as test fixtures.
+**D-5.** The regime gate ignored wakefulness; a screen-off (`dozing`) run was
+labelled `measured`. Gate now requires `awake`.
+
+**D-2. Foreground state was hardcoded, not measured.** `build_conditions`
+took `foreground="none"` as a default, so a run taken while the user was
+watching YouTube would have been reported as quiesced. The user's own
+session was in exactly that state. **Fix:** foreground is now read from
+`dumpsys activity activities` before and after the T1 window and the worse
+of the two is used (`validity.classify_foreground`); empty input yields
+`unknown`, never `none`. The first wireless run correctly caught YouTube
+(`concurrent_load: ['com.google.android.youtube']`) and downgraded every
+field.
+
+**D-3. `ROOT:` substring match.** `"ROOT:" in text` is also true of
+`"NOT_ROOT:"`; every unrooted device would have been reported as rooted.
+Caught by a test written before the first commit; fixed in the same commit.
+
+**D-4. kHz/GHz mislabel in the capability report** (÷1000 labelled GHz).
+Fixed before the first commit.
+
+**Not a defect, recorded for the next reader:** over wireless adb,
+`g0_probe.sh` takes ~37 s against <1 s over USB (many forked subshells,
+higher per-exec latency on the TCP transport). It looked like a hang; it is
+not one. Timeout raised to 90 s.
+
 ## Registered stubs (extends `10_EXTENSION_POINTS.md` section 4)
 
 | id | what | current state | removed when |

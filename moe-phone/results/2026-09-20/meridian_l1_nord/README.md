@@ -32,14 +32,10 @@ regime measurement, so every affected field in `DeviceProfile.json` is
 | `DeviceProfile.json` | `meridian/profiler.py` | the assembled contract, per `03_INTERFACES.md` §1 |
 | `capability_report.md` | `meridian/report.py` | the plain-language summary, per `02_ARCHITECTURE.md` §9 |
 
-## Headline numbers (read them from the files above, not from this line)
+## Retraction
 
-- DRAM read: ~12.4 GB/s median (prior; charging), 8/15 eight-thread rows
-  rejected as descheduled by the probe's own check.
-- Memory grantable to one quiesced process: ~8194 MiB before
-  `MemAvailable` hit its floor.
-- Storage: f2fs, `efficient_request_size` ≈ 256 KiB, O_DIRECT confirmed
-  supported.
-- `grantable_foreground`, per-cluster `matmul_gbps`, per-backend
-  decode/prefill rate, thermal derate curve: all `unknown` — not measured,
-  not guessed. See `platform/impl/STATUS.md` for why and what it would take.
+`DeviceProfile.json` and `capability_report.md` from this directory were
+deleted: they carried fabricated uncertainty intervals (STATUS.md, D-1). The
+raw artifacts above are genuine and are used as parser test fixtures. This
+run was USB-charging with an unchecked foreground state; use
+`../meridian_l1_nord_wireless/` instead.

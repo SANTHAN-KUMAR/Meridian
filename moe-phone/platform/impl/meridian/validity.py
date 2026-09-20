@@ -33,28 +33,56 @@ def parse_power_state(text: str) -> dict:
     return {"wakefulness": mapping.get(raw, "unknown")}
 
 
-def build_conditions(battery_text: str, power_text: str, foreground: str = "none",
-                      concurrent_load: list | None = None) -> ValidityConditions:
-    """Assemble ValidityConditions from the raw dumpsys captures.
+# Packages that count as "no foreground app" for profiling purposes: the
+# home screen and system UI are not a foreground workload competing for
+# memory/CPU/thermal headroom the way a real app is.
+_IDLE_PACKAGES = ("com.android.launcher", "com.android.systemui", "NA")
 
-    foreground defaults to "none": these probes ran as a bare adb-shell
-    process with no app foregrounded, which is the T1 quiesced regime the
-    profiler targets, and it is NOT the deployment regime for an agent turn
-    (04_DEVICE_PROFILING.md section 3.4 -- grantable_foreground needs a real
-    target app foregrounded and is a separate, harder probe: PL-S2).
+
+def classify_foreground(resumed_activity_text: str) -> tuple:
+    """Parse `dumpsys activity activities | grep -i resumed` and classify
+    what was actually in the foreground while a probe ran. This replaced a
+    hardcoded foreground="none" that a real session caught: the user was
+    using another app (YouTube) during part of an earlier profiling run, and
+    the hardcoded value would have silently reported that run as quiesced
+    when it was not (04_DEVICE_PROFILING.md section 4's "foreground loss"
+    contaminant, just inverted -- foreground GAIN by a third party).
+
+    Returns (foreground_class, package_name_or_None).
+    """
+    m = re.search(r"ResumedActivity:\s*ActivityRecord\{[^ ]+ u\d+ ([^ /]+)/", resumed_activity_text)
+    if not m:
+        return "unknown", None
+    pkg = m.group(1)
+    if any(pkg.startswith(p) for p in _IDLE_PACKAGES):
+        return "none", pkg
+    return "other-app", pkg
+
+
+def build_conditions(battery_text: str, power_text: str, resumed_activity_text: str = "",
+                      concurrent_load: list | None = None) -> ValidityConditions:
+    """Assemble ValidityConditions from the raw dumpsys captures. foreground
+    is measured from resumed_activity_text, not assumed -- see
+    classify_foreground(). An empty resumed_activity_text yields "unknown",
+    never a silent "none" (03_INTERFACES.md Rule 1: never substitute a
+    default and call it a value).
     """
     b = parse_battery_dumpsys(battery_text)
     p = parse_power_state(power_text)
+    fg, fg_pkg = classify_foreground(resumed_activity_text) if resumed_activity_text else ("unknown", None)
+    load = list(concurrent_load or [])
+    if fg == "other-app" and fg_pkg:
+        load.append(fg_pkg)
     return ValidityConditions(
         wakefulness=p["wakefulness"],
-        foreground=foreground,
+        foreground=fg,
         power=b["power"],
         thermal_status=None,  # OS thermal-status API not queried at L1; see STATUS.md
         skin_c_start=None,
         skin_c_end=None,
         battery_pct=b["battery_pct"],
         descheduled=False,
-        concurrent_load=concurrent_load or [],
+        concurrent_load=load,
     )
 
 

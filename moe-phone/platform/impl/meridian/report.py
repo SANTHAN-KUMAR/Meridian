@@ -66,13 +66,27 @@ def render(profile: DeviceProfile) -> str:
     lines.append("")
     lines.append("## Conditions these measurements were taken under")
     c = profile.validity.conditions
-    lines.append(f"- power: **{c.power}**, wakefulness: {c.wakefulness}, foreground: {c.foreground}, "
+    lines.append(f"- power: **{c.power}**, wakefulness: {c.wakefulness}, foreground: **{c.foreground}**, "
                   f"battery: {c.battery_pct}%")
+    if c.concurrent_load:
+        lines.append(f"  concurrent load observed during the run: {c.concurrent_load}")
     if c.power != "unplugged":
-        lines.append(f"  **This is not the deployment regime (D4 requires unplugged).** Every "
+        lines.append(f"  **Power is not the deployment regime (D4 requires unplugged).** Every "
                       f"`measured` value above is downgraded to `prior` with a widened interval for "
                       f"exactly this reason — it is a real number taken under charging, not a "
                       f"sustained-unplugged operating point, and must not be presented as one.")
+    if c.wakefulness != "awake":
+        lines.append(f"  **Wakefulness was {c.wakefulness!r}, not 'awake'.** The screen-off state is "
+                      f"a listed contaminant (04_DEVICE_PROFILING.md section 4); this run's storage "
+                      f"rates were 40-60% below an earlier awake run on the same device with p99 "
+                      f"latency ~150 ms, so values are downgraded to `prior`, not `measured`. "
+                      f"Re-run with the screen on and idle.")
+    if c.foreground not in ("none",):
+        lines.append(f"  **A foreground app was detected during T1 profiling "
+                      f"(foreground={c.foreground!r}).** This is not the quiesced regime T1 assumes "
+                      f"(04_DEVICE_PROFILING.md section 3.4) — DRAM, memory-grant and storage figures "
+                      f"above are downgraded to `prior` for this reason too, since the app was "
+                      f"competing for the same DRAM bandwidth, memory and storage bus being measured.")
     if profile.validity.rejected_runs:
         lines.append(f"- {profile.validity.rejected_runs} run(s) rejected as contaminated: "
                       f"{profile.validity.rejection_reasons}")

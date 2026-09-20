@@ -95,17 +95,18 @@
   "memory": {
     "total": 11934801920,
     "available_at_probe": {
-      "value": 7655415808,
+      "value": 8976130048,
       "provenance": "measured",
       "confidence": 0.9,
       "interval": null,
-      "observed_at": 1789910706.7219298,
+      "observed_at": 1789912355.4366014,
       "conditions": {
-        "wakefulness": "awake",
+        "wakefulness": "dozing",
         "foreground": "none",
-        "power": "usb",
+        "power": "unplugged",
         "thermal_status": null,
-        "battery_pct": 93
+        "battery_pct": 98,
+        "concurrent_load": []
       },
       "source": "g0_probe.sh:/proc/meminfo"
     },
@@ -114,18 +115,19 @@
       "provenance": "prior",
       "confidence": 0.4,
       "interval": [
-        0,
+        8860467200,
         8860467200
       ],
-      "observed_at": 1789910706.7219298,
+      "observed_at": 1789912355.4366014,
       "conditions": {
-        "wakefulness": "awake",
+        "wakefulness": "dozing",
         "foreground": "none",
-        "power": "usb",
+        "power": "unplugged",
         "thermal_status": null,
-        "battery_pct": 93
+        "battery_pct": 98,
+        "concurrent_load": []
       },
-      "source": "memprobe:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/memprobe.txt stop_reason=memavailable_floor"
+      "source": "memprobe:../../results/2026-09-20/meridian_l1_nord_wireless/memprobe_*.txt n_runs=2 stop_reason=memavailable_floor"
     },
     "grantable_foreground": {
       "value": null,
@@ -150,389 +152,405 @@
       }
     },
     "dram_read_gbps": {
-      "value": 12.404,
+      "value": 13.232,
       "provenance": "prior",
       "confidence": 0.4,
       "interval": [
-        9.87,
-        13.129
+        12.657,
+        13.348
       ],
-      "observed_at": 1789910706.7219298,
+      "observed_at": 1789912355.4366014,
       "conditions": {
-        "wakefulness": "awake",
+        "wakefulness": "dozing",
         "foreground": "none",
-        "power": "usb",
+        "power": "unplugged",
         "thermal_status": null,
-        "battery_pct": 93
+        "battery_pct": 98,
+        "concurrent_load": []
       },
-      "source": "dramprobe:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/dram.csv"
+      "source": "dramprobe:../../results/2026-09-20/meridian_l1_nord_wireless/dram.csv"
     },
     "lmk_behaviour": null
   },
   "storage": {
     "path": "/data/user/0",
     "filesystem": "f2fs",
-    "free_bytes": 182536110080,
+    "free_bytes": 183609851904,
     "random_read": [
       {
         "size_bytes": 4096,
         "threads": 1,
         "mbps": {
-          "value": 16.76,
+          "value": 6.15,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            11.732000000000001,
-            21.788000000000004
+            5.3,
+            6.61
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 184.8,
-        "p99_us": 1190.6
+        "p50_us": 266.8,
+        "p99_us": 756.0
       },
       {
         "size_bytes": 4096,
         "threads": 4,
         "mbps": {
-          "value": 68.87,
+          "value": 30.86,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            48.209,
-            89.531
+            28.68,
+            31.59
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 173.6,
-        "p99_us": 1379.4
+        "p50_us": 184.6,
+        "p99_us": 768.0
       },
       {
         "size_bytes": 4096,
         "threads": 8,
         "mbps": {
-          "value": 101.74,
+          "value": 54.72,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            71.21799999999999,
-            132.262
+            41.94,
+            71.22
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 252.9,
-        "p99_us": 1690.3
+        "p50_us": 252.7,
+        "p99_us": 987.9
       },
       {
         "size_bytes": 65536,
         "threads": 1,
         "mbps": {
-          "value": 111.81,
+          "value": 72.07,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            78.267,
-            145.353
+            68.67,
+            75.09
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 445.4,
-        "p99_us": 2956.2
+        "p50_us": 454.3,
+        "p99_us": 910.9
       },
       {
         "size_bytes": 65536,
         "threads": 4,
         "mbps": {
-          "value": 513.63,
+          "value": 250.33,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            359.541,
-            667.719
+            247.4,
+            267.48
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 439.9,
-        "p99_us": 1935.1
+        "p50_us": 443.1,
+        "p99_us": 2102.1
       },
       {
         "size_bytes": 65536,
         "threads": 8,
         "mbps": {
-          "value": 724.99,
+          "value": 413.23,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            507.493,
-            942.4870000000001
+            289.21,
+            424.64
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 650.0,
-        "p99_us": 2322.4
+        "p50_us": 636.3,
+        "p99_us": 2511.5
       },
       {
         "size_bytes": 262144,
         "threads": 1,
         "mbps": {
-          "value": 265.33,
+          "value": 107.85,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            185.73099999999997,
-            344.929
+            65.07,
+            131.07
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 950.1,
-        "p99_us": 1594.4
+        "p50_us": 1007.7,
+        "p99_us": 4580.8
       },
       {
         "size_bytes": 262144,
         "threads": 4,
         "mbps": {
-          "value": 831.4,
+          "value": 386.56,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            581.9799999999999,
-            1080.82
+            357.5,
+            393.5
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 1190.6,
-        "p99_us": 2609.4
+        "p50_us": 1225.3,
+        "p99_us": 6885.2
       },
       {
         "size_bytes": 262144,
         "threads": 8,
         "mbps": {
-          "value": 839.24,
+          "value": 384.5,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            587.468,
-            1091.012
+            322.03,
+            892.75
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 2395.1,
-        "p99_us": 4361.4
+        "p50_us": 2441.5,
+        "p99_us": 137899.1
       },
       {
         "size_bytes": 1048576,
         "threads": 1,
         "mbps": {
-          "value": 295.79,
+          "value": 121.75,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            207.053,
-            384.52700000000004
+            118.28,
+            185.61
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 3278.1,
-        "p99_us": 6383.5
+        "p50_us": 3709.9,
+        "p99_us": 159015.4
       },
       {
         "size_bytes": 1048576,
         "threads": 4,
         "mbps": {
-          "value": 858.33,
+          "value": 474.77,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            600.831,
-            1115.8290000000002
+            465.94,
+            615.4
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 4620.2,
-        "p99_us": 10965.7
+        "p50_us": 4427.4,
+        "p99_us": 153828.0
       },
       {
         "size_bytes": 1048576,
         "threads": 8,
         "mbps": {
-          "value": 859.24,
+          "value": 555.53,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            601.468,
-            1117.012
+            363.87,
+            746.19
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 9382.3,
-        "p99_us": 15725.2
+        "p50_us": 9258.1,
+        "p99_us": 167500.0
       },
       {
         "size_bytes": 4194304,
         "threads": 1,
         "mbps": {
-          "value": 313.02,
+          "value": 117.59,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            219.11399999999998,
-            406.926
+            68.51,
+            152.97
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 12589.1,
-        "p99_us": 18827.8
+        "p50_us": 15360.2,
+        "p99_us": 184766.6
       },
       {
         "size_bytes": 4194304,
         "threads": 4,
         "mbps": {
-          "value": 845.14,
+          "value": 686.26,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            591.598,
-            1098.682
+            498.42,
+            840.61
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 18847.0,
-        "p99_us": 35101.5
+        "p50_us": 19534.9,
+        "p99_us": 187877.1
       },
       {
         "size_bytes": 4194304,
         "threads": 8,
         "mbps": {
-          "value": 850.83,
+          "value": 663.69,
           "provenance": "prior",
           "confidence": 0.4,
           "interval": [
-            595.581,
-            1106.0790000000002
+            573.36,
+            743.74
           ],
-          "observed_at": 1789910706.7219298,
+          "observed_at": 1789912355.4366014,
           "conditions": {
-            "wakefulness": "awake",
+            "wakefulness": "dozing",
             "foreground": "none",
-            "power": "usb",
+            "power": "unplugged",
             "thermal_status": null,
-            "battery_pct": 93
+            "battery_pct": 98,
+            "concurrent_load": []
           },
-          "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv"
+          "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
         },
-        "p50_us": 38164.4,
-        "p99_us": 55277.3
+        "p50_us": 38708.2,
+        "p99_us": 213387.2
       }
     ],
     "efficient_request_size": {
@@ -541,17 +559,18 @@
       "confidence": 0.4,
       "interval": [
         262144,
-        262144
+        4194304
       ],
-      "observed_at": 1789910706.7219298,
+      "observed_at": 1789912355.4366014,
       "conditions": {
-        "wakefulness": "awake",
+        "wakefulness": "dozing",
         "foreground": "none",
-        "power": "usb",
+        "power": "unplugged",
         "thermal_status": null,
-        "battery_pct": 93
+        "battery_pct": 98,
+        "concurrent_load": []
       },
-      "source": "ufsbench:/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-20/meridian_l1_nord/ufs.csv bulk_mbps=859.24"
+      "source": "ufsbench:../../results/2026-09-20/meridian_l1_nord_wireless/ufs.csv n_repeats=3"
     },
     "sequential_write_mbps": {
       "value": null,
@@ -706,55 +725,7 @@
         "usable": true
       },
       {
-        "name": "cpu-0-3-step",
-        "usable": true
-      },
-      {
         "name": "pm8150_tz",
-        "usable": true
-      },
-      {
-        "name": "cpu-0-1-usr",
-        "usable": true
-      },
-      {
-        "name": "cpu-0-max-step",
-        "usable": true
-      },
-      {
-        "name": "cpu-1-max-step",
-        "usable": true
-      },
-      {
-        "name": "cpu-0-1-step",
-        "usable": true
-      },
-      {
-        "name": "cpu-0-2-step",
-        "usable": true
-      },
-      {
-        "name": "cpu-0-0-usr",
-        "usable": true
-      },
-      {
-        "name": "pm7250b-tz",
-        "usable": true
-      },
-      {
-        "name": "cpu-0-3-usr",
-        "usable": true
-      },
-      {
-        "name": "cpuss-0-usr",
-        "usable": true
-      },
-      {
-        "name": "cpuss-1-usr",
-        "usable": true
-      },
-      {
-        "name": "cpu-0-4-step",
         "usable": true
       },
       {
@@ -762,47 +733,7 @@
         "usable": true
       },
       {
-        "name": "cpu-0-0-step",
-        "usable": true
-      },
-      {
-        "name": "ddr-usr",
-        "usable": true
-      },
-      {
-        "name": "q6-hvx-usr",
-        "usable": true
-      },
-      {
-        "name": "camera-usr",
-        "usable": true
-      },
-      {
-        "name": "cpu-0-5-step",
-        "usable": true
-      },
-      {
-        "name": "cpu-0-4-usr",
-        "usable": true
-      },
-      {
-        "name": "cpu-0-5-usr",
-        "usable": true
-      },
-      {
-        "name": "cpu-1-2-usr",
-        "usable": true
-      },
-      {
-        "name": "cpu-1-0-step",
-        "usable": true
-      },
-      {
-        "name": "cpu-1-2-step",
-        "usable": true
-      },
-      {
-        "name": "cpu-1-3-step",
+        "name": "cpuss-1-usr",
         "usable": true
       },
       {
@@ -810,23 +741,91 @@
         "usable": true
       },
       {
-        "name": "xo-therm-usr",
-        "usable": true
-      },
-      {
         "name": "pa-therm2-usr",
         "usable": true
       },
       {
-        "name": "cpu-1-0-usr",
+        "name": "xo-therm-usr",
         "usable": true
       },
       {
-        "name": "cpu-1-1-step",
+        "name": "cpuss-0-usr",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-max-step",
+        "usable": true
+      },
+      {
+        "name": "skin-therm",
         "usable": true
       },
       {
         "name": "pa-therm1-usr",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-0-usr",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-1-usr",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-3-usr",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-4-usr",
+        "usable": true
+      },
+      {
+        "name": "cpu-1-2-usr",
+        "usable": true
+      },
+      {
+        "name": "cpu-1-max-step",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-3-step",
+        "usable": true
+      },
+      {
+        "name": "pm7250b-tz",
+        "usable": true
+      },
+      {
+        "name": "modem-lte-sub6-pa1",
+        "usable": true
+      },
+      {
+        "name": "modem-skin-usr",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-5-usr",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-0-step",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-1-step",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-4-step",
+        "usable": true
+      },
+      {
+        "name": "cpu-0-5-step",
+        "usable": true
+      },
+      {
+        "name": "battery",
         "usable": true
       },
       {
@@ -838,19 +837,39 @@
         "usable": true
       },
       {
-        "name": "gpuss-max-step",
+        "name": "cpu-0-2-step",
         "usable": true
       },
       {
-        "name": "aoss-1-usr",
+        "name": "cpu-1-1-step",
         "usable": true
       },
       {
-        "name": "q6-hvx-step",
+        "name": "cpu-1-2-step",
+        "usable": true
+      },
+      {
+        "name": "shell_front",
+        "usable": true
+      },
+      {
+        "name": "shell_frame",
+        "usable": true
+      },
+      {
+        "name": "shell_back",
+        "usable": true
+      },
+      {
+        "name": "q6-hvx-usr",
         "usable": true
       },
       {
         "name": "aoss0-usr",
+        "usable": true
+      },
+      {
+        "name": "cpu-1-0-usr",
         "usable": true
       },
       {
@@ -862,11 +881,51 @@
         "usable": true
       },
       {
+        "name": "gpuss-max-step",
+        "usable": true
+      },
+      {
+        "name": "cpu-1-0-step",
+        "usable": true
+      },
+      {
+        "name": "cpu-1-3-step",
+        "usable": true
+      },
+      {
+        "name": "aoss-1-usr",
+        "usable": true
+      },
+      {
+        "name": "ddr-usr",
+        "usable": true
+      },
+      {
+        "name": "camera-usr",
+        "usable": true
+      },
+      {
+        "name": "q6-hvx-step",
+        "usable": true
+      },
+      {
+        "name": "modem-1-usr",
+        "usable": true
+      },
+      {
+        "name": "modem-0-usr",
+        "usable": true
+      },
+      {
         "name": "min-temp-0-lowf",
         "usable": true
       },
       {
         "name": "min-temp-0-lowc",
+        "usable": true
+      },
+      {
+        "name": "cwlan-usr",
         "usable": true
       },
       {
@@ -882,19 +941,11 @@
         "usable": true
       },
       {
+        "name": "npu-step",
+        "usable": true
+      },
+      {
         "name": "mdm-scl-step",
-        "usable": true
-      },
-      {
-        "name": "modem-lte-sub6-pa1",
-        "usable": true
-      },
-      {
-        "name": "modem-skin-usr",
-        "usable": true
-      },
-      {
-        "name": "cwlan-usr",
         "usable": true
       },
       {
@@ -906,19 +957,11 @@
         "usable": true
       },
       {
-        "name": "npu-step",
-        "usable": true
-      },
-      {
-        "name": "mdm-vec-step",
-        "usable": true
-      },
-      {
-        "name": "skin-therm",
-        "usable": true
-      },
-      {
         "name": "mdm-core-0-usr",
+        "usable": true
+      },
+      {
+        "name": "mdm-core-1-usr",
         "usable": true
       },
       {
@@ -930,39 +973,15 @@
         "usable": true
       },
       {
+        "name": "mdm-vec-step",
+        "usable": true
+      },
+      {
         "name": "mdm-core-0-step",
         "usable": true
       },
       {
         "name": "mdm-core-1-step",
-        "usable": true
-      },
-      {
-        "name": "mdm-core-1-usr",
-        "usable": true
-      },
-      {
-        "name": "modem-1-usr",
-        "usable": true
-      },
-      {
-        "name": "modem-0-usr",
-        "usable": true
-      },
-      {
-        "name": "battery",
-        "usable": true
-      },
-      {
-        "name": "shell_front",
-        "usable": true
-      },
-      {
-        "name": "shell_frame",
-        "usable": true
-      },
-      {
-        "name": "shell_back",
         "usable": true
       },
       {
@@ -994,28 +1013,30 @@
   },
   "validity": {
     "conditions": {
-      "wakefulness": "awake",
+      "wakefulness": "dozing",
       "foreground": "none",
-      "power": "usb",
+      "power": "unplugged",
       "thermal_status": null,
       "skin_c_start": null,
       "skin_c_end": null,
-      "battery_pct": 93,
+      "battery_pct": 98,
       "descheduled": false,
       "concurrent_load": []
     },
-    "rejected_runs": 8,
+    "rejected_runs": 10,
     "rejection_reasons": [
-      "descheduled: min_cpu_over_wall=0.888 < 0.9",
-      "descheduled: min_cpu_over_wall=0.760 < 0.9",
-      "descheduled: min_cpu_over_wall=0.622 < 0.9",
-      "descheduled: min_cpu_over_wall=0.889 < 0.9",
-      "descheduled: min_cpu_over_wall=0.804 < 0.9",
+      "descheduled: min_cpu_over_wall=0.608 < 0.9",
+      "descheduled: min_cpu_over_wall=0.540 < 0.9",
+      "descheduled: min_cpu_over_wall=0.569 < 0.9",
+      "descheduled: min_cpu_over_wall=0.658 < 0.9",
+      "descheduled: min_cpu_over_wall=0.288 < 0.9",
       "descheduled: min_cpu_over_wall=0.462 < 0.9",
-      "descheduled: min_cpu_over_wall=0.825 < 0.9",
-      "descheduled: min_cpu_over_wall=0.395 < 0.9"
+      "descheduled: min_cpu_over_wall=0.469 < 0.9",
+      "descheduled: min_cpu_over_wall=0.483 < 0.9",
+      "descheduled: min_cpu_over_wall=0.391 < 0.9",
+      "descheduled: min_cpu_over_wall=0.288 < 0.9"
     ]
   },
   "schema_version": 1,
-  "created_at": 1789910706.7219298
+  "created_at": 1789912355.4366014
 }
