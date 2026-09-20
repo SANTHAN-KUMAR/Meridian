@@ -114,3 +114,20 @@ def random_read_points(rows: list, mode: str = "buffered", pattern: str = "rand"
 
 def direct_io_supported(rows: list) -> bool:
     return any(r["mode"] == "direct" and int(r.get("errors", "0")) == 0 for r in rows)
+
+
+def parse_write(csv_path: str):
+    """wrbench.csv -> median/min/max MB/s over repeats with zero write errors.
+    None if no valid repeat (never a default)."""
+    vals = []
+    with open(csv_path) as f:
+        for row in csv.DictReader(f):
+            try:
+                if int(row["errors"]) == 0:
+                    vals.append(float(row["MBps"]))
+            except (KeyError, ValueError):
+                continue
+    if not vals:
+        return None
+    vals.sort()
+    return {"mbps_median": vals[len(vals) // 2], "mbps_range": (vals[0], vals[-1]), "n_repeats": len(vals)}

@@ -108,10 +108,25 @@ Fixed before the first commit.
 higher per-exec latency on the TCP transport). It looked like a hang; it is
 not one. Timeout raised to 90 s.
 
+## Planner slice (L2, feasibility only)
+
+`meridian/gguf.py` reads real GGUF headers (sizes computed from dims and the
+ggml block table, cross-checked against file layout); `meridian/planner.py`
+derives a `ModelCard` and issues per-tier verdicts. It never returns
+"feasible" and never predicts a rate: it refuses `Infeasible` only via a
+sound lower-bound argument (assumption A1: a foreground app cannot raise what
+one process may keep) and otherwise returns `NotCalibrated` naming every
+missing measurement. Registry rows (olmoe, gpt-oss, granitemoe) were observed
+in real local checkpoints; qwen3moe is refused because no local file verifies
+its pattern. Defect found while testing: offset-gap sizing over-stated tensor
+bytes by alignment padding (D-6, fixed).
+
 ## Registered stubs (extends `10_EXTENSION_POINTS.md` section 4)
 
 | id | what | current state | removed when |
 |---|---|---|---|
+| `PL-E21` | engine working-set bytes | excluded from tier need (makes need a lower bound; verdicts stay sound) | measured from a real engine session |
+| `PL-E22` | qwen3moe/other registry rows | refused `ArchitectureUnsupported` | a real checkpoint's expert pattern is observed |
 | `PL-E10` | L0 engine + session protocol | does not exist in `platform/impl/` | an engine binary is wired to `LocalApi` per `06_EXECUTION_ENGINE.md` §11 |
 | `PL-E11` | per-cluster `matmul_gbps` (T2 compute probe) | `Measured.unknown` in every `CpuCluster`; requires `host/app/ggml_matmul_bench.cpp`, which needs a ggml build this pass did not attempt | the ggml-based compute probe is cross-compiled and wired in |
 | `PL-E12` | thread-placement A/B (`recommended_compute_mask`/`recommended_io_mask`) | `Measured.unknown`; the 4.0 vs 30.1 tok/s pinned/unpinned gap in `00_PROBLEM.md` §4 was never re-measured on the Nord | a same-process pinned/unpinned A/B runs and picks a mask |

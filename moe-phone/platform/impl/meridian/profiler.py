@@ -30,16 +30,64 @@ PROBE_SUITE_VERSION = "meridian-l1-0.1.0"
 REMOTE_DIR = "/data/local/tmp"
 
 
+class WakeKeeper:
+    """Background thread: every `period` s, sample wakefulness and send
+    KEYCODE_WAKEUP if not Awake. Every sample is kept; the run's regime is the
+    worst sample. Cost: one `dumpsys power` fork per period on the device --
+    the same load the earlier clean run's shell keeper imposed."""
+
+    def __init__(self, device, period: float = 8.0):
+        import threading
+        self.device, self.period, self.samples = device, period, []
+        self._stop = threading.Event()
+        self._t = threading.Thread(target=self._loop, daemon=True)
+
+    def _sample(self):
+        try:
+            out = self.device.shell("dumpsys power | grep -m1 mWakefulness=", timeout=25).strip()
+        except Exception as e:  # counted, not swallowed: an unsampled period is recorded as unknown
+            out = f"mWakefulness=unknown ({type(e).__name__})"
+        self.samples.append(out)
+        if "mWakefulness=Awake" not in out:
+            try:
+                self.device.shell("input keyevent KEYCODE_WAKEUP; input keyevent KEYCODE_HOME", timeout=25)
+            except Exception:
+                pass
+
+    def _loop(self):
+        while not self._stop.wait(self.period):
+            self._sample()
+
+    def __enter__(self):
+        self.device.ensure_awake()
+        self._sample()
+        self._t.start()
+        return self
+
+    def __exit__(self, *a):
+        self._stop.set()
+        self._t.join(timeout=30)
+        self._sample()
+
+
 def run_probes(device: AdbDevice, bin_dir: str, out_dir: str) -> dict:
+    with WakeKeeper(device) as keeper:
+        result = _run_probes(device, bin_dir, out_dir)
+    with open(os.path.join(out_dir, "power_state.txt"), "w") as f:
+        f.write("\n".join(keeper.samples) + "\n")
+    return result
+
+
+def _run_probes(device: AdbDevice, bin_dir: str, out_dir: str) -> dict:
     """Push binaries, run T0+T1 on the live device, pull results. Returns the
     dict of local artifact paths, so the caller can build the profile from
     files on disk rather than from values held only in memory -- the same
     discipline the rest of this repo uses for every reported number."""
     os.makedirs(out_dir, exist_ok=True)
-    for b in ("devprobe", "dramprobe", "memprobe", "ufsbench"):
+    for b in ("devprobe", "dramprobe", "memprobe", "ufsbench", "wrbench"):
         device.push(os.path.join(bin_dir, b), f"{REMOTE_DIR}/{b}")
     device.shell(f"chmod 755 {REMOTE_DIR}/devprobe {REMOTE_DIR}/dramprobe "
-                 f"{REMOTE_DIR}/memprobe {REMOTE_DIR}/ufsbench")
+                 f"{REMOTE_DIR}/memprobe {REMOTE_DIR}/ufsbench {REMOTE_DIR}/wrbench")
 
     g0_script_local = os.path.join(os.path.dirname(__file__), "..", "..", "..", "device", "g0_probe.sh")
     g0_script_local = os.path.normpath(g0_script_local)
@@ -63,9 +111,6 @@ def run_probes(device: AdbDevice, bin_dir: str, out_dir: str) -> dict:
     battery_text = device.shell("dumpsys battery", timeout=15)
     with open(os.path.join(out_dir, "battery_dumpsys.txt"), "w") as f:
         f.write(battery_text)
-    power_text = device.shell("dumpsys power | grep -i mWakefulness", timeout=15)
-    with open(os.path.join(out_dir, "power_state.txt"), "w") as f:
-        f.write(power_text)
 
     fg_before = device.shell("dumpsys activity activities | grep -i resumed", timeout=15)
     with open(os.path.join(out_dir, "foreground_before.txt"), "w") as f:
@@ -92,6 +137,10 @@ def run_probes(device: AdbDevice, bin_dir: str, out_dir: str) -> dict:
         f"--seconds 1 --repeats 1 --sizes-kb 4,1024 --threads 4 --modes direct "
         f"--patterns rand --out {REMOTE_DIR}/ufs_direct.csv", timeout=60)
     device.pull(f"{REMOTE_DIR}/ufs_direct.csv", os.path.join(out_dir, "ufs_direct.csv"))
+
+    wr = device.shell(f"{REMOTE_DIR}/wrbench --file {REMOTE_DIR}/wr.bin --mb 1024 --repeats 3", timeout=180)
+    with open(os.path.join(out_dir, "wrbench.csv"), "w") as f:
+        f.write(wr)
 
     # Two independent memprobe runs, not one: same reasoning as above --
     # grantable_quiesced needs a real min/max across repeated allocate-and-
@@ -271,12 +320,22 @@ def build_profile(out_dir: str) -> DeviceProfile:
         storage.parse_rows(os.path.join(out_dir, "ufs_direct.csv"))
     ) if os.path.exists(os.path.join(out_dir, "ufs_direct.csv")) else False
 
+    wr_path = os.path.join(out_dir, "wrbench.csv")
+    wr_stats = storage.parse_write(wr_path) if os.path.exists(wr_path) else None
+    seq_write = Measured(
+        value=wr_stats["mbps_median"], provenance="measured" if in_regime else "prior",
+        confidence=0.7 if in_regime else 0.4,
+        interval=None if in_regime else list(wr_stats["mbps_range"]),
+        observed_at=now, conditions=conditions_dict,
+        source=f"wrbench:{wr_path} n_repeats={wr_stats['n_repeats']} (fsync included)",
+    ) if wr_stats else Measured.unknown("wrbench:not_run")
+
     storage_block = Storage(
         path=mount["path"], filesystem=mount["filesystem"],
         free_bytes=mount.get("free_bytes") or 0,
         random_read=random_read,
         efficient_request_size=efficient_size,
-        sequential_write_mbps=Measured.unknown("sequential_write_probe:not_run_L1"),
+        sequential_write_mbps=seq_write,
         direct_io_supported=direct_ok,
     )
 

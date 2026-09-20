@@ -28,4 +28,5 @@ mkdir -p "$OUT"
 "$CC" -O3 -pthread "$DEVICE_SRC/dramprobe.c" -o "$OUT/dramprobe"
 "$CC" -O2 "$DEVICE_SRC/memprobe.c" -o "$OUT/memprobe"
 "$CC" -O2 -pthread "$DEVICE_SRC/ufsbench.c" -o "$OUT/ufsbench" -lm
+"$CC" -O2 "$(dirname "$0")/native/wrbench.c" -o "$OUT/wrbench"
 echo "built: $OUT/devprobe $OUT/dramprobe $OUT/memprobe $OUT/ufsbench"

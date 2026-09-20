@@ -51,3 +51,11 @@ class AdbDevice:
         r = subprocess.run(["adb", "devices", "-l"], capture_output=True, text=True, timeout=15)
         lines = [l for l in r.stdout.splitlines()[1:] if l.strip()]
         return lines
+
+    def ensure_awake(self) -> None:
+        """Wake the screen and return to the launcher if the device is not
+        Awake. Called before every probe stage so a run never silently
+        crosses into the dozing regime (04_DEVICE_PROFILING.md section 4)."""
+        out = self.shell("dumpsys power | grep -m1 mWakefulness=", timeout=20)
+        if "Awake" not in out:
+            self.shell("input keyevent KEYCODE_WAKEUP; input keyevent KEYCODE_HOME", timeout=20)

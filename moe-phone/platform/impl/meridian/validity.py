@@ -26,11 +26,17 @@ def parse_battery_dumpsys(text: str) -> dict:
 
 
 def parse_power_state(text: str) -> dict:
-    """Extract wakefulness from `adb shell dumpsys power`."""
-    m = re.search(r"mWakefulness=(\w+)", text)
-    raw = m.group(1) if m else "unknown"
+    """Wakefulness over ALL samples in the text (one `mWakefulness=` line per
+    sample); the worst sample decides -- one dozing sample anywhere in a run
+    contaminates it (04_DEVICE_PROFILING.md section 4)."""
     mapping = {"Awake": "awake", "Dozing": "dozing", "Asleep": "dozing"}
-    return {"wakefulness": mapping.get(raw, "unknown")}
+    vals = [mapping.get(v, "unknown") for v in re.findall(r"mWakefulness=(\w+)", text)]
+    if not vals:
+        return {"wakefulness": "unknown"}
+    for bad in ("dozing", "unknown"):
+        if bad in vals:
+            return {"wakefulness": bad}
+    return {"wakefulness": "awake"}
 
 
 # Packages that count as "no foreground app" for profiling purposes: the

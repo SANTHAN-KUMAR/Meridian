@@ -26,7 +26,28 @@ def main(argv=None):
     prof.add_argument("--from-existing", action="store_true",
                        help="skip the device and rebuild from artifacts already in --out-dir")
 
+    card = sub.add_parser("card", help="derive a ModelCard from a GGUF file")
+    card.add_argument("gguf")
+    feas = sub.add_parser("plan", help="feasibility verdicts for a GGUF on a DeviceProfile.json")
+    feas.add_argument("--profile", required=True)
+    feas.add_argument("--gguf", required=True)
+    feas.add_argument("--context", type=int, required=True)
+
     args = p.parse_args(argv)
+
+    if args.cmd in ("card", "plan"):
+        import json
+        from . import planner
+        try:
+            c = planner.derive_card(args.gguf)
+            if args.cmd == "card":
+                print(json.dumps(c.to_dict(), indent=2))
+            else:
+                print(json.dumps(planner.plan(json.load(open(args.profile)), c, args.context), indent=2))
+        except planner.Refusal as r:
+            print(json.dumps({"refusal": r.to_dict()}, indent=2))
+            return 3
+        return 0
 
     if args.cmd == "profile":
         device = AdbDevice(serial=args.serial)

@@ -152,6 +152,24 @@ def test_parse_isa_features_per_core():
     assert static_inventory.parse_isa_features("no features here") == {}
 
 
+def test_parse_write_ignores_errored_repeats(tmp_path_factory=None):
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        f = os.path.join(d, "w.csv")
+        open(f, "w").write("repeat,mb,seconds,MBps,errors\n1,1024,2,480.0,0\n2,1024,2,100.0,3\n3,1024,2,440.0,0\n")
+        r = storage.parse_write(f)
+        assert r["mbps_range"] == (440.0, 480.0) and r["n_repeats"] == 2
+        open(f, "w").write("repeat,mb,seconds,MBps,errors\n1,1024,2,1.0,5\n")
+        assert storage.parse_write(f) is None
+
+
+def test_wakefulness_worst_sample_wins():
+    from meridian.validity import parse_power_state
+    assert parse_power_state("mWakefulness=Awake\nmWakefulness=Awake")["wakefulness"] == "awake"
+    assert parse_power_state("mWakefulness=Awake\nmWakefulness=Dozing\nmWakefulness=Awake")["wakefulness"] == "dozing"
+    assert parse_power_state("")["wakefulness"] == "unknown"
+
+
 def test_reject_descheduled_pure_function():
     rows = [{"r": 0.95}, {"r": 0.5}, {"r": 0.91}]
     clean, rejected, reasons = reject_descheduled(rows, "r", threshold=0.9)
