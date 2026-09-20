@@ -1,0 +1,3 @@
+app/build/
+app/debug.keystore
+__pycache__/

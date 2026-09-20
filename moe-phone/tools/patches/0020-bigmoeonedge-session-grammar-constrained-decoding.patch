@@ -1,0 +1,95 @@
+# Adds per-request grammar-constrained decoding to bmoe-cli --session (closes platform stub PL-E7 for the Meridian app).
+# Applies to the engine tree at moe-work/BigMoeOnEdge (0019 snapshot state). Request field: {"cmd":"generate",...,"grammar":"<GBNF, root rule 'root'>"}.
+# Greedy under the grammar; refused if a draft source (mtp/ngram) is configured. BMOE_READY gains "grammar":true so a client can detect support.
+# Verified on a OnePlus Nord (SM7250): grammar-constrained tool calls parse 100% in the app's plan/act/answer loop (see platform/impl/STATUS.md).
+--- a/core/include/bmoe/session.h
++++ b/core/include/bmoe/session.h
+@@ -96,6 +96,10 @@
+     // default output, and every benchmark run) does not, and should turn it off. Default on so an
+     // embedder that does not know about this flag keeps the old behaviour.
+     bool render_text = true;
++    // GBNF grammar constraining the generation (root rule `root`); empty = unconstrained. Sampling is
++    // greedy under the grammar. Incompatible with speculation (a rejected draft would have advanced
++    // the grammar state), so the request fails if a draft source is configured.
++    std::string grammar;
+ };
+ 
+ // Teacher-forced quality measurement. The text is fixed, so every cell scores the SAME token
+--- a/core/src/engine/session.cpp
++++ b/core/src/engine/session.cpp
+@@ -1369,6 +1369,20 @@
+         if (im.smpl) llama_sampler_reset(im.smpl);
+     }
+ 
++    // Grammar-constrained decoding (per request). The chain is grammar -> greedy; llama_sampler_sample
++    // accepts each drawn token into the grammar, so exactly the tokens the caller receives advance it.
++    std::unique_ptr<llama_sampler, decltype(&llama_sampler_free)> gram(nullptr, &llama_sampler_free);
++    if (!req.grammar.empty()) {
++        if (im.cfg.spec.source != DraftSource::none)
++            return fail("a grammar cannot be combined with speculative decoding (a rejected draft would advance the grammar state)");
++        llama_sampler * gs = llama_sampler_init_grammar(im.vocab, req.grammar.c_str(), "root");
++        if (!gs) return fail("invalid grammar: GBNF failed to parse or has no `root` rule");
++        llama_sampler * chain = llama_sampler_chain_init(llama_sampler_chain_default_params());
++        llama_sampler_chain_add(chain, gs);
++        llama_sampler_chain_add(chain, llama_sampler_init_greedy());
++        gram.reset(chain);
++    }
++
+     // Format the prompt. With chat on, render the model's OWN chat template (real Jinja) over the
+     // WHOLE conversation so far, and set up reasoning parsing so a thinking model's internal
+     // reasoning is stripped from the shown answer. req.think drives enable_thinking, per prompt.
+@@ -1681,7 +1695,8 @@
+     // to the resident reference the gates check); with a sampling chain, draw from the context's
+     // last-position logits, which llama_sampler_sample reads at index -1 — the same logits argmax
+     // would have read.
+-    llama_token tok = im.smpl ? llama_sampler_sample(im.smpl, ctx, -1) : argmax(logits, im.n_vocab);
++    llama_token tok = gram ? llama_sampler_sample(gram.get(), ctx, -1)
++                    : im.smpl ? llama_sampler_sample(im.smpl, ctx, -1) : argmax(logits, im.n_vocab);
+ 
+     while (n_gen < req.n_predict) {
+         if (llama_vocab_is_eog(im.vocab, tok)) break;
+@@ -1903,7 +1918,8 @@
+         n_past += 1 + n_acc;
+         const int32_t row = wide ? n_acc : -1;
+         logits = llama_get_logits_ith(ctx, row);
+-        tok = im.smpl ? llama_sampler_sample(im.smpl, ctx, row) : argmax(logits, im.n_vocab);
++        tok = gram ? llama_sampler_sample(gram.get(), ctx, row)
++            : im.smpl ? llama_sampler_sample(im.smpl, ctx, row) : argmax(logits, im.n_vocab);
+     }
+ 
+     // Speculation can leave the KV ahead of what the caller received: an accepted end-of-generation
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -222,6 +222,7 @@
+     int n_predict = 128;
+     bool think = true;
+     bool clear_kv = true;
++    std::string grammar;
+ };
+ 
+ // Interactive session: keep the model loaded and the expert cache warm across prompts, reading
+@@ -247,7 +248,7 @@
+     // anything sensible about --drop-cold-experts, whose threshold is a fraction of 1/top-k: the
+     // same percentage trims a tail at 8 and takes half the routing at 2. 0 on a non-MoE model.
+     std::printf("BMOE_READY {\"load_s\":%.3f,\"arch\":\"%s\",\"n_ctx\":%d,\"think_ctl\":\"%s\","
+-                "\"n_expert_used\":%d}\n",
++                "\"n_expert_used\":%d,\"grammar\":true}\n",
+                 session->load_seconds(), json_escape(session->arch()).c_str(), session->n_ctx(),
+                 bmoe::think_control_name(session->think_control()), session->n_expert_used());
+     std::fflush(stdout);
+@@ -279,6 +280,7 @@
+                 c.n_predict = json_get_int(line, "n_predict", cfg.n_predict);
+                 c.think = json_get_bool(line, "think", cfg.think);
+                 c.clear_kv = json_get_bool(line, "clear_kv", true);
++                json_get_string(line, "grammar", c.grammar);
+             } else {
+                 continue;
+             }
+@@ -315,6 +317,7 @@
+         req.n_predict = cmd.n_predict;
+         req.think = cmd.think;
+         req.clear_kv = cmd.clear_kv;
++        req.grammar = cmd.grammar;
+         req.render_text = true; // the line protocol carries the parsed answer on every token
+ 
+         ProgressDelta pd; // fresh per generation: the first line extends the empty state
