@@ -6,23 +6,33 @@ what it does not do. This extends the stub registry of
 unregistered stub is a false claim (CLAUDE.md section 7.5), so everything
 this code skips is listed here, not silently omitted.
 
-## Conformance reached: **L1 — profiled runner**, incomplete
+## Conformance reached (per `../10_EXTENSION_POINTS.md` section 1)
 
-Per [`../10_EXTENSION_POINTS.md`](../10_EXTENSION_POINTS.md) section 1:
+**Delivered: `app/dist/meridian.apk`** (build: `app/build.sh`; details: [`app/README.md`](app/README.md)). One arm64 APK containing the
+engine, the probe suite, the planner and the agent runtime. Models are downloaded or imported, never bundled.
 
-> L1 = L0 (loads a model, runs it) + the device profiler at T0/T1 + a
-> capability report.
+| level | state | what exists |
+|---|---|---|
+| **L0 runner** | done | research engine (`bmoe-cli`, session protocol) + resident tier + Android app shell + foreground service; typed refusals (`EngineUnsupported`, `ArchitectureUnsupported`, `Infeasible`, `IntegrityFailed`) |
+| **L1 profiled runner** | done | on-device T0/T1 profile with a per-second regime sampler; every number carries measured/prior/unknown; capability report |
+| **L2 planned runner** | **partial** | ModelCard from real GGUF headers; feasibility verdicts (sound `Infeasible` or `NotCalibrated`); measured thread-placement A/B with the real engine. **No PerformanceModel, no memory lease protocol, no degradation ladder** (so no rate is ever predicted) |
+| **L3 governed platform** | **no** | no governor, no streamed tier exposed, no T2/T3 profiling, no fidelity-gated transforms |
+| **L4 agent platform** | **partial** | ToolSpec registry, grammar-constrained plan/act/answer loop, consent gate, postcondition verification, audit trail. **No frozen task suite and no three baselines (PL-S1)**, so no success rate `S` is claimed |
 
-**L0 is not built.** There is no engine, no session protocol, no app shell.
-This pass builds the layer *below* L0 — the device profiler — because it is
-the cheapest thing to build honestly and the thing every other layer depends
-on, and because building an inference engine or an Android app in one pass
-without the ability to test either on a UI would itself violate this
-project's "verify before claiming done" rule.
+The engine in the APK is the research fork (BigMoeOnEdge + `tools/patches`, version string 0.23.0) with one more patch,
+`tools/patches/0020-*` (per-request grammar). The app currently runs it in resident mode only; its streaming flags exist in
+the binary but are not exposed (`PL-E25`).
 
-So this is more precisely: **T0+T1 device profiling and a capability
-report, with no engine underneath it yet.** It satisfies L1's *profiling*
-requirement and none of L0's *running* requirement.
+## Remaining stubs introduced or changed by the app
+
+| id | what | state |
+|---|---|---|
+| ~~`PL-E7`~~ | grammar from ToolSpecs | **closed**: `Tools.grammar*()` + engine patch 0020; string-typed arguments only (others refused at generation time) |
+| `PL-E23` | i8mm engine variant | not shipped: two engine builds collide on library names inside one APK; the portable armv8.2 build runs everywhere with dotprod+fp16 |
+| `PL-E24` | engine crash isolation | the engine is a child process of the app; a foreground service keeps priority, but there is no separate-process supervisor/restart |
+| `PL-E25` | streamed tier in the app | engine flags exist; not exposed, because cache sizing needs the memory-lease protocol and `grantable_foreground` (PL-S2) |
+| `PL-E26` | Java tests | only `app/test/test_parity.py` (Java planner == Python planner on 3 real GGUFs); no UI or agent unit tests. Agent behaviour was verified by hand on a Nord |
+| `PL-S1` | frozen task suite + baselines | still open; the agent's success rate is unmeasured. Observed: with grammar-constrained plan/act/answer, one 2-tool task succeeded and verified on a 3B model; a free-form loop failed on the same model |
 
 ## What was actually measured, on a real device, over adb
 
@@ -127,9 +137,9 @@ bytes by alignment padding (D-6, fixed).
 |---|---|---|---|
 | `PL-E21` | engine working-set bytes | excluded from tier need (makes need a lower bound; verdicts stay sound) | measured from a real engine session |
 | `PL-E22` | qwen3moe/other registry rows | refused `ArchitectureUnsupported` | a real checkpoint's expert pattern is observed |
-| `PL-E10` | L0 engine + session protocol | does not exist in `platform/impl/` | an engine binary is wired to `LocalApi` per `06_EXECUTION_ENGINE.md` §11 |
+| ~~`PL-E10`~~ | L0 engine + session protocol | **closed**: engine bundled in the APK and driven over its session protocol (`app/src/com/meridian/Engine.java`) | - |
 | `PL-E11` | per-cluster `matmul_gbps` (T2 compute probe) | `Measured.unknown` in every `CpuCluster`; requires `host/app/ggml_matmul_bench.cpp`, which needs a ggml build this pass did not attempt | the ggml-based compute probe is cross-compiled and wired in |
-| `PL-E12` | thread-placement A/B (`recommended_compute_mask`/`recommended_io_mask`) | `Measured.unknown`; the 4.0 vs 30.1 tok/s pinned/unpinned gap in `00_PROBLEM.md` §4 was never re-measured on the Nord | a same-process pinned/unpinned A/B runs and picks a mask |
+| ~~`PL-E12`~~ | thread-placement A/B | **closed for the compute mask** (I/O mask still unknown): app `Placement.java` A/Bs masks with the real engine (ABBA, 2 reps). On the Nord, olmoe: cores 6-7 = 17.3 tok/s vs default unpinned-4 = 8.3 (results in the app's `profile.json`, `cpu.recommended_compute_mask.arms`) | - |
 | `PL-E13` | per-accelerator decode/prefill rate, dispatch overhead | `Measured.unknown` for CPU/GPU/NPU; requires an engine (`PL-E10`) | T2 profiling ships |
 | `PL-E14` | thermal derate curve, time-to-throttle, recovery (T3) | not attempted; would need a sustained decode load this pass has no engine to generate | T3 profiling ships, per `04_DEVICE_PROFILING.md` §3.5 |
 | `PL-E15` | thermal-status OS field in `ValidityConditions` | left `None`; only wakefulness/power/battery are read from `dumpsys` | a thermal-status API call is added to `validity.py` |

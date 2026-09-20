@@ -15,11 +15,11 @@ cp "$E/cli/bmoe-cli" "$B/apk/lib/arm64-v8a/libbmoe_cli.so"
 for l in libggml-base.so libggml-cpu.so libggml.so libllama-common.so libllama.so; do cp "$E/bin/$l" "$B/apk/lib/arm64-v8a/$l"; done
 sh "$D/../build_probes.sh" "$B/probes" >/dev/null
 for p in devprobe dramprobe memprobe ufsbench wrbench; do cp "$B/probes/$p" "$B/apk/lib/arm64-v8a/lib$p.so"; done
-sed "s/@DEBUGGABLE@/$DEBUGGABLE/" "$D/AndroidManifest.xml" > "$B/AndroidManifest.xml"
-"$BT/aapt2" link -o "$B/base.apk" -I "$PL/android.jar" --manifest "$B/AndroidManifest.xml" --min-sdk-version 26 --target-sdk-version 33
+sed "s/@DEBUGGABLE@/$DEBUGGABLE/g" "$D/AndroidManifest.xml" > "$B/AndroidManifest.xml"
+"$BT/aapt2" link -o "$B/base.apk" -I "$PL/android.jar" --manifest "$B/AndroidManifest.xml" --min-sdk-version 29 --target-sdk-version 33
 javac --release 8 -Xlint:-options -cp "$PL/android.jar" -d "$B/classes" "$D"/src/com/meridian/*.java
 jar cf "$B/classes.jar" -C "$B/classes" .
-"$BT/d8" --min-api 26 --lib "$PL/android.jar" --output "$B" "$B/classes.jar"
+"$BT/d8" --min-api 29 --lib "$PL/android.jar" --output "$B" "$B/classes.jar"
 cp "$B/base.apk" "$B/unsigned.apk"
 (cd "$B" && zip -q unsigned.apk classes.dex && cd apk && zip -q -r ../unsigned.apk lib)
 "$BT/zipalign" -f -p 4 "$B/unsigned.apk" "$B/aligned.apk"

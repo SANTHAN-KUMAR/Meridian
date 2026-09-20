@@ -53,6 +53,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         if (getActionBar() != null) getActionBar().hide();
         rec = new Recorder(this);
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
         try { tools = new Tools(this); } catch (JSONException e) { throw new RuntimeException(e); }
         File pf = new File(getFilesDir(), "profile.json");
         if (pf.exists()) try { profile = new JSONObject(Native.readFile(pf.getAbsolutePath())); } catch (Exception ignored) { }
@@ -79,6 +80,8 @@ public class MainActivity extends Activity {
             else if (what.equals("unload") && chat != null) toggleEngine();
             else if (what.equals("agent")) { show("Agent"); runAgent(task); }
             else if (what.equals("chat")) { show("Chat"); send(task); }
+            else if (what.equals("placement")) { show("Device"); calibratePlacement(); }
+            else if (what.equals("download")) { show("Models"); downloadUrl(task, i.getStringExtra("sha")); }
         }, 500);
     }
     @Override protected void onResume() { super.onResume(); Regime.appForeground = true; }
@@ -127,8 +130,9 @@ public class MainActivity extends Activity {
                 profile.getJSONObject("cpu").put("recommended_compute_mask", m);
                 try (FileWriter w = new FileWriter(new File(getFilesDir(), "profile.json"))) { w.write(profile.toString(2)); }
                 final String rep = Report.render(profile) + "\nPlacement arms:\n" + r.getJSONArray("arms").toString(2);
+                final String armsTxt = r.getJSONArray("arms").toString();
                 final String msg = "Placement calibrated: " + rec1.getString("name") + (r.getBoolean("tie") ? " (tie -> fewest threads)" : "");
-                onUi(() -> { deviceStatus.setText(msg); deviceReport.setText(colorize(rep)); });
+                onUi(() -> { deviceStatus.setText(msg); deviceReport.setText(colorize(rep)); saveText("last_placement.txt", msg + "\n" + armsTxt); });
             } catch (Exception e) { onUi(() -> deviceStatus.setText("Placement calibration failed: " + e)); }
             finally { setBusy(false); }
         });
@@ -141,18 +145,20 @@ public class MainActivity extends Activity {
         final EditText url = edit("https://.../model.gguf"), sha = edit("sha256 (optional)");
         dlBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal); dlBar.setMax(1000);
         final Downloader[] dl = {null};
-        Button go = btn("Download", v -> {
-            if (busy) { toast("Busy"); return; }
-            final Downloader d = new Downloader(); dl[0] = d; setBusy(true);
-            run(() -> { try { File f = d.download(url.getText().toString().trim(), internalModels(), sha.getText().toString(), (done, total) -> onUi(() -> { dlBar.setProgress(total > 0 ? (int) (done * 1000 / total) : 0); modelStatus.setText("Downloading " + (done >> 20) + " / " + (total >> 20) + " MiB"); }));
-                    onUi(() -> { modelStatus.setText("Downloaded and verified: " + f.getName()); refreshModels(); }); }
-                catch (Exception e) { onUi(() -> modelStatus.setText("Download failed: " + e.getMessage())); } finally { setBusy(false); } });
-        });
+        Button go = btn("Download", v -> { dl[0] = downloadUrl(url.getText().toString().trim(), sha.getText().toString()); });
         Button cancel = btn("Cancel", v -> { if (dl[0] != null) dl[0].cancelled = true; });
         Button imp = btn("Import .gguf from storage", v -> { Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("*/*"); startActivityForResult(i, 7); });
         modelList = new LinearLayout(this); modelList.setOrientation(LinearLayout.VERTICAL);
         l.addView(modelStatus); l.addView(url); l.addView(sha); l.addView(go); l.addView(cancel); l.addView(dlBar); l.addView(imp); l.addView(tv("Your models", 18, FG)); l.addView(modelList);
         return scroll(l);
+    }
+    Downloader downloadUrl(final String url, final String sha) {
+        if (busy) { toast("Busy"); return null; }
+        final Downloader d = new Downloader(); setBusy(true);
+        run(() -> { try { File f = d.download(url, internalModels(), sha, (done, total) -> onUi(() -> { dlBar.setProgress(total > 0 ? (int) (done * 1000 / total) : 0); modelStatus.setText("Downloading " + (done >> 20) + " / " + (total >> 20) + " MiB"); }));
+                onUi(() -> { modelStatus.setText("Downloaded and verified: " + f.getName()); refreshModels(); saveText("last_download.txt", "OK " + f.getName() + " " + f.length()); }); }
+            catch (Exception e) { onUi(() -> { modelStatus.setText("Download failed: " + e.getMessage()); saveText("last_download.txt", "FAIL " + e.getMessage()); }); } finally { setBusy(false); } });
+        return d;
     }
     @Override protected void onActivityResult(int req, int res, final Intent data) {
         super.onActivityResult(req, res, data);
@@ -180,7 +186,7 @@ public class MainActivity extends Activity {
             row.addView(bs); row.addView(info); modelList.addView(row, lp);
             run(() -> { String s; try { Planner.Card c = Planner.derive(f); String pl;
                     if (profile == null) pl = "feasibility: profile the device first (Device tab)"; else pl = summarize(Binder.bind(profile, c, Math.min(4096, c.contextLimit), rec.observedTokS(c.modelId)));
-                    s = String.format("%s: %d layers, %d experts (%d used per token)\nweights %.2f GiB, touched per token %.0f MiB, KV %d KiB/1k tokens\n%s", c.arch, c.nLayer, c.nExpert, c.nUsed, c.totalBytes / 1073741824.0, c.activeBytesPerToken / 1048576.0, c.kvF16PerToken, pl);
+                    s = String.format("%s: %d layers, %d experts (%d used per token)\nweights %.2f GiB, touched per token %.0f MiB, KV cache %d KiB per token (f16)\n%s", c.arch, c.nLayer, c.nExpert, c.nUsed, c.totalBytes / 1073741824.0, c.activeBytesPerToken / 1048576.0, c.kvF16PerToken / 1024, pl);
                 } catch (Planner.Refusal r) { s = "Refusal " + r.reason + ": " + r.getMessage(); } catch (Exception e) { s = "error: " + e; }
                 final String out = f.getName() + "\n" + (f.length() >> 20) + " MiB\n" + s; onUi(() -> info.setText(colorize(out))); });
         }
@@ -228,7 +234,7 @@ public class MainActivity extends Activity {
     }
     void toggleEngine() {
         if (busy) { toast("Busy"); return; }
-        if (chat != null) { chat.close(); chat = null; loadBtn.setText("Load engine with selected model"); chatInfo.setText("Engine unloaded."); return; }
+        if (chat != null) { chat.close(); chat = null; stopService(new Intent(this, KeepAlive.class)); loadBtn.setText("Load engine with selected model"); chatInfo.setText("Engine unloaded."); return; }
         String why = engineRefusal(); if (why != null) { android.util.Log.i("meridian", "engine refusal: " + why); chatInfo.setText(colorize(why)); return; }
         setBusy(true); chatInfo.setText("Loading " + selectedModel.getName() + " ...");
         run(() -> { try {
@@ -236,7 +242,7 @@ public class MainActivity extends Activity {
             JSONObject cm = profile.getJSONObject("cpu").getJSONObject("recommended_compute_mask");
             if (!cm.isNull("value")) { JSONObject v = cm.getJSONObject("value"); cfg.threads = v.getInt("threads"); if (!v.isNull("mask_hex")) cfg.cpuMask = v.getString("mask_hex"); basis = "placement " + v.getString("name") + " [" + cm.getString("provenance") + "]"; }
             android.util.Log.i("meridian", "starting engine " + cfg.model); Chat c = new Chat(this, cfg); c.start(180000); chat = c; android.util.Log.i("meridian", "engine ready"); chatTurns = 0; final String b = basis;
-            onUi(() -> { loadBtn.setText("Unload engine"); chatInfo.setText(colorize("Engine ready (" + b + ")  load " + c.engine().readyInfo().optDouble("load_s") + " s")); });
+            onUi(() -> { startForegroundService(new Intent(this, KeepAlive.class).putExtra("model", selectedModel.getName())); loadBtn.setText("Unload engine"); chatInfo.setText(colorize("Engine ready (" + b + ")  load " + c.engine().readyInfo().optDouble("load_s") + " s")); });
         } catch (Exception e) { android.util.Log.e("meridian", "engine failed", e); chat = null; onUi(() -> chatInfo.setText("Engine failed: " + e.getMessage())); } finally { setBusy(false); } });
     }
     void send(final String q) {
