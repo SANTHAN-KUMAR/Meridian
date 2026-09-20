@@ -42,31 +42,22 @@ live).
 - **T1 fast probes**, cross-compiled with the NDK
   (`platform/impl/build_probes.sh`) from the existing, already-validated C
   sources in `device/`:
-  - `dramprobe.c` → `memory.dram_read_gbps` (12.4 GB/s median, 3 repeats x
-    5 thread counts; 8 of 15 rows at 8 threads rejected as descheduled by
-    the probe's own `min_cpu_over_wall` check — expected on an unpinned
-    8-core device with no `--cpus` mask given, since thread placement is a
-    separate, unimplemented probe, see below).
-  - `memprobe.c` (anonymous mode) → `memory.grantable_quiesced` (8194 MiB
-    plateau before `MemAvailable` hit its floor).
-  - `ufsbench.c` → `storage.random_read` curve and `efficient_request_size`
-    (four sizes x three thread counts, buffered + one direct-I/O
-    confirmation pair).
+  - `dramprobe.c` → `memory.dram_read_gbps` (rows failing the probe's own
+    `min_cpu_over_wall` check are rejected and counted, not averaged).
+  - `memprobe.c` (anonymous mode, 2 runs) → `memory.grantable_quiesced`.
+  - `ufsbench.c` (3 repeats) → `storage.random_read` and
+    `efficient_request_size`; one direct-I/O confirmation pair.
+  Values: read them from `DeviceProfile.json`, not from this file.
 - **ValidityGuard** (`meridian/validity.py`): reads `dumpsys battery` and
   `dumpsys power` to attach real `ValidityConditions` to every measurement,
-  and discovered a genuine regime violation — the phone was USB-charging
-  throughout this session (needed for the adb connection), which is **not**
-  the deployment regime decision D4 requires (`unplugged`). The profiler
-  downgrades every affected `Measured` from `provenance: measured` to
-  `provenance: prior` with a widened interval for exactly this reason,
-  rather than reporting a charging-state number as if it were the sustained
-  unplugged operating point. **Re-running this profiler on battery power
-  would upgrade these fields to `measured`** — that is the one substantive
-  follow-up this document recommends.
+  and gates `measured` on power=unplugged, foreground=none and
+  wakefulness=awake. Any other state downgrades to `prior` with an interval
+  from real repeats. The current run (`meridian_l1_nord_wireless`) is
+  unplugged with the launcher foreground but the screen was off, so it is
+  `prior`; a screen-on idle re-run is the outstanding step.
 
-Raw artifacts: [`../../results/2026-09-20/meridian_l1_nord/`](../../results/2026-09-20/meridian_l1_nord/)
-(every CSV/text file the parsers above read, plus the assembled
-`DeviceProfile.json` and `capability_report.md`).
+Raw artifacts and the assembled profile:
+[`../../results/2026-09-20/meridian_l1_nord_wireless/`](../../results/2026-09-20/meridian_l1_nord_wireless/).
 
 ## Defects found in this code after the first commit, and how they were fixed
 

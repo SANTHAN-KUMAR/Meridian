@@ -29,8 +29,6 @@ regime measurement, so every affected field in `DeviceProfile.json` is
 | `ufs_direct.csv` | same | O_DIRECT confirmation at 4KiB and 1MiB, 4 threads |
 | `memprobe.txt` | cross-compiled `device/memprobe.c` | anonymous-memory grant-and-hold curve to the resident plateau |
 | `battery_dumpsys.txt`, `power_state.txt` | `adb shell dumpsys battery / power` | validity conditions (power source, wakefulness, battery %) |
-| `DeviceProfile.json` | `meridian/profiler.py` | the assembled contract, per `03_INTERFACES.md` §1 |
-| `capability_report.md` | `meridian/report.py` | the plain-language summary, per `02_ARCHITECTURE.md` §9 |
 
 ## Retraction
 
