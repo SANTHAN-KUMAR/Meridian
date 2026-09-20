@@ -40,20 +40,41 @@ RAM), measured across all three compute units
 | Adreno GPU, OpenCL | 50.0 tok/s [E:olmoe_gpu_decode] | 135.3 tok/s [E:olmoe_gpu_prefill] |
 | Hexagon NPU | 40.7 tok/s [E:olmoe_npu_decode] | **284.1 tok/s** [E:olmoe_npu_prefill] |
 
-Put beside §1: on one phone, on one day, **a resident small model decodes about 7x faster than the
-streamed 30B and prefills about an order of magnitude faster still.** The NPU is last at decode and
-first at prefill by a factor of 14 over the CPU, which is a latency-versus-throughput signature, not
-a bandwidth one.
+Two comparisons follow from this table, and they must be kept apart because only one of them is
+clean.
+
+**Clean: decode, across tiers.** The resident small model decodes about 6.7x faster than the
+streamed 30B on the same phone (44.5 [E:olmoe_cpu_decode] against 6.68 [E:qwen3_h2h_ours] tok/s).
+**This compares two different models as well as two tiers** — a 1B-active checkpoint against a
+3B-active one — so it is not a measurement of what streaming costs. It is a measurement of what the
+platform would actually bind, which is the decision at hand, and the confound is stated rather than
+hidden.
+
+**Clean: prefill, within the resident tier.** The NPU is last at decode and first at prefill by a
+factor of 14 over the CPU on the same model and the same campaign. That is a latency-versus-
+throughput signature, not a bandwidth one, and it is the reason placement must be chosen separately
+for the two phases.
+
+**Not available: prefill across tiers.** The streamed tier's prefill has never been measured at any
+realistic prompt length (`PL-S3`, §8.6), so *no* ratio may be quoted for it. What bounds it instead
+is a measurement that needs no prefill number at all: at ~3,000 tokens of context the streamed
+model's compute floor alone is 144.3 ms/token [E:qwen3_e1_long_ms], which puts it under 7 tok/s
+before a single byte is read from flash.
 
 This is not an argument that big models are pointless. It is an argument about **defaults**, and it
 is decisive for a product whose unit of work is a task rather than a token:
 
-> A phone-task agent turn is a large-ish prompt and a short output. It is **prefill-dominated**.
-> The prior project optimised **decode** for a model whose compute floor at agent-sized context is
-> 144.3 ms/token [E:qwen3_e1_long_ms]. The product's default execution tier must therefore be the
-> resident small model on the accelerator that wins *prefill*, and the streamed 30B must become the
+> A phone-task agent turn is a large-ish prompt and a short output, so it is **prefill-dominated**.
+> The prior project optimised **decode**, for a model whose compute floor at agent-sized context
+> already exceeds the budget. The product's default execution tier must therefore be a resident
+> model on the compute unit that wins *prefill*, and the streamed large model must become the
 > **escalation tier** — reached when a task demonstrably needs it, at a cost the system predicted
 > before paying it.
+
+The premise "prefill-dominated" is itself an assumption about the workload, not yet a measurement
+(`PL-S3`), and experiment X2 in [`01_RESEARCH.md`](01_RESEARCH.md) §6 exists to test it. If it is
+false, the tiering inverts, and that is a cheap thing to find out early rather than a reason to
+delay the decision.
 
 That reframing is the central architectural decision of this platform, and it converts the prior
 project's closed negative result into a component with a defined role rather than a sunk cost.

@@ -144,8 +144,8 @@ diverged routinely on the primary device, where the largest budget ever granted 
 **No cross-model scaling law.** The pre-registered transfer rule across expert geometries was
 refuted ([`00_PROBLEM.md`](00_PROBLEM.md) §8.3). Permitted sources, in order:
 
-1. a **measured warm sample** for this model at this cache size on this device (§4 of
-   [`04_DEVICE_PROFILING.md`](04_DEVICE_PROFILING.md), a few hundred tokens);
+1. a **measured warm sample** for this model at this cache size on this device
+   ([`04_DEVICE_PROFILING.md`](04_DEVICE_PROFILING.md) §3.6, a few hundred tokens);
 2. a simulated curve from this model's **own** routing trace, with the measured simulator-versus-device
    correction attached and carried in `assumptions` — the simulator is known to sit above the device
    at both points where the two were compared;

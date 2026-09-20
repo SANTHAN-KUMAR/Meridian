@@ -163,7 +163,7 @@ No venue index, issue tracker or repository history was crawled. **Every verdict
 
 | prior work | what it already does |
 |---|---|
-| Qualcomm **GenieX** (BSD-3) and the Genie SDK | runs GGUF models on Snapdragon NPU, GPU and CPU, with a CLI, Android bindings and an OpenAI-compatible local server. **Running local models on the Snapdragon NPU is not novel, and this is a component to adopt rather than reimplement** ([`09_VENDOR_INTEGRATION.md`](09_VENDOR_INTEGRATION.md) §3) |
+| Qualcomm **GenieX** (BSD-3) and the Genie SDK | runs GGUF models on Snapdragon NPU, GPU and CPU, with a CLI, Android bindings and an OpenAI-compatible local server. **Running local models on the Snapdragon NPU is not novel, and this is a component to adopt rather than reimplement** ([`09_VENDOR_INTEGRATION.md`](09_VENDOR_INTEGRATION.md) §5.1) |
 | **Qwen-UI-Agent**, **GUI-Owl-1.5**, **Mobile-Agent-v3.5**, **V-Droid**, **AndroidWorld**, **SPA-Bench** | mobile GUI agents, their benchmarks and their evaluation harnesses exist and are mature. A phone agent is not novel; the benchmark suites are assets to reuse |
 | **llmfit**, **ModelFit**, **LLM Configurator** | "which model fits my hardware" tools. All PC-oriented; all derive tokens per second from nameplate bandwidth and parameter count; none measures the device, models thermal derating, or distinguishes requested from granted memory |
 | `ggml-hexagon` / llama.cpp Snapdragon backends | an NPU backend exists upstream and is described as experimental, with reports of corrupted output on some models; the OpenCL/Adreno path is the working alternative. **Consequence: the NPU path must be validated by the fidelity gate on every device, not trusted** |
