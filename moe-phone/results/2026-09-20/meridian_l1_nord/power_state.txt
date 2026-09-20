@@ -1,0 +1,2 @@
+  mWakefulness=Awake
+  mWakefulnessChanging=false

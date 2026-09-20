@@ -1,0 +1,4 @@
+repeat,mode,pattern,size_kb,threads,bytes,seconds,MBps,iops,lat_p50_us,lat_p99_us,errors,first_errno,power_w,temp_start_c,temp_end_c,temp_zone
+1,direct,rand,4,4,89104384,1.0014,88.98,21723.3,161.3,488.1,0,0,nan,81.5,81.5,mmw-pa4-usr
+1,direct,rand,1024,4,936378368,1.0039,932.71,889.5,4156.4,9903.8,0,0,nan,81.5,81.5,mmw-pa4-usr
+# direct_io_supported=1
