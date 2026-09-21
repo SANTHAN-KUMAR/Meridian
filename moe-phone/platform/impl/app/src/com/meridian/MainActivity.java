@@ -61,7 +61,7 @@ public class MainActivity extends Activity {
         TextView title = tv("Meridian", 22, FG); title.setPadding(dp(14), dp(12), dp(14), 0); title.setTypeface(Typeface.DEFAULT_BOLD); root.addView(title);
         HorizontalScrollView hs = new HorizontalScrollView(this); LinearLayout bar = new LinearLayout(this); hs.addView(bar); root.addView(hs);
         content = new FrameLayout(this); root.addView(content, new LinearLayout.LayoutParams(-1, 0, 1f));
-        tabViews.put("Device", deviceTab()); tabViews.put("Models", modelsTab()); tabViews.put("Chat", chatTab()); tabViews.put("Agent", agentTab()); tabViews.put("Audit", auditTab());
+        tabViews.put("Device", deviceTab()); tabViews.put("Models", modelsTab()); tabViews.put("Chat", chatTab()); tabViews.put("Agent", agentTab()); tabViews.put("Lab", labTab()); tabViews.put("Audit", auditTab());
         for (final String name : tabViews.keySet()) bar.addView(btn(name, v -> show(name)));
         setContentView(root); show(profile == null ? "Device" : "Models");
         if (profile != null) try { deviceReport.setText(colorize(Report.render(profile))); } catch (JSONException ignored) { }
@@ -81,6 +81,15 @@ public class MainActivity extends Activity {
             else if (what.equals("agent")) { show("Agent"); runAgent(task); }
             else if (what.equals("chat")) { show("Chat"); send(task); }
             else if (what.equals("placement")) { show("Device"); calibratePlacement(); }
+            else if (what.equals("plan")) { show("Lab"); labPlan(); }
+            else if (what.equals("calibrate")) { show("Lab"); labCalibrate(false); }
+            else if (what.equals("calibrate_streamed")) { show("Lab"); labCalibrate(true); }
+            else if (what.equals("loadplan")) { show("Lab"); labLoadPlan(); }
+            else if (what.equals("validate")) { show("Lab"); labValidate(); }
+            else if (what.equals("t3")) { show("Lab"); labParam.setText(task == null ? "10" : task); labT3(); }
+            else if (what.equals("x1")) { show("Lab"); labParam.setText(task == null ? "" : task); labX1(); }
+            else if (what.equals("eval")) { show("Lab"); labEval(); }
+            else if (what.equals("select")) { for (File f : allModels()) if (f.getName().contains(task)) selectedModel = f; saveText("auto.log", "selected " + selectedModel); }
             else if (what.equals("download")) { show("Models"); downloadUrl(task, i.getStringExtra("sha")); }
         }, 500);
     }
@@ -232,19 +241,46 @@ public class MainActivity extends Activity {
             return null;
         } catch (Planner.Refusal r) { return "Refusal " + r.reason + ": " + r.getMessage(); } catch (Exception e) { return "error: " + e; }
     }
+    Lease lease; Governor governor; Engine.Config curCfg; JSONObject curPlan;
     void toggleEngine() {
         if (busy) { toast("Busy"); return; }
-        if (chat != null) { chat.close(); chat = null; stopService(new Intent(this, KeepAlive.class)); loadBtn.setText("Load engine with selected model"); chatInfo.setText("Engine unloaded."); return; }
-        String why = engineRefusal(); if (why != null) { android.util.Log.i("meridian", "engine refusal: " + why); chatInfo.setText(colorize(why)); return; }
-        setBusy(true); chatInfo.setText("Loading " + selectedModel.getName() + " ...");
-        run(() -> { try {
-            Engine.Config cfg = new Engine.Config(); cfg.model = selectedModel; cfg.ctx = 2048; cfg.ubatch = 512; String basis = "default 4 threads, unpinned [prior]";
-            JSONObject cm = profile.getJSONObject("cpu").getJSONObject("recommended_compute_mask");
-            if (!cm.isNull("value")) { JSONObject v = cm.getJSONObject("value"); cfg.threads = v.getInt("threads"); if (!v.isNull("mask_hex")) cfg.cpuMask = v.getString("mask_hex"); basis = "placement " + v.getString("name") + " [" + cm.getString("provenance") + "]"; }
-            android.util.Log.i("meridian", "starting engine " + cfg.model); Chat c = new Chat(this, cfg); c.start(180000); chat = c; android.util.Log.i("meridian", "engine ready"); chatTurns = 0; final String b = basis;
-            onUi(() -> { startForegroundService(new Intent(this, KeepAlive.class).putExtra("model", selectedModel.getName())); loadBtn.setText("Unload engine"); chatInfo.setText(colorize("Engine ready (" + b + ")  load " + c.engine().readyInfo().optDouble("load_s") + " s")); });
-        } catch (Exception e) { android.util.Log.e("meridian", "engine failed", e); chat = null; onUi(() -> chatInfo.setText("Engine failed: " + e.getMessage())); } finally { setBusy(false); } });
+        if (chat != null) { unloadEngine(); loadBtn.setText("Load engine with selected model"); chatInfo.setText("Engine unloaded."); return; }
+        String why = engineRefusal(); if (why != null) { chatInfo.setText(colorize(why)); return; }
+        try { Engine.Config cfg = PlanV2.baseConfig(profile, selectedModel, 2048); loadEngine(cfg, null); } catch (JSONException e) { chatInfo.setText("error: " + e); }
     }
+    void unloadEngine() {
+        if (governor != null) { governor.stop(); governor = null; } if (lease != null) { lease.revoke(); lease = null; }
+        if (chat != null) { chat.close(); chat = null; } stopService(new Intent(this, KeepAlive.class));
+    }
+    /** Load the engine with `cfg`; when a plan is given, register its lease and start the governor with its ladder and falsification rule. */
+    void loadEngine(final Engine.Config cfg, final JSONObject plan) {
+        setBusy(true); onUi(() -> chatInfo.setText("Loading " + cfg.describe() + " ..."));
+        run(() -> { try {
+            Chat c = new Chat(this, cfg); c.start(900000); chat = c; chatTurns = 0; curCfg = cfg; curPlan = plan;
+            JSONObject lst = null; String leaseTxt = "no plan: no lease, no governor (the configuration is uncalibrated)";
+            if (plan != null) { long floor = plan.getJSONObject("lease").getLong("floor"), target = plan.getJSONObject("lease").getLong("target");
+                lease = Lease.request(profile, floor, target); lst = lease.verify(); leaseTxt = "lease granted " + (lease.granted >> 20) + " MiB, verified resident " + (lease.verifiedResident >> 20) + " MiB (swapped " + (lease.swapped >> 20) + " MiB)";
+                lease.startHeartbeat(ui, 5000, (why, st) -> { if (governor != null) governor.onMemoryPressure(why); });
+                governor = new Governor(this, new Governor.Host() {
+                    public void applyRung(JSONObject r, String why) { applyRungAsync(r, why); }
+                    public void invalidated(String why) { onUi(() -> chatInfo.setText(colorize("Plan falsified: " + why + ". Recalibrate before trusting it."))); } }, rec, plan); governor.start(); }
+            final String fl = leaseTxt;
+            onUi(() -> { startForegroundService(new Intent(this, KeepAlive.class).putExtra("model", cfg.model.getName())); loadBtn.setText("Unload engine"); chatInfo.setText(colorize("Engine ready: " + cfg.describe() + "\nload " + c.engine().readyInfo().optDouble("load_s") + " s; " + fl)); });
+        } catch (Exception e) { chat = null; onUi(() -> chatInfo.setText("Engine failed: " + e.getMessage())); } finally { setBusy(false); } });
+    }
+    /** Execute a ladder rung chosen by the governor: reload with the rung's change, or unload. Queued behind whatever job is running. */
+    void applyRungAsync(final JSONObject r, final String why) {
+        run(() -> { try {
+            String act = r.getString("action"); Engine.Config c = curCfg; JSONObject pl = curPlan; if (c == null) return;
+            rec.write(new JSONObject().put("event", "ladder_rung").put("action", act).put("why", why).put("expected_cost", r.getJSONObject("expected_cost")).put("t", System.currentTimeMillis() / 1000.0));
+            onUi(() -> chatInfo.setText(colorize("Governor: " + act + " because " + why)));
+            if (act.equals("suspend") || act.equals("refuse")) { onUi(this::unloadEngine); return; }
+            Engine.Config n = PlanV2.configFromJson(PlanV2.cfgJson(c), c.model); JSONObject p = r.getJSONObject("params");
+            if (act.equals("change_placement")) { n.threads = p.getInt("threads"); n.cpuMask = p.getString("mask_hex"); } else if (act.equals("reduce_context")) n.ctx = p.getInt("ctx"); else if (act.equals("shrink_cache")) n.cacheCeilMb = n.cacheFloorMb;
+            final Engine.Config nn = n; onUi(() -> { unloadEngine(); loadEngine(nn, pl); });
+        } catch (Exception e) { onUi(() -> chatInfo.setText("Governor failed to apply rung: " + e)); } });
+    }
+    @Override public void onTrimMemory(int level) { super.onTrimMemory(level); if (level >= TRIM_MEMORY_RUNNING_LOW && governor != null) governor.onMemoryPressure("onTrimMemory level " + level); }
     void send(final String q) {
         if (chat == null) { toast("Load the engine first"); return; } if (busy) { toast("Busy"); return; } setBusy(true);
         final boolean fresh = chatTurns == 0; final Chat c = chat; final StringBuilder acc = new StringBuilder();
@@ -256,7 +292,7 @@ public class MainActivity extends Activity {
                 .put("prefill_ms", d.optDouble("prefill_s") * 1000).put("predicted", JSONObject.NULL).put("observed", new JSONObject().put("tokens_per_s", d.optDouble("tok_s")).put("prefill_tokens_per_s", d.optDouble("prefill_tps")))
                 .put("conditions", cond).put("in_regime", cond.getBoolean("in_regime")).put("outcome", "ok"));
             final String info = String.format("decode %.2f tok/s, prefill %.1f tok/s (%d prompt tokens) - observed this turn [%s]", d.optDouble("tok_s"), d.optDouble("prefill_tps"), d.optInt("n_prompt"), cond.getBoolean("in_regime") ? "measured" : "prior: out of regime");
-            onUi(() -> chatInfo.setText(colorize(info)));
+            onUi(() -> chatInfo.setText(colorize(info))); if (governor != null && cond.getBoolean("in_regime")) governor.observe(d.optDouble("tok_s"));
         } catch (Exception e) { onUi(() -> chatInfo.setText("Turn failed: " + e.getMessage())); } finally { setBusy(false); } });
     }
 
@@ -289,6 +325,85 @@ public class MainActivity extends Activity {
         } catch (Exception e) { onUi(() -> { agentLog.append("\nFailed: " + e.getMessage() + "\n"); saveText("last_agent.txt", agentLog.getText().toString()); }); } finally { setBusy(false); } });
     }
     void saveText(String name, String t) { try (FileWriter w = new FileWriter(new File(getFilesDir(), name))) { w.write(t); } catch (IOException ignored) { } }
+
+
+    // ---------- Lab: planner, calibration, validation, thermal, foreground grant, evaluation ----------
+    TextView labOut; EditText labCtx, labOutTok, labLat, labParam;
+    View labTab() {
+        LinearLayout l = col();
+        l.addView(tv("Measurement lab. Everything here runs the real engine on this phone; results are saved and shown with their basis. Keep the app in front, phone unplugged.", 14, DIM));
+        labCtx = edit("prompt tokens (default 200)"); labOutTok = edit("output tokens (default 64)"); labLat = edit("latency target to first token, ms (default 5000)"); labParam = edit("parameter (minutes / package name)");
+        l.addView(labCtx); l.addView(labOutTok); l.addView(labLat); l.addView(labParam);
+        l.addView(btn("Plan (selected model)", v -> labPlan()));
+        l.addView(btn("Calibrate resident tier (~3 min)", v -> labCalibrate(false)));
+        l.addView(btn("Calibrate streamed tier", v -> labCalibrate(true)));
+        l.addView(btn("Load engine from plan", v -> labLoadPlan()));
+        l.addView(btn("Validate planner (pre-registered)", v -> labValidate()));
+        l.addView(btn("Sustained thermal test (T3)", v -> labT3()));
+        l.addView(btn("Foreground memory grant (X1)", v -> labX1()));
+        l.addView(btn("Run agent evaluation (suite-v1)", v -> labEval()));
+        labOut = mono(""); l.addView(labOut); return scroll(l);
+    }
+    long num(EditText e, long d) { try { return Long.parseLong(e.getText().toString().trim()); } catch (Exception x) { return d; } }
+    void labShow(final String name, final String text) { onUi(() -> { labOut.setText(colorize(text)); }); saveText("last_" + name + ".txt", text); }
+    boolean labReady(boolean needIdle) {
+        if (busy) { toast("Busy"); return false; } if (profile == null) { labShow("error", "Profile the device first."); return false; } if (selectedModel == null) { List<File> ms = allModels(); if (ms.isEmpty()) { labShow("error", "No model."); return false; } selectedModel = ms.get(0); }
+        if (needIdle && chat != null) { labShow("error", "Unload the engine first: this experiment needs the device otherwise idle."); return false; } return true;
+    }
+    static String planSummary(JSONObject p) throws JSONException {
+        StringBuilder b = new StringBuilder();
+        if (p.has("refusal")) b.append("Refusal ").append(p.getJSONObject("refusal").getString("reason")).append(": ").append(p.getJSONObject("refusal").getString("detail")).append('\n');
+        if (p.has("grant_basis")) b.append("memory basis: ").append(p.getString("grant_basis")).append('\n');
+        JSONArray c = p.optJSONArray("candidates"); if (c != null) for (int i = 0; i < c.length(); i++) { JSONObject o = c.getJSONObject(i); b.append(o.getString("tier")).append(": ").append(o.getString("verdict"));
+            if (o.has("detail")) b.append(" - ").append(o.getString("detail")); if (o.has("ttft_ms")) b.append(String.format("  TTFT %.0f-%.0f ms [%s], decode %.2f-%.2f tok/s", o.getJSONObject("ttft_ms").getDouble("lo_ms"), o.getJSONObject("ttft_ms").getDouble("hi_ms"), o.getString("calibration_state"), o.getJSONObject("decode_tok_s").getDouble("lo"), o.getJSONObject("decode_tok_s").getDouble("hi")));
+            if (o.has("offer")) b.append("\n   offer: ").append(o.getString("offer")); b.append('\n'); }
+        if (p.has("chosen")) b.append("CHOSEN ").append(p.getJSONObject("chosen").getString("tier")).append(" config ").append(p.getJSONObject("config")).append("\nlease ").append(p.getJSONObject("lease")).append("\nfalsification ").append(p.getJSONObject("falsification")).append("\nladder ").append(p.getJSONArray("ladder").length()).append(" rungs\n");
+        return b.toString();
+    }
+    void labPlan() { if (!labReady(false)) return; run(() -> { try { Planner.Card c = Planner.derive(selectedModel); JSONObject p = PlanV2.plan(this, profile, c, selectedModel, num(labCtx, 200), num(labOutTok, 64), num(labLat, 5000)); saveText("plan.json", p.toString(2)); labShow("plan", planSummary(p)); } catch (Exception e) { labShow("plan", "Plan failed: " + e); } }); }
+    void labCalibrate(final boolean streamed) {
+        if (!labReady(true)) return; setBusy(true);
+        run(() -> { try { Planner.Card c = Planner.derive(selectedModel); long grant = profile.getJSONObject("memory").getJSONObject("grantable_foreground").isNull("value") ? profile.getJSONObject("memory").getJSONObject("grantable_quiesced").getLong("value") : profile.getJSONObject("memory").getJSONObject("grantable_foreground").getLong("value");
+            Engine.Config cfg = PlanV2.configFor(profile, c, selectedModel, streamed ? "streamed" : "resident", 1024, grant); long t0 = System.currentTimeMillis();
+            Cells cells = Calibration.run(this, cfg, new int[]{32, 128, 512}, 2, s -> labShow("calibrate", "Calibrating " + cfg.describe() + "\n" + s));
+            labShow("calibrate", "Calibrated in " + (System.currentTimeMillis() - t0) / 1000 + " s, in_regime=" + cells.inRegime + "\n" + cells.toJson().toString(2));
+        } catch (Exception e) { labShow("calibrate", "Calibration failed: " + e); } finally { setBusy(false); } });
+    }
+    void labLoadPlan() {
+        if (!labReady(true)) return;
+        run(() -> { try { Planner.Card c = Planner.derive(selectedModel); JSONObject p = PlanV2.plan(this, profile, c, selectedModel, num(labCtx, 200), num(labOutTok, 64), num(labLat, 5000)); labShow("plan", planSummary(p));
+            if (p.has("refusal")) return; Engine.Config cfg = PlanV2.configFromJson(p.getJSONObject("config"), selectedModel); onUi(() -> loadEngine(cfg, p)); } catch (Exception e) { labShow("plan", "failed: " + e); } });
+    }
+    void labValidate() {
+        if (!labReady(true)) return; setBusy(true);
+        run(() -> { try { Planner.Card c = Planner.derive(selectedModel); Engine.Config cfg = PlanV2.configFor(profile, c, selectedModel, "resident", 1024, 0);
+            JSONObject r = Validate.run(this, cfg, c, profile, s -> labShow("validate", s)); labShow("validate", r.toString(2)); } catch (Exception e) { labShow("validate", "Validation failed: " + e); } finally { setBusy(false); } });
+    }
+    void labT3() {
+        if (!labReady(true)) return; setBusy(true); final int secs = (int) num(labParam, 10) * 60;
+        run(() -> { try { Planner.Card c = Planner.derive(selectedModel); Engine.Config cfg = PlanV2.baseConfig(profile, selectedModel, 1024);
+            JSONObject r = Thermal.run(this, cfg, secs, s -> labShow("t3", s));
+            JSONObject th = profile.getJSONObject("thermal"); boolean in = r.getJSONObject("conditions").getBoolean("in_regime"); JSONObject cond = r.getJSONObject("conditions");
+            JSONArray dr = new JSONArray(); JSONArray d = r.getJSONArray("derate"); for (int i = 0; i < d.length(); i++) dr.put(d.getJSONObject(i));
+            th.put("sustained_derate", new JSONObject().put("value", dr).put("provenance", in ? "measured" : "prior").put("confidence", in ? 0.6 : 0.3).put("source", r.getString("temperature_source") + "; " + r.getString("config")).put("conditions", cond));
+            th.put("time_to_throttle_s", new JSONObject().put("value", r.get("time_to_throttle_s")).put("provenance", in ? "measured" : "prior").put("source", "T3 sustained run"));
+            th.put("recovery_s", new JSONObject().put("value", r.get("recovery_s")).put("provenance", in ? "measured" : "prior").put("source", "T3 recovery polling"));
+            try (FileWriter w = new FileWriter(new File(getFilesDir(), "profile.json"))) { w.write(profile.toString(2)); }
+            r.remove("series"); labShow("t3", r.toString(2)); } catch (Exception e) { labShow("t3", "T3 failed: " + e); } finally { setBusy(false); } });
+    }
+    void labX1() {
+        if (!labReady(true)) return; setBusy(true); final String pkg = labParam.getText().toString().trim().isEmpty() ? "com.google.android.youtube" : labParam.getText().toString().trim();
+        run(() -> { try { if (!ForegroundGrant.usageAccess(this)) labShow("x1", "Usage Access is not granted: the foreground app cannot be verified, so the result will be labelled prior. Grant it in Settings > Usage access.");
+            JSONObject m = ForegroundGrant.run(this, pkg, s -> labShow("x1", s));
+            profile.getJSONObject("memory").put("grantable_foreground", m); try (FileWriter w = new FileWriter(new File(getFilesDir(), "profile.json"))) { w.write(profile.toString(2)); }
+            onUi(() -> startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))); labShow("x1", m.toString(2)); } catch (Exception e) { labShow("x1", "X1 failed: " + e); } finally { setBusy(false); } });
+    }
+    void labEval() {
+        if (chat == null) { labShow("eval", "Load the engine (Chat tab) first: the model-driven variants need it."); return; } if (busy) { toast("Busy"); return; } setBusy(true);
+        run(() -> { try { String[] variants = {"keyword_router", "constant:battery_status", "constant:storage_free", "constant:notes_list", "constant:say_hello", "free_form", "plan_act_answer"};
+            JSONObject r = Eval.run(this, chat, tools, rec, selectedModel.getName(), variants, s -> labShow("eval", "Evaluating: " + s)); labShow("eval", r.getJSONObject("summary").toString(2)); }
+            catch (Exception e) { labShow("eval", "Eval failed: " + e); } finally { setBusy(false); } });
+    }
 
     // ---------- Audit ----------
     View auditTab() { LinearLayout l = col(); l.addView(tv("Audit trail (structural fields only; no prompt or screen content is stored).", 14, DIM)); auditView = mono(""); l.addView(auditView);
