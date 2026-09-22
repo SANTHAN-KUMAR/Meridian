@@ -17,9 +17,12 @@ public final class Engine {
     }
     public static final class Config {
         public File model; public int threads = 4, ctx = 2048, ubatch = 512; public String cpuMask = null; public boolean chatml = true;
+        /** Engine build: "dot" = portable armv8.2-a+dotprod+fp16, "i8" = armv8.6-a+i8mm (chosen per device by ComputeProbe). */
+        public String variant = "dot";
+        public String binary() { return "i8".equals(variant) ? "bmoe_cli_i8" : "bmoe_cli"; }
         // streamed tier (experts read from flash through a per-layer cache); all values are derived by PlanV2 from measurements
         public boolean moeStream; public int cacheFloorMb, cacheCeilMb, ioThreads = 4; public String ioMask = null;
-        public String describe() { return (moeStream ? "streamed" : "resident") + " threads=" + threads + " mask=" + cpuMask + " ctx=" + ctx + (moeStream ? " cache=[" + cacheFloorMb + "," + cacheCeilMb + "]MiB io=" + ioThreads + "@" + ioMask : ""); }
+        public String describe() { return (moeStream ? "streamed" : "resident") + " engine=" + variant + " threads=" + threads + " mask=" + cpuMask + " ctx=" + ctx + (moeStream ? " cache=[" + cacheFloorMb + "," + cacheCeilMb + "]MiB io=" + ioThreads + "@" + ioMask : ""); }
     }
 
     private final Context ctx; private final Config cfg; private Process proc; private Listener listener;
@@ -43,7 +46,8 @@ public final class Engine {
                 "--overlap", "--dense-weights", "anon", "--expert-slru", "--predict-prefetch", "--spec-adopt-selective", "--io-threads", String.valueOf(cfg.ioThreads)));
             if (cfg.ioMask != null) { a.add("--io-cpu-mask"); a.add(cfg.ioMask); }
         }
-        proc = Native.builder(ctx, "bmoe_cli", a).start();
+        if (!Native.present(ctx, cfg.binary())) throw new IOException("EngineUnsupported: engine build '" + cfg.variant + "' is not bundled in this APK");
+        proc = Native.builder(ctx, cfg.binary(), a).start();
         stdin = new BufferedWriter(new OutputStreamWriter(proc.getOutputStream(), "UTF-8"));
         Thread out = new Thread(this::readStdout, "engine-stdout"), err = new Thread(this::readStderr, "engine-stderr");
         out.setDaemon(true); err.setDaemon(true); out.start(); err.start();

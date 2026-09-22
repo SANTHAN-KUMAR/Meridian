@@ -24,6 +24,7 @@ public class MainActivity extends Activity {
     final Handler ui = new Handler(Looper.getMainLooper());
     FrameLayout content; final Map<String, View> tabViews = new LinkedHashMap<>();
     JSONObject profile; File selectedModel; Chat chat; Planner.Card selectedCard; Tools tools; Recorder rec; int chatTurns = 0;
+    LinearLayout recList, searchList;
     TextView deviceStatus, deviceReport, modelStatus, chatOut, chatInfo, agentLog, auditView; LinearLayout modelList; ProgressBar dlBar; Button loadBtn;
     CheckBox memGrant; boolean busy;
 
@@ -65,7 +66,7 @@ public class MainActivity extends Activity {
         for (final String name : tabViews.keySet()) bar.addView(btn(name, v -> show(name)));
         setContentView(root); show(profile == null ? "Device" : "Models");
         if (profile != null) try { deviceReport.setText(colorize(Report.render(profile))); } catch (JSONException ignored) { }
-        refreshModels();
+        refreshModels(); refreshRecommendations();
         autoRun(getIntent());
     }
     // Debug-build automation (ignored unless the APK is debuggable): am start -n com.meridian.app/.MainActivity --es auto load|agent|chat [--es task "..."]
@@ -91,6 +92,11 @@ public class MainActivity extends Activity {
             else if (what.equals("eval")) { show("Lab"); labEval(); }
             else if (what.equals("select")) { for (File f : allModels()) if (f.getName().contains(task)) selectedModel = f; saveText("auto.log", "selected " + selectedModel); }
             else if (what.equals("download")) { show("Models"); downloadUrl(task, i.getStringExtra("sha")); }
+            else if (what.equals("profile")) { show("Device"); memGrant.setChecked(!"nomem".equals(task)); profileDevice(); }
+            else if (what.equals("probe")) { show("Device"); measureCompute(); }
+            else if (what.equals("recommend")) { show("Models"); refreshRecommendations(); }
+            else if (what.equals("evalurl")) { show("Models"); evaluateUrl(task); }
+            else if (what.equals("use")) { useModel(task); }
         }, 500);
     }
     @Override protected void onResume() { super.onResume(); Regime.appForeground = true; }
@@ -106,6 +112,7 @@ public class MainActivity extends Activity {
         deviceReport = mono("");
         l.addView(deviceStatus); l.addView(memGrant);
         l.addView(btn("Profile this device", v -> profileDevice()));
+        l.addView(btn("Measure engine compute only (~2 min)", v -> measureCompute()));
         l.addView(btn("Calibrate thread placement (needs a selected model)", v -> calibratePlacement()));
         l.addView(deviceReport);
         return scroll(l);
@@ -118,7 +125,8 @@ public class MainActivity extends Activity {
             try {
                 File dir = internalModels();
                 JSONObject p = Profile.run(this, dir, mem, s -> onUi(() -> deviceStatus.setText("Working: " + s + " ... keep this app in front, phone unplugged, don't touch it.")));
-                profile = p; Native.readFile("/proc/version");
+                attachCompute(p);
+                profile = p;
                 try (FileWriter w = new FileWriter(new File(getFilesDir(), "profile.json"))) { w.write(p.toString(2)); }
                 final String rep = Report.render(p);
                 onUi(() -> { deviceStatus.setText("Profile saved."); deviceReport.setText(colorize(rep)); refreshModels(); });
@@ -126,6 +134,21 @@ public class MainActivity extends Activity {
             finally { setBusy(false); }
         });
     }
+    /** Runs the engine compute probe and stores it in the profile; a failure is recorded as unknown with its reason, never defaulted. */
+    void attachCompute(JSONObject p) throws JSONException {
+        try { p.getJSONObject("cpu").put("compute", ComputeProbe.run(this, p, s -> onUi(() -> deviceStatus.setText("Working: " + s + " ... keep this app in front, phone unplugged.")))); }
+        catch (Exception e) { p.getJSONObject("cpu").put("compute", new JSONObject().put("value", JSONObject.NULL).put("provenance", "unknown").put("confidence", 0).put("source", "ComputeProbe failed: " + e.getMessage()));
+            rec.write(new JSONObject().put("event", "compute_probe_failed").put("why", String.valueOf(e.getMessage())).put("t", System.currentTimeMillis() / 1000.0)); }
+    }
+    void measureCompute() {
+        if (busy || profile == null) { toast(profile == null ? "Profile the device first" : "Busy"); return; }
+        if (chat != null) { toast("Unload the engine first"); return; }
+        setBusy(true);
+        run(() -> { try { attachCompute(profile); saveProfile(); final String rep = Report.render(profile);
+                onUi(() -> { deviceStatus.setText("Compute probe done."); deviceReport.setText(colorize(rep)); refreshModels(); refreshRecommendations(); saveText("last_probe.txt", rep); }); }
+            catch (Exception e) { onUi(() -> deviceStatus.setText("Compute probe failed: " + e)); } finally { setBusy(false); } });
+    }
+    void saveProfile() throws IOException, JSONException { try (FileWriter w = new FileWriter(new File(getFilesDir(), "profile.json"))) { w.write(profile.toString(2)); } }
     void calibratePlacement() {
         if (busy || profile == null || selectedModel == null) { toast(profile == null ? "Profile the device first" : "Select a model first"); return; }
         if (chat != null) { toast("Unload the engine first"); return; }
@@ -158,15 +181,27 @@ public class MainActivity extends Activity {
         Button cancel = btn("Cancel", v -> { if (dl[0] != null) dl[0].cancelled = true; });
         Button imp = btn("Import .gguf from storage", v -> { Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("*/*"); startActivityForResult(i, 7); });
         modelList = new LinearLayout(this); modelList.setOrientation(LinearLayout.VERTICAL);
-        l.addView(modelStatus); l.addView(url); l.addView(sha); l.addView(go); l.addView(cancel); l.addView(dlBar); l.addView(imp); l.addView(tv("Your models", 18, FG)); l.addView(modelList);
+        recList = new LinearLayout(this); recList.setOrientation(LinearLayout.VERTICAL); searchList = new LinearLayout(this); searchList.setOrientation(LinearLayout.VERTICAL);
+        final EditText q = edit("search Hugging Face GGUF models, e.g. qwen3");
+        l.addView(tv("Recommended for this phone", 18, FG));
+        l.addView(tv("Every model below was checked against this phone's measured memory and compute. Speeds are predictions with their range and basis; the app checks them against what it observes.", 13, DIM));
+        l.addView(btn("Refresh recommendations", v -> refreshRecommendations())); l.addView(recList);
+        l.addView(modelStatus); l.addView(dlBar); l.addView(cancel);
+        l.addView(tv("Any model", 18, FG)); l.addView(url); l.addView(sha);
+        l.addView(btn("Evaluate URL (reads only the file header)", v -> evaluateUrl(url.getText().toString().trim()))); l.addView(go);
+        l.addView(q); l.addView(btn("Search Hugging Face", v -> searchHf(q.getText().toString().trim()))); l.addView(searchList);
+        l.addView(imp); l.addView(tv("Your models", 18, FG)); l.addView(modelList);
         return scroll(l);
     }
     Downloader downloadUrl(final String url, final String sha) {
         if (busy) { toast("Busy"); return null; }
         final Downloader d = new Downloader(); setBusy(true);
+        // under the foreground service: OxygenOS cut the app's network when the screen locked mid-download (15R, 2026-09-22)
+        startForegroundService(new Intent(this, KeepAlive.class).putExtra("text", "Downloading " + url.substring(url.lastIndexOf('/') + 1)));
         run(() -> { try { File f = d.download(url, internalModels(), sha, (done, total) -> onUi(() -> { dlBar.setProgress(total > 0 ? (int) (done * 1000 / total) : 0); modelStatus.setText("Downloading " + (done >> 20) + " / " + (total >> 20) + " MiB"); }));
                 onUi(() -> { modelStatus.setText("Downloaded and verified: " + f.getName()); refreshModels(); saveText("last_download.txt", "OK " + f.getName() + " " + f.length()); }); }
-            catch (Exception e) { onUi(() -> { modelStatus.setText("Download failed: " + e.getMessage()); saveText("last_download.txt", "FAIL " + e.getMessage()); }); } finally { setBusy(false); } });
+            catch (Exception e) { onUi(() -> { modelStatus.setText("Download failed: " + e.getMessage()); saveText("last_download.txt", "FAIL " + e.getMessage()); }); }
+            finally { setBusy(false); onUi(() -> { if (chat == null) stopService(new Intent(this, KeepAlive.class)); refreshRecommendations(); }); } });
         return d;
     }
     @Override protected void onActivityResult(int req, int res, final Intent data) {
@@ -181,6 +216,68 @@ public class MainActivity extends Activity {
             final String nm = out.getName(); onUi(() -> { modelStatus.setText("Imported " + nm); refreshModels(); });
         } catch (Exception e) { if (out != null) out.delete(); onUi(() -> modelStatus.setText("Import failed: " + e.getMessage())); } finally { setBusy(false); } });
     }
+    static String gib(long b) { return String.format(Locale.ROOT, "%.2f GiB", b / 1073741824.0); }
+    /** One line a person can read: what tier, how fast, how sure. Built from the evaluation JSON only. */
+    static String evalText(JSONObject e) throws JSONException {
+        StringBuilder b = new StringBuilder();
+        String v = e.getString("verdict");
+        if (v.equals("Runs")) {
+            JSONObject d = e.getJSONObject("decode_tok_s"), t = e.getJSONObject("ttft_200_s");
+            // a prior-basis figure is shown as a range only: it may not be the sole basis for a promise (05 section 2)
+            if (d.getString("provenance").equals("prior")) b.append(String.format(Locale.ROOT, "%s tier: %.1f-%.1f tokens/s [prior], %s%n", e.getString("tier"), d.getDouble("lo"), d.getDouble("hi"), e.getString("speed_class")));
+            else b.append(String.format(Locale.ROOT, "%s tier: about %.1f tokens/s (range %.1f-%.1f) [%s], %s%n", e.getString("tier"), d.getDouble("value"), d.getDouble("lo"), d.getDouble("hi"), d.getString("provenance"), e.getString("speed_class")));
+            b.append(String.format(Locale.ROOT, "first reply to a 200-token prompt: %.1f s (%.1f-%.1f)", t.getDouble("value"), t.getDouble("lo"), t.getDouble("hi")));
+            if (e.getString("tier").equals("streamed")) b.append(String.format(Locale.ROOT, "%nexperts stream from storage through a %s cache", gib(e.getLong("cache_bytes"))));
+        } else b.append(v).append(": ").append(e.optString("detail"));
+        return b.toString();
+    }
+    void refreshRecommendations() {
+        if (recList == null) return;
+        if (profile == null) { recList.removeAllViews(); recList.addView(tv("Profile this phone first (Device tab): recommendations come from its measurements.", 14, WARN)); return; }
+        run(() -> { try { final JSONArray r = Catalog.recommend(this, profile, internalModels()); saveText("last_recommend.json", r.toString(2)); onUi(() -> renderRecs(r)); }
+            catch (Exception e) { onUi(() -> { recList.removeAllViews(); recList.addView(tv("Recommendation failed: " + e, 14, WARN)); }); } });
+    }
+    void renderRecs(JSONArray r) {
+        recList.removeAllViews();
+        for (int i = 0; i < r.length(); i++) { try { final JSONObject e = r.getJSONObject(i);
+            String head = (e.optBoolean("recommended") ? "RECOMMENDED  " : "") + e.getString("name") + "  (" + e.optString("params_note") + ", " + e.optString("quant") + ", " + gib(e.getLong("size_bytes")) + ", " + e.optString("kind") + ")";
+            LinearLayout row = new LinearLayout(this); row.setOrientation(LinearLayout.VERTICAL); row.setBackgroundColor(PANEL); row.setPadding(dp(10), dp(8), dp(10), dp(8));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2); lp.setMargins(0, dp(4), 0, dp(4));
+            TextView h = tv(head, 14, e.optBoolean("recommended") ? GOOD : FG); h.setTypeface(Typeface.DEFAULT_BOLD); row.addView(h); row.addView(mono(evalText(e)));
+            if (!e.optString("license").isEmpty() && !e.optString("license").startsWith("apache") && !e.optString("license").equals("mit")) row.addView(tv("license: " + e.optString("license"), 12, WARN));
+            LinearLayout bs = new LinearLayout(this);
+            if (e.optBoolean("downloaded")) bs.addView(btn("Use this model", v -> useModel(e.optString("filename"))));
+            else if (e.getString("verdict").equals("Runs")) bs.addView(btn("Download " + gib(e.getLong("size_bytes")), v -> downloadUrl(e.optString("url"), e.optString("sha256"))));
+            row.addView(bs); recList.addView(row, lp);
+        } catch (JSONException ignored) { } }
+    }
+    void useModel(String filename) {
+        for (File f : allModels()) if (f.getName().equals(filename)) selectedModel = f;
+        if (selectedModel == null) { toast("not found: " + filename); return; }
+        show("Chat"); if (chat == null) toggleEngine();
+    }
+    void evaluateUrl(final String url) {
+        if (profile == null) { modelStatus.setText("Profile this phone first."); return; } if (url.isEmpty()) return;
+        modelStatus.setText("Reading the header of " + url + " ...");
+        run(() -> { try { JSONObject e = Catalog.evaluateUrl(profile, url, internalModels()); final String t = e.getString("name") + " (" + e.getString("arch") + ", " + gib(e.getLong("size_bytes")) + ", header " + (e.getLong("header_bytes_fetched") >> 10) + " KiB read)\n" + evalText(e);
+                saveText("last_evaluate.json", e.toString(2)); onUi(() -> modelStatus.setText(colorize(t))); }
+            catch (Exception e) { onUi(() -> modelStatus.setText("Could not evaluate: " + e.getMessage())); } });
+    }
+    void searchHf(final String q) {
+        if (q.isEmpty()) return; searchList.removeAllViews(); searchList.addView(tv("Searching...", 13, DIM));
+        run(() -> { try { final JSONArray repos = Catalog.searchRepos(q); onUi(() -> { searchList.removeAllViews(); if (repos.length() == 0) searchList.addView(tv("No ungated GGUF repos found.", 13, DIM));
+                for (int i = 0; i < repos.length(); i++) { final String repo = repos.optJSONObject(i).optString("repo"); searchList.addView(btn(repo + "  (" + repos.optJSONObject(i).optLong("downloads") + " downloads)", v -> listRepo(repo))); } }); }
+            catch (Exception e) { onUi(() -> { searchList.removeAllViews(); searchList.addView(tv("Search failed: " + e.getMessage(), 13, WARN)); }); } });
+    }
+    void listRepo(final String repo) {
+        searchList.removeAllViews(); searchList.addView(tv("Files in " + repo + " ...", 13, DIM));
+        run(() -> { try { final JSONArray fs = Catalog.repoFiles(repo); onUi(() -> { searchList.removeAllViews(); searchList.addView(tv(repo, 14, FG));
+                for (int i = 0; i < fs.length(); i++) { final JSONObject f = fs.optJSONObject(i); LinearLayout row = new LinearLayout(this); row.setOrientation(LinearLayout.VERTICAL);
+                    row.addView(tv(f.optString("filename") + "  " + gib(f.optLong("size_bytes")), 13, FG)); LinearLayout bs = new LinearLayout(this);
+                    bs.addView(btn("Evaluate", v -> evaluateUrl(f.optString("url")))); bs.addView(btn("Download", v -> downloadUrl(f.optString("url"), f.optString("sha256"))));
+                    row.addView(bs); searchList.addView(row); } }); }
+            catch (Exception e) { onUi(() -> { searchList.removeAllViews(); searchList.addView(tv("Listing failed: " + e.getMessage(), 13, WARN)); }); } });
+    }
     List<File> allModels() { List<File> l = new ArrayList<>(); for (File d : new File[]{internalModels(), externalModels()}) if (d != null && d.listFiles() != null) for (File f : d.listFiles()) if (f.getName().endsWith(".gguf")) l.add(f); return l; }
     void refreshModels() {
         if (modelList == null) return; modelList.removeAllViews();
@@ -191,11 +288,14 @@ public class MainActivity extends Activity {
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2); lp.setMargins(0, dp(6), 0, dp(6));
             LinearLayout bs = new LinearLayout(this);
             bs.addView(btn("Select", v -> { selectedModel = f; selectedCard = null; toast("Selected " + f.getName()); }));
+            bs.addView(btn("Chat", v -> useModel(f.getName())));
             bs.addView(btn("Delete", v -> new AlertDialog.Builder(this).setMessage("Delete " + f.getName() + "?").setPositiveButton("Delete", (d, w) -> { f.delete(); if (f.equals(selectedModel)) selectedModel = null; refreshModels(); }).setNegativeButton("Cancel", null).show()));
             row.addView(bs); row.addView(info); modelList.addView(row, lp);
             run(() -> { String s; try { Planner.Card c = Planner.derive(f); String pl;
-                    if (profile == null) pl = "feasibility: profile the device first (Device tab)"; else pl = summarize(Binder.bind(profile, c, Math.min(4096, c.contextLimit), rec.observedTokS(c.modelId)));
-                    s = String.format("%s: %d layers, %d experts (%d used per token)\nweights %.2f GiB, touched per token %.0f MiB, KV cache %d KiB per token (f16)\n%s", c.arch, c.nLayer, c.nExpert, c.nUsed, c.totalBytes / 1073741824.0, c.activeBytesPerToken / 1048576.0, c.kvF16PerToken / 1024, pl);
+                    if (profile == null) pl = "feasibility: profile the device first (Device tab)";
+                    else { pl = evalText(Predictor.evaluate(profile, c, f.getParentFile().getUsableSpace(), true, Profile.filesystemOf(f.getAbsolutePath())));
+                        List<Double> obs = rec.observedTokS(c.modelId); if (obs.size() >= 3) { List<Double> o = new ArrayList<>(obs); Collections.sort(o); pl += String.format(Locale.ROOT, "%nobserved on this phone: %.1f tokens/s median over %d turns [measured]", o.get(o.size() / 2), o.size()); } }
+                    s = String.format("%s: %d layers, %s\nweights %.2f GiB, touched per token %.0f MiB, KV cache %d KiB per token (f16)\n%s", c.arch, c.nLayer, c.moe ? c.nExpert + " experts (" + c.nUsed + " used per token)" + (c.streamable ? ", streamable" : ", resident only") : "dense", c.totalBytes / 1073741824.0, c.activeBytesPerToken / 1048576.0, c.kvF16PerToken / 1024, pl);
                 } catch (Planner.Refusal r) { s = "Refusal " + r.reason + ": " + r.getMessage(); } catch (Exception e) { s = "error: " + e; }
                 final String out = f.getName() + "\n" + (f.length() >> 20) + " MiB\n" + s; onUi(() -> info.setText(colorize(out))); });
         }
@@ -231,14 +331,9 @@ public class MainActivity extends Activity {
         if (selectedModel == null) return "Select a model on the Models tab first.";
         if (profile == null) return "Profile the device first (Device tab).";
         try {
-            JSONArray cl = profile.getJSONObject("cpu").getJSONArray("clusters"); boolean dot = false, fp16 = false;
-            for (int i = 0; i < cl.length(); i++) { String f = cl.getJSONObject(i).getJSONArray("isa_features").toString(); if (f.contains("asimddp")) dot = true; if (f.contains("asimdhp") || f.contains("fphp")) fp16 = true; }
-            if (!dot || !fp16) return "EngineUnsupported: the bundled engine is built for armv8.2-a+dotprod+fp16; this CPU reports dotprod=" + dot + " fp16=" + fp16 + ".";
-            selectedCard = Planner.derive(selectedModel);
-            JSONObject plan = Planner.plan(profile, selectedCard, 2048);
-            if (plan.getJSONObject("tiers").getJSONObject("resident").getString("verdict").equals("Infeasible"))
-                return "Infeasible for this app: the resident tier needs >= " + plan.getJSONObject("tiers").getJSONObject("resident").getLong("need_lower_bound") / 1048576 + " MiB but the largest grant ever kept is " + plan.getJSONObject("tiers").getJSONObject("resident").getLong("grant_upper_bound") / 1048576 + " MiB. The streamed tier is not exposed in this build (stub PL-E25).";
-            return null;
+            if (!Topo.hasIsa(profile, "asimddp") || !(Topo.hasIsa(profile, "asimdhp") || Topo.hasIsa(profile, "fphp")))
+                return "EngineUnsupported: the bundled engine needs armv8.2-a+dotprod+fp16 on every core.";
+            selectedCard = Planner.derive(selectedModel); return null;
         } catch (Planner.Refusal r) { return "Refusal " + r.reason + ": " + r.getMessage(); } catch (Exception e) { return "error: " + e; }
     }
     Lease lease; Governor governor; Engine.Config curCfg; JSONObject curPlan;
@@ -246,7 +341,13 @@ public class MainActivity extends Activity {
         if (busy) { toast("Busy"); return; }
         if (chat != null) { unloadEngine(); loadBtn.setText("Load engine with selected model"); chatInfo.setText("Engine unloaded."); return; }
         String why = engineRefusal(); if (why != null) { chatInfo.setText(colorize(why)); return; }
-        try { Engine.Config cfg = PlanV2.baseConfig(profile, selectedModel, 2048); loadEngine(cfg, null); } catch (JSONException e) { chatInfo.setText("error: " + e); }
+        try {
+            JSONObject plan = AutoPlan.plan(this, profile, selectedCard, selectedModel); saveText("plan.json", plan.toString(2));
+            if (plan.has("refusal")) { chatInfo.setText(colorize("Refusal " + plan.getJSONObject("refusal").getString("reason") + ": " + plan.getJSONObject("refusal").optString("detail"))); return; }
+            loadEngine(PlanV2.configFromJson(plan.getJSONObject("config"), selectedModel), plan);
+        } catch (Exception e) {   // no compute probe yet: the model still runs, on the topology placement, with no promise attached
+            try { Engine.Config cfg = AutoPlan.config(profile, selectedCard, selectedModel, "resident", 2048, 0); rec.write(new JSONObject().put("event", "plan_unavailable").put("why", String.valueOf(e.getMessage())));
+                chatInfo.setText(colorize("No prediction (" + e.getMessage() + "); loading without one.")); loadEngine(cfg, null); } catch (JSONException x) { chatInfo.setText("error: " + x); } }
     }
     void unloadEngine() {
         if (governor != null) { governor.stop(); governor = null; } if (lease != null) { lease.revoke(); lease = null; }
@@ -259,8 +360,10 @@ public class MainActivity extends Activity {
             Chat c = new Chat(this, cfg); c.start(900000); chat = c; chatTurns = 0; curCfg = cfg; curPlan = plan;
             JSONObject lst = null; String leaseTxt = "no plan: no lease, no governor (the configuration is uncalibrated)";
             if (plan != null) { long floor = plan.getJSONObject("lease").getLong("floor"), target = plan.getJSONObject("lease").getLong("target");
-                lease = Lease.request(profile, floor, target); lst = lease.verify(); leaseTxt = "lease granted " + (lease.granted >> 20) + " MiB, verified resident " + (lease.verifiedResident >> 20) + " MiB (swapped " + (lease.swapped >> 20) + " MiB)";
-                lease.startHeartbeat(ui, 5000, (why, st) -> { if (governor != null) governor.onMemoryPressure(why); });
+                try { lease = Lease.request(profile, floor, target); lst = lease.verify(); leaseTxt = "lease granted " + (lease.granted >> 20) + " MiB, verified resident " + (lease.verifiedResident >> 20) + " MiB (swapped " + (lease.swapped >> 20) + " MiB)";
+                    lease.startHeartbeat(ui, 5000, (why, st) -> { if (governor != null) governor.onMemoryPressure(why); }); }
+                catch (Planner.Refusal r) { lease = null; leaseTxt = "no memory lease (" + r.reason + ": " + r.getMessage() + "); the governor still watches heat and speed"; rec.write(new JSONObject().put("event", "lease_refused").put("why", r.getMessage())); }
+                JSONObject pd = plan.getJSONObject("chosen").getJSONObject("decode_tok_s"); leaseTxt += String.format(Locale.ROOT, "%npredicted %.1f tokens/s (range %.1f-%.1f) [%s]", pd.getDouble("value"), pd.getDouble("lo"), pd.getDouble("hi"), pd.getString("provenance"));
                 governor = new Governor(this, new Governor.Host() {
                     public void applyRung(JSONObject r, String why) { applyRungAsync(r, why); }
                     public void invalidated(String why) { onUi(() -> chatInfo.setText(colorize("Plan falsified: " + why + ". Recalibrate before trusting it."))); } }, rec, plan); governor.start(); }
@@ -289,9 +392,11 @@ public class MainActivity extends Activity {
             c.ask(q, 384, fresh, t -> onUi(() -> chatOut.append(t))); chatTurns++;
             JSONObject d = c.lastResult; JSONObject cond = Regime.snapshot(this);
             rec.write(new JSONObject().put("turn_id", "chat." + System.currentTimeMillis()).put("model_id", selectedModel.getName()).put("prompt_tokens", d.optInt("n_prompt")).put("output_tokens", d.optInt("tokens"))
-                .put("prefill_ms", d.optDouble("prefill_s") * 1000).put("predicted", JSONObject.NULL).put("observed", new JSONObject().put("tokens_per_s", d.optDouble("tok_s")).put("prefill_tokens_per_s", d.optDouble("prefill_tps")))
+                .put("prefill_ms", d.optDouble("prefill_s") * 1000).put("predicted", curPlan == null ? JSONObject.NULL : curPlan.getJSONObject("chosen").getJSONObject("decode_tok_s")).put("observed", new JSONObject().put("tokens_per_s", d.optDouble("tok_s")).put("prefill_tokens_per_s", d.optDouble("prefill_tps")))
                 .put("conditions", cond).put("in_regime", cond.getBoolean("in_regime")).put("outcome", "ok"));
-            final String info = String.format("decode %.2f tok/s, prefill %.1f tok/s (%d prompt tokens) - observed this turn [%s]", d.optDouble("tok_s"), d.optDouble("prefill_tps"), d.optInt("n_prompt"), cond.getBoolean("in_regime") ? "measured" : "prior: out of regime");
+            String pr = ""; if (curPlan != null) { JSONObject pd = curPlan.getJSONObject("chosen").getJSONObject("decode_tok_s"); double ob = d.optDouble("tok_s");
+                pr = String.format(Locale.ROOT, "%npredicted %.1f (%.1f-%.1f) [%s]: %s", pd.getDouble("value"), pd.getDouble("lo"), pd.getDouble("hi"), pd.getString("provenance"), ob >= pd.getDouble("lo") && ob <= pd.getDouble("hi") ? "inside the range" : "OUTSIDE the range"); }
+            final String info = String.format("decode %.2f tok/s, prefill %.1f tok/s (%d prompt tokens) - observed this turn [%s]", d.optDouble("tok_s"), d.optDouble("prefill_tps"), d.optInt("n_prompt"), cond.getBoolean("in_regime") ? "measured" : "prior: out of regime") + pr + "\nconfig: " + (curCfg == null ? "?" : curCfg.describe());
             onUi(() -> chatInfo.setText(colorize(info))); if (governor != null && cond.getBoolean("in_regime")) governor.observe(d.optDouble("tok_s"));
         } catch (Exception e) { onUi(() -> chatInfo.setText("Turn failed: " + e.getMessage())); } finally { setBusy(false); } });
     }

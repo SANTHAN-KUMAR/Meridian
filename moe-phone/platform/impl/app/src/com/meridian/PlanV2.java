@@ -100,11 +100,11 @@ public final class PlanV2 {
 
     static JSONObject cfgJson(Engine.Config c) throws JSONException {
         return new JSONObject().put("tier", c.moeStream ? "streamed" : "resident").put("threads", c.threads).put("cpu_mask", c.cpuMask == null ? JSONObject.NULL : c.cpuMask).put("ctx", c.ctx).put("ubatch", c.ubatch)
-            .put("cache_floor_mb", c.cacheFloorMb).put("cache_ceil_mb", c.cacheCeilMb).put("io_threads", c.ioThreads).put("io_mask", c.ioMask == null ? JSONObject.NULL : c.ioMask);
+            .put("cache_floor_mb", c.cacheFloorMb).put("cache_ceil_mb", c.cacheCeilMb).put("io_threads", c.ioThreads).put("io_mask", c.ioMask == null ? JSONObject.NULL : c.ioMask).put("variant", c.variant);
     }
     public static Engine.Config configFromJson(JSONObject j, File model) throws JSONException {
         Engine.Config c = new Engine.Config(); c.model = model; c.threads = j.getInt("threads"); c.cpuMask = j.isNull("cpu_mask") ? null : j.getString("cpu_mask"); c.ctx = j.getInt("ctx"); c.ubatch = j.getInt("ubatch");
-        c.moeStream = j.getString("tier").equals("streamed"); c.cacheFloorMb = j.optInt("cache_floor_mb"); c.cacheCeilMb = j.optInt("cache_ceil_mb"); c.ioThreads = j.optInt("io_threads", 4); c.ioMask = j.isNull("io_mask") ? null : j.getString("io_mask"); return c;
+        c.moeStream = j.getString("tier").equals("streamed"); c.cacheFloorMb = j.optInt("cache_floor_mb"); c.cacheCeilMb = j.optInt("cache_ceil_mb"); c.ioThreads = j.optInt("io_threads", 4); c.ioMask = j.isNull("io_mask") ? null : j.getString("io_mask"); c.variant = j.optString("variant", "dot"); return c;
     }
 
     /** Degradation ladder, ordered by quality preserved per unit of pressure relieved; every cost is measured or stated unknown. */

@@ -29,7 +29,17 @@ public final class Report {
         b.append("\nConditions: power ").append(cond.getString("power")).append(", ").append(cond.getString("wakefulness")).append(", foreground ").append(cond.getString("foreground")).append(", battery ").append(cond.optInt("battery_pct")).append("%\n");
         if (!cond.getBoolean("in_regime")) b.append("  NOT the deployment regime: every figure above is labelled [prior], not [measured]. Re-run unplugged with the screen on and this app in front.\n");
         int rej = p.getJSONObject("validity").getInt("rejected_runs"); if (rej > 0) b.append("  ").append(rej).append(" contaminated probe row(s) rejected, not averaged.\n");
-        b.append("\nNot measured in this build: per-cluster compute throughput, thermal derate, foreground memory grant, NPU. No tokens/s is promised for any model; see the Models tab for what can be said.\n");
+        JSONObject cp = p.getJSONObject("cpu").optJSONObject("compute");
+        b.append("\nEngine compute (measured with the real engine on synthetic calibration models)\n");
+        if (cp == null || cp.isNull("value")) b.append("  not measured").append(cp == null ? "" : " (" + cp.optString("source") + ")").append(": run the compute probe; until then no speed can be predicted\n");
+        else { JSONObject v = cp.getJSONObject("value"); JSONObject ty = v.getJSONObject("types");
+            b.append(String.format("  engine build %s, %d threads on mask %s [%s]%n  fixed cost per token %.2f ms, per layer %.3f ms%n", v.getString("engine_variant").equals("i8") ? "i8mm" : "dotprod (portable)", v.getInt("threads"), v.getString("cpu_mask"), cp.getString("provenance"), v.getDouble("t0_ms"), v.optDouble("t_layer_ms", 0)));
+            for (java.util.Iterator<String> it = ty.keys(); it.hasNext(); ) { String k = it.next(); JSONObject w = ty.getJSONObject(k);
+                b.append(String.format("  %-6s %.1f GB/s of weights (observed %.1f-%s)%n", k, w.getDouble("w_gbps"), w.getDouble("lo"), w.isNull("hi") ? "?" : String.format("%.1f", w.getDouble("hi")))); }
+            b.append(String.format("  prefill (Q4_0) %.1f GB/s-tokens%n", v.getDouble("prefill_gbps_q4_0")));
+            if (v.getInt("failures") > 0) b.append("  ").append(v.getInt("failures")).append(" probe run(s) failed and were excluded: ").append(v.getJSONArray("failure_log")).append('\n');
+        }
+        b.append("\nNot measured in this build: thermal derate over long sessions, foreground memory grant, NPU. Predicted speeds on the Models tab come from the figures above and are labelled with their basis.\n");
         return b.toString();
     }
 }

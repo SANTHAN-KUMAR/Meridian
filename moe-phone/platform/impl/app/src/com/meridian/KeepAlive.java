@@ -14,7 +14,7 @@ public final class KeepAlive extends Service {
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Meridian engine", NotificationManager.IMPORTANCE_LOW));
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
         Notification n = new Notification.Builder(this, CHANNEL).setSmallIcon(android.R.drawable.stat_notify_sync).setContentTitle("Meridian")
-            .setContentText(i != null && i.getStringExtra("model") != null ? "Model loaded: " + i.getStringExtra("model") : "Model loaded").setContentIntent(open).setOngoing(true).build();
+            .setContentText(i != null && i.getStringExtra("text") != null ? i.getStringExtra("text") : i != null && i.getStringExtra("model") != null ? "Model loaded: " + i.getStringExtra("model") : "Model loaded").setContentIntent(open).setOngoing(true).build();
         startForeground(7, n);
         return START_NOT_STICKY;
     }

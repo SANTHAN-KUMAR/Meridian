@@ -23,7 +23,7 @@ public final class Lease {
     /** Find the engine child's pid: same-UID processes expose /proc/<pid>/cmdline. */
     public static int findEnginePid() {
         File[] ps = new File("/proc").listFiles(); if (ps == null) return -1;
-        for (File p : ps) { if (!p.getName().matches("\\d+")) continue; String c = Native.readFile(p.getPath() + "/cmdline"); if (c != null && c.contains("libbmoe_cli.so")) return Integer.parseInt(p.getName()); }
+        for (File p : ps) { if (!p.getName().matches("\\d+")) continue; String c = Native.readFile(p.getPath() + "/cmdline"); if (c != null && (c.contains("libbmoe_cli.so") || c.contains("libbmoe_cli_i8.so"))) return Integer.parseInt(p.getName()); }
         return -1;
     }
     static long statusKb(int pid, String key) { String s = Native.readFile("/proc/" + pid + "/status"); if (s == null) return -1; for (String l : s.split("\n")) if (l.startsWith(key + ":")) return Long.parseLong(l.replaceAll("[^0-9]", "")); return -1; }
