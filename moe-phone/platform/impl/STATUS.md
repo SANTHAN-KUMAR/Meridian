@@ -115,6 +115,10 @@ first Qwen3-1.7B file.
     Changed: a step now opens with one call (a tool call or the step's written result), and a verified single action ends the step.
     `Agent.warm()` prefills the ~1.8k-token tool prefix at load time. The suite-v2 scores were measured on the previous loop and
     were not re-run.
+  - *D-10 (engine unloaded mid-task).* With the screen locked, the OS trimmed the engine's file-backed model pages; the lease
+    heartbeat reported "resident set shrank", and the resident plan's memory ladder (a single `refuse` rung) unloaded the engine
+    while an agent task was waiting on it: the task never finished. Fixed in `Governor.onMemoryPressure`: a reclaim, or any
+    pressure while the phone is not interactive, is recorded (`deferred`) without entering a rung.
 - **Extension point.** A new capability is one `Tools.Tool` subclass registered in `Tools` (name, description, argument schema,
   effects, reversibility, consent class `none`, `once` or `every_time`, a named postcondition, `execute`, `verify`, and optionally
   `note`, `consentText`, `consentFor`, `consentScope`, `resultChars`, `observes`). The grammar, the planner-executor, the consent

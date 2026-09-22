@@ -38,7 +38,15 @@ public final class Governor {
     }
 
     /** Memory pressure from the lease heartbeat or onTrimMemory. */
-    public void onMemoryPressure(String why) { try { JSONObject r = ladder.next("memory", System.currentTimeMillis()); rec.write(new JSONObject().put("event", "memory_pressure").put("why", why).put("rung", r == null ? JSONObject.NULL : r.getString("action")));
+    public void onMemoryPressure(String why) { try {
+        // 2026-09-22 (D-10): with the screen locked the OS trims the engine's file-backed (mmap'ed model) pages; they fault back in
+        // from flash, so the right response is none. The resident plan's memory ladder is a single "refuse" rung, and entering it
+        // unloaded the engine in the middle of an agent task. A reclaim, or any pressure while the phone is not interactive, is now
+        // recorded without entering a rung.
+        boolean interactive = ((PowerManager) ctx.getSystemService(Context.POWER_SERVICE)).isInteractive();
+        if (why.contains("shrank") || !interactive) { rec.write(new JSONObject().put("event", "memory_pressure").put("why", why).put("rung", JSONObject.NULL)
+                .put("deferred", why.contains("shrank") ? "reclaimed file-backed pages fault back in" : "screen off: recorded only")); return; }
+        JSONObject r = ladder.next("memory", System.currentTimeMillis()); rec.write(new JSONObject().put("event", "memory_pressure").put("why", why).put("rung", r == null ? JSONObject.NULL : r.getString("action")));
         if (r != null) host.applyRung(r, why); } catch (JSONException ignored) { } }
 
     /** Observed decode rate for one turn. Falsified when >= min_observations of the last `window` fall outside the registered interval. */
