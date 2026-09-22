@@ -4,6 +4,24 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
+    <!-- the agent resolves apps and intents by name on the device (open_app, maps, dialer, clock...); a sideloaded APK may declare this -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
+    <queries>
+        <intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="https"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="geo"/></intent>
+        <intent><action android:name="android.intent.action.DIAL"/></intent>
+        <intent><action android:name="android.intent.action.SENDTO"/><data android:scheme="smsto"/></intent>
+        <intent><action android:name="android.intent.action.SET_ALARM"/></intent>
+        <intent><action android:name="android.intent.action.SET_TIMER"/></intent>
+        <intent><action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH"/></intent>
+        <intent><action android:name="android.media.action.STILL_IMAGE_CAMERA"/></intent>
+        <intent><action android:name="android.intent.action.SEND"/><data android:mimeType="text/plain"/></intent>
+        <intent><action android:name="android.intent.action.SENDTO"/><data android:scheme="mailto"/></intent>
+    </queries>
     <application android:label="Meridian" android:hasCode="true" android:extractNativeLibs="true" android:largeHeap="true" android:debuggable="@DEBUGGABLE@" android:usesCleartextTraffic="@DEBUGGABLE@">
         <service android:name=".KeepAlive" android:exported="false"/>
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:configChanges="orientation|screenSize|keyboardHidden|screenLayout" android:windowSoftInputMode="adjustResize">

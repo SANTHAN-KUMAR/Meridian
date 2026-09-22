@@ -54,7 +54,10 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         if (getActionBar() != null) getActionBar().hide();
         rec = new Recorder(this);
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
+        List<String> ask = new ArrayList<>();   // asked once up front so the agent's contact lookups and notifications work
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) ask.add("android.permission.POST_NOTIFICATIONS");
+        if (checkSelfPermission("android.permission.READ_CONTACTS") != android.content.pm.PackageManager.PERMISSION_GRANTED) ask.add("android.permission.READ_CONTACTS");
+        if (!ask.isEmpty()) requestPermissions(ask.toArray(new String[0]), 1);
         try { tools = new Tools(this); } catch (JSONException e) { throw new RuntimeException(e); }
         File pf = new File(getFilesDir(), "profile.json");
         if (pf.exists()) try { profile = new JSONObject(Native.readFile(pf.getAbsolutePath())); } catch (Exception ignored) { }
@@ -89,7 +92,7 @@ public class MainActivity extends Activity {
             else if (what.equals("validate")) { show("Lab"); labValidate(); }
             else if (what.equals("t3")) { show("Lab"); labParam.setText(task == null ? "10" : task); labT3(); }
             else if (what.equals("x1")) { show("Lab"); labParam.setText(task == null ? "" : task); labX1(); }
-            else if (what.equals("eval")) { show("Lab"); labEval(); }
+            else if (what.equals("eval")) { show("Lab"); evalVariants = task == null ? null : task.split(","); labEval(); }
             else if (what.equals("select")) { for (File f : allModels()) if (f.getName().contains(task)) selectedModel = f; saveText("auto.log", "selected " + selectedModel); }
             else if (what.equals("download")) { show("Models"); downloadUrl(task, i.getStringExtra("sha")); }
             else if (what.equals("profile")) { show("Device"); memGrant.setChecked(!"nomem".equals(task)); profileDevice(); }
@@ -404,7 +407,7 @@ public class MainActivity extends Activity {
     // ---------- Agent ----------
     View agentTab() {
         LinearLayout l = col();
-        l.addView(tv("The agent uses only the tools below. Each tool's result is checked against device state; destructive tools ask you first.", 14, DIM));
+        l.addView(tv("Ask for anything the tools below can do, in your own words. The agent picks tools step by step, each result is checked against the phone's real state, and anything that reaches other people (messages, calls) or cannot be undone asks you first.", 14, DIM));
         try { l.addView(mono(tools.schemaText())); } catch (JSONException ignored) { }
         final EditText task = edit("e.g. Save a note that says buy milk, then tell me my battery level");
         agentLog = mono("");
@@ -418,7 +421,7 @@ public class MainActivity extends Activity {
         onUi(() -> agentLog.setText("Task: " + task + "\n"));
         final Agent a = new Agent(this, chat, tools, rec, selectedModel.getName());
         run(() -> { try {
-            String res = a.run(task, 6, new Agent.UI() {
+            String res = a.runLoop(task, 8, new Agent.UI() {
                 public void log(String s) { onUi(() -> agentLog.append(s + "\n")); }
                 public void token(String t) { }
                 public boolean consent(String tool, String args) { final CountDownLatch cd = new CountDownLatch(1); final boolean[] ok = {false};
@@ -433,6 +436,7 @@ public class MainActivity extends Activity {
 
 
     // ---------- Lab: planner, calibration, validation, thermal, foreground grant, evaluation ----------
+    String[] evalVariants;
     TextView labOut; EditText labCtx, labOutTok, labLat, labParam;
     View labTab() {
         LinearLayout l = col();
@@ -505,7 +509,7 @@ public class MainActivity extends Activity {
     }
     void labEval() {
         if (chat == null) { labShow("eval", "Load the engine (Chat tab) first: the model-driven variants need it."); return; } if (busy) { toast("Busy"); return; } setBusy(true);
-        run(() -> { try { String[] variants = {"keyword_router", "constant:battery_status", "constant:storage_free", "constant:notes_list", "constant:say_hello", "free_form", "plan_act_answer"};
+        run(() -> { try { String[] variants = evalVariants != null ? evalVariants : new String[]{"loop", "plan_act_answer", "keyword_router", "constant:say_hello", "constant:battery_status"};
             JSONObject r = Eval.run(this, chat, tools, rec, selectedModel.getName(), variants, s -> labShow("eval", "Evaluating: " + s)); labShow("eval", r.getJSONObject("summary").toString(2)); }
             catch (Exception e) { labShow("eval", "Eval failed: " + e); } finally { setBusy(false); } });
     }
