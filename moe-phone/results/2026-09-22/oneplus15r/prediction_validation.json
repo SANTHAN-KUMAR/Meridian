@@ -19,6 +19,21 @@
    "inside_range": "2/4"
   },
   {
+   "model": "olmoe-1b-7b-0924-q4_0.gguf",
+   "predicted": 13.38,
+   "predicted_lo": 7.01,
+   "predicted_hi": 18.37,
+   "basis": "prior",
+   "observed": [
+    9.2,
+    10.17,
+    10.3
+   ],
+   "observed_median": 10.17,
+   "point_error_frac": 0.3152,
+   "inside_range": "3/3"
+  },
+  {
    "model": "qwen2.5-3b-instruct-q4_0.gguf",
    "predicted": 14.52,
    "predicted_lo": 14.2,

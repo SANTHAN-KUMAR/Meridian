@@ -33,6 +33,10 @@ a compute probe. Prior-basis figures are shown as ranges only. Checked on the 15
 two models so far (Qwen3-0.6B and Qwen2.5-3B-Instruct, both Q4_0): each row of the artifact has the prediction, every
 observed turn, the median, the point error and how many turns fell inside the predicted range. Regenerate with
 `python3 tools/validation_report.py ../../results/2026-09-22/oneplus15r/audit.jsonl out.json`.
+The streamed tier was run in the app on the 15R with OLMoE-1B-7B (larger than the phone's measured grant, so the plan chose
+streaming with the cache sized from the grant); its turns are in the same artifact. During that run the governor saw the OS
+reclaim part of the engine's memory and stepped down its ladder (smaller expert cache, reload), as designed; the plan's
+prediction was not recomputed for the smaller cache, which is a known gap.
 Known gap: the streamed tier's prediction is `prior` (hit-rate curve and cache-management cost transferred from the research's
 Qwen3-30B-A3B measurements); a back-test against the research's Nord measurement of Qwen3-30B-A3B
 (`../../results/2026-09-19/nord/`) had the measured rate inside the predicted range but the point estimate well above it,
