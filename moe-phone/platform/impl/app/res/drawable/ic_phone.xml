@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Meridian UI icon: 24dp grid, 2dp round stroke; tinted at runtime -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M9.5,2 h5.0 a2.5,2.5 0 0 1 2.5,2.5 v15.0 a2.5,2.5 0 0 1 -2.5,2.5 h-5.0 a2.5,2.5 0 0 1 -2.5,-2.5 v-15.0 a2.5,2.5 0 0 1 2.5,-2.5 z" android:strokeColor="#FFFFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+    <path android:pathData="M11,18h2" android:strokeColor="#FFFFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+</vector>

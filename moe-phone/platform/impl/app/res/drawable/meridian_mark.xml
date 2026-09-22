@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Meridian mark "Zenith globe": globe + meridian + marigold sun at the top -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="64dp" android:height="64dp" android:viewportWidth="64" android:viewportHeight="64">
+    <path android:pathData="M16,0 h32 a16,16 0 0 1 16,16 v32 a16,16 0 0 1 -16,16 h-32 a16,16 0 0 1 -16,-16 v-32 a16,16 0 0 1 16,-16 z" android:fillColor="#FF141A2E"/>
+    <path android:pathData="M14,34 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0" android:strokeColor="#FFF5F6F9" android:strokeWidth="3.5" android:fillColor="#00000000"/>
+    <path android:pathData="M24.5,34 a7.5,18 0 1,0 15.0,0 a7.5,18 0 1,0 -15.0,0" android:strokeColor="#FFF5F6F9" android:strokeWidth="3.5" android:fillColor="#00000000"/>
+    <path android:pathData="M26,16 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" android:fillColor="#FFF5A524" android:strokeColor="#FF141A2E" android:strokeWidth="3"/>
+</vector>
