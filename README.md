@@ -1,9 +1,17 @@
-# moe-phone / Meridian
+# Meridian
 
 Running large Mixture-of-Experts (MoE) language models on Android phones by streaming expert
 weights from flash storage, and an on-device agent app built on that engine.
 
+The research directory inside this repo is still named `moe-phone/` (that was the project's
+original name before the platform/app phase was named Meridian); it has not been renamed to avoid
+breaking the links throughout it.
+
 **Demo page:** https://claude.ai/artifact/HGeMyeWYzqz5VuEsYA26Fr
+
+```sh
+git clone https://github.com/SANTHAN-KUMAR/Meridian.git
+```
 
 ## 60-second overview
 
@@ -114,8 +122,9 @@ rules ([`CLAUDE.md`](CLAUDE.md) §7.1) it should not exist.
 This is primarily a research + solo-engineering repository, not one set up for external
 contributions. If you're picking it up:
 
-1. Read [`CLAUDE.md`](CLAUDE.md) — the working method (why a result is or isn't trustworthy) that
-   every document here follows.
+1. Clone it: `git clone https://github.com/SANTHAN-KUMAR/Meridian.git`. Read
+   [`CLAUDE.md`](CLAUDE.md) — the working method (why a result is or isn't trustworthy) that every
+   document here follows.
 2. Read [`moe-phone/HANDOFF.md`](moe-phone/HANDOFF.md) for live state, then either
    [`moe-phone/README.md`](moe-phone/README.md) (research/gates) or
    [`moe-phone/platform/README.md`](moe-phone/platform/README.md) (product/app), depending on which
