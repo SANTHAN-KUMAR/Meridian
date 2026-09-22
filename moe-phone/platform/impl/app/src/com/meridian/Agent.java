@@ -142,6 +142,7 @@ public final class Agent {
             + "- People often describe a situation or a need instead of naming an action; pick the tool that addresses it.\n"
             + "- Take only the actions the request asks for; do not open apps or save notes unless asked.\n"
             + "- Use only facts from tool results. If something failed or no tool can do it, say so. Never claim an action you did not take.\n"
+            + "- When saving or sending a list (places, results, items), put the whole list in one note or message, best first.\n"
             + "- To work inside another app: open it, read the screen, then tap or type using the element ids shown (n5). Each action shows the new screen.\n";
     }
     /** Prefills the stable prefix (instructions + every tool schema) right after the engine loads, so the first task does not pay
@@ -165,7 +166,13 @@ public final class Agent {
      *  written result; a verified single-action step ends there (no "is it done?" call); a follow-up call happens only for multi-item
      *  steps ("each caller"), screen flows, or a failed verification. Each result is verified against device state. Hard caps: tool
      *  calls per step, per task (24), and cancel() at any point. */
+    /** Agent tasks in progress; the Governor defers engine-unloading rungs while this is > 0 (D-11). */
+    static final java.util.concurrent.atomic.AtomicInteger running = new java.util.concurrent.atomic.AtomicInteger();
     public String runLoop(String task, int maxSteps, UI ui) throws Exception {
+        running.incrementAndGet();
+        try { return runLoopInner(task, maxSteps, ui); } finally { running.decrementAndGet(); }
+    }
+    private String runLoopInner(String task, int maxSteps, UI ui) throws Exception {
         trace.clear(); calls.clear(); consentAsked.clear(); newTask(); String taskId = "r" + (taskCounter++);
         if (!chat.engine().supportsGrammar()) return "EngineUnsupported: this engine build has no grammar-constrained decoding, which the agent requires.";
         String prefix = prefix(), grammar = tools.stepGrammar(), finalOnly = tools.finalGrammar();
@@ -222,12 +229,29 @@ public final class Agent {
         }
         if (used >= budget) ui.log("action budget reached (" + budget + " tool calls); stopping");
         checkCancel();
-        JSONObject fin = ask(prefix + "Request: " + task + "\nPlan: " + steps + "\nResults:\n" + scratch + "Write the final answer for the user covering every step, using only these results. A drafted message or email is drafted, not sent; an opened settings page is opened, not switched.", 320, false, true, finalOnly, taskId, "final", ui);
-        String ans = fin == null ? "" : fin.optString("final").trim();
+        // the final answer must not be lost to a context overflow after every action succeeded (15R rehearsal, 2026-09-22): retry with
+        // each result line clipped, and as a last resort answer from the verified action log itself (counted in context_overflows)
+        String fq = "Write the final answer for the user covering every step in at most 5 short sentences, using only these results. Refer to people and places by name; never re-type phone numbers, codes or long lists (the exact list of actions is shown to the user separately). A drafted message or email is drafted, not sent; an opened settings page is opened, not switched.";
+        JSONObject fin = null; String ans = "";
+        for (int attempt = 0; attempt < 3 && fin == null; attempt++) {
+            String res = attempt == 0 ? scratch.toString() : compact(scratch.toString(), attempt == 1 ? 220 : 90);
+            try { fin = ask(prefix + "Request: " + task + "\nPlan: " + steps + "\nResults:\n" + res + fq, attempt == 0 ? 200 : 160, false, true, finalOnly, taskId, "final", ui); break; }
+            catch (IllegalStateException e) { if (!String.valueOf(e.getMessage()).contains("exceeds the session n_ctx")) throw e; overflows++; ui.log("context full (" + overflows + " this task): shortening the results for the final answer"); }
+        }
+        ans = fin == null ? salvageFinal(chat.lastText) : fin.optString("final").trim();
+        if (ans.length() < 2 && !calls.isEmpty()) ans = "Done. The steps and their verified results are listed below.";
         String out = (ans.length() < 2 ? "NoProgress: empty answer" : ans) + groundTruth();
         remember(task, steps, ans);
         return out;
     }
+    /** A final answer cut off by the token cap is still text: keep what was written (the JSON did not close, so it did not parse). */
+    static String salvageFinal(String raw) {
+        if (raw == null) return ""; int i = raw.indexOf("\"final\""); if (i < 0) return ""; int q = raw.indexOf('"', raw.indexOf(':', i) + 1); if (q < 0) return "";
+        String t = raw.substring(q + 1).replaceAll("\"\\s*}\\s*$", "").replace("\\n", "\n").replace("\\\"", "\"").trim();
+        return t.isEmpty() ? "" : t + " ...";
+    }
+    /** Each result line clipped to n characters (the scratchpad for a final answer that would not fit the context). */
+    static String compact(String scratch, int n) { StringBuilder b = new StringBuilder(); for (String l : scratch.split("\n")) b.append(clip(l, n)).append('\n'); return b.toString(); }
     static String clip(String s, int n) { return s == null ? "" : s.length() > n ? s.substring(0, n) + " ..." : s; }
     /** Task memory for later "summary" requests (the recall tool): request, plan, answer and verified actions, one JSON line per task. */
     void remember(String task, List<String> steps, String answer) {

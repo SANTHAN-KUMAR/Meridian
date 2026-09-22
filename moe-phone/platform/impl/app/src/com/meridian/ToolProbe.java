@@ -17,7 +17,8 @@ public final class ToolProbe extends BroadcastReceiver {
             try { String name = i.getStringExtra("tool"); JSONObject args = new JSONObject(i.getStringExtra("args") == null ? "{}" : i.getStringExtra("args"));
                 row.put("tool", name).put("args", args);
                 Tools.Tool t = new Tools(c).registry.get(name);
-                if (t == null) row.put("error", "no such tool");
+                if ("__status".equals(name)) row.put("a11y_connected", A11y.inst != null).put("notifs_connected", Notifs.inst != null).put("pid", android.os.Process.myPid());
+                else if (t == null) row.put("error", "no such tool");
                 else if (!t.consentFor(args).equals("none")) row.put("error", "refused: consent class " + t.consentFor(args) + " needs the agent's gate");
                 else { String bad = Tools.validate(t, args); if (bad != null) row.put("error", bad);
                     else { long t0 = System.currentTimeMillis(); JSONObject r; boolean v;

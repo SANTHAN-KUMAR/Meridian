@@ -189,7 +189,7 @@ final class ToolsDaily {
                     return c != null && c.moveToFirst() && a.getString("title").equals(c.getString(0)) && c.getLong(1) == r.getLong("start_ms"); } } });
         t.add(new Tools.Tool("places_nearby", "Find the nearest places of a kind (restaurant, cafe, pharmacy, ATM, hospital, petrol...) near where the phone is (near empty) or near a named place. Gives distance, cuisine, hours; ratings only if a ratings source is configured.", "read", true, "none",
                 "every place's distance re-computes from its coordinates, lies within the search radius, and the list is nearest-first", Tools.obj("what", "string", "near", "string")) {
-            @Override int resultChars() { return 1800; }
+            @Override int resultChars() { return 1300; }
             JSONObject execute(JSONObject a) throws Exception { JSONObject c = locate(t, a.getString("near"), true); double la = c.getDouble("lat"), lo = c.getDouble("lon");
                 JSONArray p = new JSONArray(); int radius = 1500;
                 for (int rr : new int[]{1500, 4000, 10000}) { radius = rr; p = osmPlaces(a.getString("what"), la, lo, rr); if (p.length() >= 3) break; }

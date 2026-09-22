@@ -18,7 +18,10 @@ public final class Governor {
     public Governor(Context c, Host h, Recorder r, JSONObject plan) throws JSONException { ctx = c.getApplicationContext(); host = h; rec = r; this.plan = plan; ladder = new Ladder(plan.getJSONArray("ladder")); }
     public JSONObject plan() { return plan; }
 
-    public void start() {
+    private final Deque<Long> pressure = new ArrayDeque<>(); private long started = System.currentTimeMillis();
+    boolean nextIsDestructive() throws JSONException { for (int i = 0; i < ladder.rungs.length(); i++) { JSONObject r = ladder.rungs.getJSONObject(i);
+            if (r.getString("trigger").equals("memory") && !ladder.applied().contains(i)) return r.getString("action").matches("suspend|refuse"); } return false; }
+    public void start() { started = System.currentTimeMillis();
         if (Build.VERSION.SDK_INT < 29) return;
         PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
         tl = status -> onThermal(status, System.currentTimeMillis());
@@ -46,7 +49,14 @@ public final class Governor {
         boolean interactive = ((PowerManager) ctx.getSystemService(Context.POWER_SERVICE)).isInteractive();
         if (why.contains("shrank") || !interactive) { rec.write(new JSONObject().put("event", "memory_pressure").put("why", why).put("rung", JSONObject.NULL)
                 .put("deferred", why.contains("shrank") ? "reclaimed file-backed pages fault back in" : "screen off: recorded only")); return; }
-        JSONObject r = ladder.next("memory", System.currentTimeMillis()); rec.write(new JSONObject().put("event", "memory_pressure").put("why", why).put("rung", r == null ? JSONObject.NULL : r.getString("action")));
+        // destructive rungs (suspend, refuse) unload the engine: they need SUSTAINED pressure (>= 3 events in 120 s) and never fire in
+        // the first 90 s after the plan starts, when the model load itself pushes other apps' pages to zram (15R: +91 MiB, then suspend)
+        long now = System.currentTimeMillis(); pressure.addLast(now); while (!pressure.isEmpty() && now - pressure.peekFirst() > 120_000) pressure.removeFirst();
+        if (nextIsDestructive() && Agent.running.get() > 0) { rec.write(new JSONObject().put("event", "memory_pressure").put("why", why).put("rung", JSONObject.NULL)
+                .put("deferred", "an agent task is running; unloading the engine now would kill it")); return; }   // D-11
+        if (nextIsDestructive() && (now - started < 90_000 || pressure.size() < 3)) { rec.write(new JSONObject().put("event", "memory_pressure").put("why", why).put("rung", JSONObject.NULL)
+                .put("deferred", "destructive rung needs sustained pressure (" + pressure.size() + " of 3 events in 120 s" + (now - started < 90_000 ? ", within 90 s of load" : "") + ")")); return; }
+        JSONObject r = ladder.next("memory", now); rec.write(new JSONObject().put("event", "memory_pressure").put("why", why).put("rung", r == null ? JSONObject.NULL : r.getString("action")));
         if (r != null) host.applyRung(r, why); } catch (JSONException ignored) { } }
 
     /** Observed decode rate for one turn. Falsified when >= min_observations of the last `window` fall outside the registered interval. */
