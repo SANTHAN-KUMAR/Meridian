@@ -32,6 +32,13 @@ public final class Topo {
         return p;
     }
 
+    /** Every core, when none is an in-order little core (e.g. the 15R: 6+2 big cores); null otherwise. */
+    public static Placement allBigCores(JSONObject profile) throws JSONException {
+        JSONArray cl = profile.getJSONObject("cpu").getJSONArray("clusters"); long all = 0; int n = 0;
+        for (int i = 0; i < cl.length(); i++) { JSONObject c = cl.getJSONObject(i); if (LITTLE.contains(c.optString("cpu_part").toLowerCase(Locale.ROOT))) return null;
+            JSONArray ids = c.getJSONArray("core_ids"); for (int k = 0; k < ids.length(); k++) { all |= 1L << ids.getInt(k); n++; } }
+        if (n == 0) return null; Placement p = new Placement(); p.threads = n; p.computeMask = all; p.ioMask = all; p.basis = "all cores (no little cores; resident tier)"; return p;
+    }
     /** Threads and mask to use: the measured placement if the A/B has run, else the topology rule. */
     public static Placement effective(JSONObject profile) throws JSONException {
         Placement d = defaults(profile);

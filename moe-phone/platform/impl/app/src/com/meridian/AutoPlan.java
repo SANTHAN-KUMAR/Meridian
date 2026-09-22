@@ -37,6 +37,10 @@ public final class AutoPlan {
     public static Engine.Config config(JSONObject profile, Planner.Card card, File model, String tier, int ctx, long cacheBytes) throws JSONException {
         Topo.Placement pl = Topo.effective(profile); Engine.Config c = new Engine.Config();
         c.model = model; c.ctx = ctx; c.ubatch = 512; c.threads = pl.threads; c.cpuMask = pl.computeMask == 0 ? null : Long.toHexString(pl.computeMask);
+        // resident tier on a CPU with no in-order little cores: all cores (prefill is compute-bound, and a resident model needs no
+        // I/O lanes). 15R, Qwen3-4B Q4_0, 404-token prompt, 2026-09-22 (bench_threads, n=3 per arm, noisy, PROVISIONAL): prefill
+        // 22.4/13.4/25.5 tok/s at 8 threads vs 16.5/14.0 (warm) at 4; decode ~10 either way. Replaced by the placement A/B once run.
+        if (tier.equals("resident") && !pl.basis.startsWith("measured")) { Topo.Placement all = Topo.allBigCores(profile); if (all != null) { c.threads = all.threads; c.cpuMask = Long.toHexString(all.computeMask); } }
         JSONObject cp = Predictor.compute(profile); if (cp != null) c.variant = cp.getJSONObject("value").optString("engine_variant", "dot");
         if (tier.equals("streamed")) {
             // --cache-floor-mb is "RAM to leave free" when the engine sizes the cache (bmoe-cli --help), NOT a minimum cache size:
