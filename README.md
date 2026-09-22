@@ -1,7 +1,22 @@
 # Meridian
 
+<p align="center">
+  <img src="docs/media/hero.png" alt="Meridian: your phone, doing the task for you. A 17.4 GB model running on a 12 GB phone, 0 servers for the AI, 61 phone actions each verified." width="100%">
+</p>
+
+<p align="center">
+  <a href="https://claude.ai/artifact/HGeMyeWYzqz5VuEsYA26Fr"><b>Demo page</b></a> ·
+  <a href="#key-verified-results"><b>Results</b></a> ·
+  <a href="#the-agent"><b>The agent</b></a> ·
+  <a href="#architecture"><b>Architecture</b></a> ·
+  <a href="#how-to-verify-our-claims"><b>Verify our claims</b></a>
+</p>
+
 Running large Mixture-of-Experts (MoE) language models on Android phones by streaming expert
 weights from flash storage, and an on-device agent app built on that engine.
+
+<p align="center"><img src="docs/media/stats.png" alt="1.22x faster than the published engine (same phone, same session) · 284 tok/s prompt reading on the NPU · 7.6x from choosing CPU cores · 61 tools" width="100%"></p>
+<p align="center"><sub>Every figure is read from <a href="moe-phone/platform/EVIDENCE.md"><code>moe-phone/platform/EVIDENCE.md</code></a>; sources are in the table below.</sub></p>
 
 The research directory inside this repo is still named `moe-phone/` (that was the project's
 original name before the platform/app phase was named Meridian); it has not been renamed to avoid
@@ -24,6 +39,11 @@ specific speed target (10 tokens/s) is not reachable at this phone's sustained c
 losing quality. That negative result, and everything that was tried to avoid it, is written up in
 [`moe-phone/research/2026-09-19_CLOSURE.md`](moe-phone/research/2026-09-19_CLOSURE.md).
 
+<p align="center">
+  <img src="docs/media/expert-streaming.gif" alt="Animation: all experts live in storage (UFS); the hottest ones are kept in a RAM expert cache (gold = cache hit) and the rest are streamed in just in time (white)." width="90%"><br>
+  <sub>How expert streaming works (illustration from the demo page): gold = expert already in the RAM cache, white = streamed from storage just in time.</sub>
+</p>
+
 **The product phase** ([`moe-phone/platform/`](moe-phone/platform/), active) turns the engine into
 Meridian: an Android app that profiles the phone it's running on, predicts how fast a given model
 will run *before* it's downloaded, picks a configuration automatically, and runs an on-device
@@ -45,9 +65,44 @@ numbers are deleted, not annotated, per this repo's research standard
 | App agent tool registry | **61 tools**: `Tools.java` 34 + `ToolsScreen.java` 5 + `ToolsComms.java` 7 + `ToolsDaily.java` 15 | [`moe-phone/platform/impl/app/src/com/meridian/`](moe-phone/platform/impl/app/src/com/meridian/) |
 | Agent task-suite pass rate on the 15R, Qwen3-4B (grounded, predicate-checked, consent-simulated tasks) | observe-act loop **13/14 (93%)**; planner-executor **11/14 (79%)**, the weaker of the two measured loops. Measured before the 2026-09-22 loop changes (STATUS.md D-8 to D-11); the suite has not been re-run on the current loop | [`moe-phone/results/2026-09-22/oneplus15r/eval_suite-v2_qwen3-4b_loop-v4-prefix.json`](moe-phone/results/2026-09-22/oneplus15r/eval_suite-v2_qwen3-4b_loop-v4-prefix.json), [`..._planner-executor.json`](moe-phone/results/2026-09-22/oneplus15r/eval_suite-v2_qwen3-4b_planner-executor.json) |
 
+<p align="center">
+  <img src="docs/media/results.png" alt="The right chip for every phase: prompt reading CPU 20.4, GPU 135.3, NPU 284.1 tok/s; answer writing CPU 44.5, GPU 50.0, NPU 40.7 tok/s; what worked and what didn't, each with its evidence key." width="100%"><br>
+  <sub>Measured on a OnePlus 15R. The small monospace labels under each figure are keys into <a href="moe-phone/platform/EVIDENCE.md"><code>EVIDENCE.md</code></a>.</sub>
+</p>
+
 An earlier, uncontrolled comparison of the engine's speed against the published baseline was
 retracted once a same-session controlled test was run; see the H2H artifact above for why the
 controlled number (1.22x) replaced it.
+
+## The agent
+
+Meridian's agent plans a request into short steps, runs each step with one of 61 phone tools (apps, alarms, messages,
+calendar, places, files, screen control), **verifies every action against the phone's real state**, and **asks before
+anything reaches another person**. The answer ends with a harness-written list of the actions actually taken.
+
+<table>
+  <tr>
+    <td align="center" width="50%"><img src="docs/media/agent-task.gif" alt="Animated illustration: a two-step task (text Mom, set a timer) planned and completed with each step checked." width="300"></td>
+    <td align="center" width="50%"><img src="docs/media/consent.gif" alt="Animated illustration: before a message is sent, a sheet shows the exact recipient and text with Allow once / Don't allow." width="220"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Plan → act → verify (illustration)</sub></td>
+    <td align="center"><sub>Consent before anything reaches a person (illustration)</sub></td>
+  </tr>
+</table>
+
+What is and is not verified end to end is listed plainly in
+[`moe-phone/platform/impl/STATUS.md`](moe-phone/platform/impl/STATUS.md).
+
+## Architecture
+
+<p align="center">
+  <img src="docs/media/architecture.png" alt="The system, call by call: App UI (MainActivity, UiTask, consent sheet) → Agent (sanePlan, Agent.gate, Tool.execute, Tool.verify → Agent.groundTruth) → Planner (Profile/ComputeProbe, AutoPlan, Lease, Governor) → Engine (Chat ↔ libbmoe_cli.so, resident and streamed tiers) → chips (CPU, GPU, NPU, UFS, RAM)." width="100%">
+</p>
+
+The app process (UI, agent, planner) drives the engine as a child process over a line protocol (`BMOE_READY / PROGRESS / DONE /
+ERROR`). The planner measures the phone first (profile + compute probe), then picks the model tier, cores and context; the
+governor steps down under memory or thermal pressure. Design documents: [`moe-phone/platform/`](moe-phone/platform/).
 
 ## What's in the repo
 
