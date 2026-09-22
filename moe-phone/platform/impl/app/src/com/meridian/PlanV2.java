@@ -119,7 +119,8 @@ public final class PlanV2 {
         }
         if (tier.equals("streamed")) l.put(new JSONObject().put("trigger", "memory").put("action", "shrink_cache").put("params", new JSONObject().put("to_mb", cfg.cacheFloorMb))
             .put("expected_cost", new JSONObject().put("rate_frac", JSONObject.NULL).put("quality", "none")).put("reversible", true).put("hysteresis_ms", HYST));
-        l.put(new JSONObject().put("trigger", "memory").put("action", "reduce_context").put("params", new JSONObject().put("ctx", Math.max(512, cfg.ctx / 2)))
+        // never below 2048 tokens: the agent's tool list plus a few steps needs it (a 1536-token context broke the agent)
+        if (cfg.ctx / 2 >= 2048) l.put(new JSONObject().put("trigger", "memory").put("action", "reduce_context").put("params", new JSONObject().put("ctx", cfg.ctx / 2))
             .put("expected_cost", new JSONObject().put("rate_frac", JSONObject.NULL).put("quality", "bounded")).put("reversible", true).put("hysteresis_ms", HYST));
         l.put(new JSONObject().put("trigger", "memory").put("action", "suspend").put("params", new JSONObject()).put("expected_cost", new JSONObject().put("rate_frac", 0).put("quality", "none")).put("reversible", true).put("hysteresis_ms", HYST));
         l.put(new JSONObject().put("trigger", "memory").put("action", "refuse").put("params", new JSONObject().put("code", "MemoryUnavailable")).put("expected_cost", new JSONObject().put("rate_frac", 0).put("quality", "none")).put("reversible", true).put("hysteresis_ms", 0));

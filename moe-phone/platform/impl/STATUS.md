@@ -44,20 +44,46 @@ streamed with the cache sized from the grant), the largest context of 4096/3072/
 build. Two engine builds share one APK through same-length ELF renames (`app/elf_rename.py`). Plans feed the existing
 Lease and Governor; the Governor falsifies a plan whose observed speed leaves the predicted range.
 
-**Agent.** `Agent.runLoop`: the request is rewritten as one direct instruction, a constrained yes/no decides whether a tool
-is needed, each step is grammar-constrained over all tools (30 intent/system tools, `Tools.java`), each result is verified
-against device state, a constrained yes/no after each result decides whether to answer, and every answer ends with a
-verified-action summary generated from the call log (the model's words are not trusted for what happened). Messages, calls
-and email only open the composer/dialer and ask consent every time. Evaluated with suite-v2 (`Eval.java`: requests that never
-name a tool, predicates on device state, a simulated user who approves consent only for the tool a task is about):
-see `oneplus15r/eval_suite-v2_*.json` (each file's `summary.S`). **The agent's success rate with the small models that fit
-this phone is well below reliable**: Qwen3-1.7B passed about half the tasks, above the no-model baselines but far from
-dependable; the larger-model run is recorded in the same folder when it completes.
+**Agent.** `Agent.runLoop` is a planner-executor. The model first breaks the request into ordered steps (grammar-constrained
+list; one step for a simple request). For each step a constrained yes/no decides whether a tool is needed; tool steps are
+grammar-constrained calls over the registered tools, each executed behind the consent gate and verified against device state,
+followed by a constrained "is this step done?"; writing/thinking steps produce text that later steps can use. Results carry
+forward in a bounded scratchpad (long results are clipped), the final answer is written from the results only, and the harness
+appends the list of verified actions plus a note for anything left to the user (a drafted message is not sent; an opened
+settings panel is not switched). Every finished task is appended to a task memory (`files/memory.jsonl`) that the `recall`
+tool reads for later "what did you do / summarise" requests. The engine keeps the tool-list prefix in its KV cache across
+tasks (engine patch 0021), so only the new request is prefilled.
+
+Tools registered (`Tools.java`, one class per tool with arguments, consent class and a verification check):
+- phone state and settings: battery, storage, device info, flashlight (torch state read back), media volume (read back),
+  brightness (read back; needs the system "modify settings" permission, which the tool opens), media keys, settings pages and
+  system quick panels (Wi-Fi, internet, volume, NFC), clipboard (read back);
+- apps and intents: open an installed app by name, web search in the browser, open a URL, maps/navigation, play music by search,
+  camera, share text;
+- time: alarm (verified against the system's next alarm clock), timer, calendar new-event screen, current date and time;
+- information: web results read as text (DuckDuckGo HTML), read a page's text, arithmetic with percentages;
+- people: contact lookup by name; message, call and email only as drafts in the user's own apps, consent every time;
+- memory: notes (add, list, clear with consent), missed calls (call-log permission), coarse location with area name, recall of
+  earlier tasks.
+
+Evaluation (`Eval.java` suite-v2, requests that never name a tool, predicates on device state, a simulated user who approves
+consent only for the tool a task is about), all on the 15R, results in `oneplus15r/eval_suite-v2_*.json` (`summary.S` in each):
+Qwen3-1.7B with the earlier loop variants, Qwen3-4B with the observe-act loop, and Qwen3-4B with the planner-executor. The
+planner-executor scored below the observe-act loop on this suite; the misses are recorded in the file as they happened (the
+suite's predicates were fixed before the runs and were not changed after seeing results). The no-model baselines are in the
+first Qwen3-1.7B file.
 
 **Not done, stated plainly.**
-- The agent cannot operate inside other apps (read the screen, tap, type). An AccessibilityService for that was not built:
-  the development environment's safety policy blocked writing it. Everything the agent does goes through standard Android
-  intents and system APIs.
+- **Agent scope is limited by the development environment, not by Android.** During this session the environment's safety
+  controls stopped three pieces of agent work, and none of them was built: (1) an AccessibilityService to read other apps'
+  screens and tap/type in them; (2) autonomous messaging, calling, contacts-writing and notification-reading tools; (3) a
+  further module of general daily-task tools (information services, reminders, calendar access, places, device settings,
+  files). The agent therefore covers the tool list above and says so when a request needs something else.
+- **Extension point.** A new capability is one `Tools.Tool` subclass registered in `Tools` (name, description, argument schema,
+  effects, reversibility, consent class `none` or `every_time`, a named postcondition, `execute`, `verify`, optional `note`).
+  The grammar, the planner-executor, the consent gate, verification, the action summary and the task memory pick it up with no
+  other change. Permissions a tool needs go in `AndroidManifest.xml` and, for runtime permissions, the list asked in
+  `MainActivity.onCreate`.
 - Thermal derate (T3) is not in the predictions; they describe the first minutes of use.
 - The 15R's memory grant was measured with many user apps resident (`oneplus15r/profile.json`, `memory.grantable_quiesced`);
   the research measured much larger grants on the same phone when quiesced (`EVIDENCE.md`, `dev_budget_max_mib`), so the

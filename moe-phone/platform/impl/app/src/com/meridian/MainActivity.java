@@ -56,7 +56,8 @@ public class MainActivity extends Activity {
         rec = new Recorder(this);
         List<String> ask = new ArrayList<>();   // asked once up front so the agent's contact lookups and notifications work
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) ask.add("android.permission.POST_NOTIFICATIONS");
-        if (checkSelfPermission("android.permission.READ_CONTACTS") != android.content.pm.PackageManager.PERMISSION_GRANTED) ask.add("android.permission.READ_CONTACTS");
+        for (String perm : new String[]{"android.permission.READ_CONTACTS", "android.permission.READ_CALL_LOG", "android.permission.ACCESS_COARSE_LOCATION"})
+            if (checkSelfPermission(perm) != android.content.pm.PackageManager.PERMISSION_GRANTED) ask.add(perm);
         if (!ask.isEmpty()) requestPermissions(ask.toArray(new String[0]), 1);
         try { tools = new Tools(this); } catch (JSONException e) { throw new RuntimeException(e); }
         File pf = new File(getFilesDir(), "profile.json");
@@ -359,7 +360,28 @@ public class MainActivity extends Activity {
     /** Load the engine with `cfg`; when a plan is given, register its lease and start the governor with its ladder and falsification rule. */
     void loadEngine(final Engine.Config cfg, final JSONObject plan) {
         setBusy(true); onUi(() -> chatInfo.setText("Loading " + cfg.describe() + " ..."));
-        run(() -> { try {
+        run(() -> { try { loadEngineNow(cfg, plan); } catch (Exception e) { chat = null; onUi(() -> chatInfo.setText("Engine failed: " + e.getMessage())); } finally { setBusy(false); } });
+    }
+    /** Autonomy: the agent and chat never make the user press "Load": if no engine is running, plan and load the selected model
+     *  (or the most capable downloaded model that fits, by the same ranking the recommendations use). Runs on the executor thread. */
+    boolean ensureEngineNow(StringBuilder why) {
+        if (chat != null) return true;
+        try {
+            if (profile == null) { why.append("Profile this phone first (Device tab)."); return false; }
+            File pick = selectedModel; JSONObject bestPlan = null;
+            if (pick == null) { double bestP = -1;
+                for (File f : allModels()) { try { Planner.Card c = Planner.derive(f); JSONObject pl = AutoPlan.plan(this, profile, c, f);
+                    if (!pl.has("refusal") && Predictor.paramsB(c) > bestP) { bestP = Predictor.paramsB(c); pick = f; bestPlan = pl; } } catch (Exception ignored) { } } }
+            if (pick == null) { why.append("No model that fits this phone is downloaded yet (Models tab)."); return false; }
+            selectedModel = pick; selectedCard = Planner.derive(pick);
+            JSONObject plan = bestPlan != null ? bestPlan : AutoPlan.plan(this, profile, selectedCard, pick);
+            if (plan.has("refusal")) { why.append(plan.getJSONObject("refusal").optString("detail")); return false; }
+            final String nm = pick.getName(); onUi(() -> chatInfo.setText("Loading " + nm + " ...")); saveText("plan.json", plan.toString(2));
+            loadEngineNow(PlanV2.configFromJson(plan.getJSONObject("config"), pick), plan); return chat != null;
+        } catch (Exception e) { why.append("could not load a model: ").append(e.getMessage()); return false; }
+    }
+    void loadEngineNow(final Engine.Config cfg, final JSONObject plan) throws Exception {
+        {
             Chat c = new Chat(this, cfg); c.start(900000); chat = c; chatTurns = 0; curCfg = cfg; curPlan = plan;
             JSONObject lst = null; String leaseTxt = "no plan: no lease, no governor (the configuration is uncalibrated)";
             if (plan != null) { long floor = plan.getJSONObject("lease").getLong("floor"), target = plan.getJSONObject("lease").getLong("target");
@@ -372,7 +394,7 @@ public class MainActivity extends Activity {
                     public void invalidated(String why) { onUi(() -> chatInfo.setText(colorize("Plan falsified: " + why + ". Recalibrate before trusting it."))); } }, rec, plan); governor.start(); }
             final String fl = leaseTxt;
             onUi(() -> { startForegroundService(new Intent(this, KeepAlive.class).putExtra("model", cfg.model.getName())); loadBtn.setText("Unload engine"); chatInfo.setText(colorize("Engine ready: " + cfg.describe() + "\nload " + c.engine().readyInfo().optDouble("load_s") + " s; " + fl)); });
-        } catch (Exception e) { chat = null; onUi(() -> chatInfo.setText("Engine failed: " + e.getMessage())); } finally { setBusy(false); } });
+        }
     }
     /** Execute a ladder rung chosen by the governor: reload with the rung's change, or unload. Queued behind whatever job is running. */
     void applyRungAsync(final JSONObject r, final String why) {
@@ -388,10 +410,11 @@ public class MainActivity extends Activity {
     }
     @Override public void onTrimMemory(int level) { super.onTrimMemory(level); if (level >= TRIM_MEMORY_RUNNING_LOW && governor != null) governor.onMemoryPressure("onTrimMemory level " + level); }
     void send(final String q) {
-        if (chat == null) { toast("Load the engine first"); return; } if (busy) { toast("Busy"); return; } setBusy(true);
-        final boolean fresh = chatTurns == 0; final Chat c = chat; final StringBuilder acc = new StringBuilder();
+        if (busy) { toast("Busy"); return; } setBusy(true);
         onUi(() -> chatOut.append("\n> " + q + "\n"));
         run(() -> { try {
+            StringBuilder why = new StringBuilder(); if (!ensureEngineNow(why)) { final String w = why.toString(); onUi(() -> chatInfo.setText(colorize(w))); return; }
+            final boolean fresh = chatTurns == 0; final Chat c = chat;
             c.ask(q, 384, fresh, t -> onUi(() -> chatOut.append(t))); chatTurns++;
             JSONObject d = c.lastResult; JSONObject cond = Regime.snapshot(this);
             rec.write(new JSONObject().put("turn_id", "chat." + System.currentTimeMillis()).put("model_id", selectedModel.getName()).put("prompt_tokens", d.optInt("n_prompt")).put("output_tokens", d.optInt("tokens"))
@@ -417,11 +440,12 @@ public class MainActivity extends Activity {
         return scroll(l);
     }
     void runAgent(final String task) {
-        if (chat == null) { toast("Load the engine on the Chat tab first"); return; } if (task.isEmpty() || busy) return; setBusy(true); chatTurns = 0;
+        if (task.isEmpty() || busy) return; setBusy(true); chatTurns = 0;
         onUi(() -> agentLog.setText("Task: " + task + "\n"));
-        final Agent a = new Agent(this, chat, tools, rec, selectedModel.getName());
         run(() -> { try {
-            String res = a.runLoop(task, 8, new Agent.UI() {
+            StringBuilder why = new StringBuilder(); if (!ensureEngineNow(why)) { final String w = why.toString(); onUi(() -> agentLog.append("Cannot start: " + w + "\n")); saveText("last_agent.txt", "Task: " + task + "\nFailed: " + w); return; }
+            final Agent a = new Agent(this, chat, tools, rec, selectedModel.getName());
+            String res = a.runLoop(task, 12, new Agent.UI() {
                 public void log(String s) { onUi(() -> agentLog.append(s + "\n")); }
                 public void token(String t) { }
                 public boolean consent(String tool, String args) { final CountDownLatch cd = new CountDownLatch(1); final boolean[] ok = {false};

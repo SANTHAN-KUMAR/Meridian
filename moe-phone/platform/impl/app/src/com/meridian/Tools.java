@@ -14,6 +14,8 @@ public final class Tools {
         Tool(String n, String d, String eff, boolean rev, String consent, String post, JSONObject params) { name = n; description = d; effects = eff; reversible = rev; this.consent = consent; postcondition = post; this.params = params; }
         abstract JSONObject execute(JSONObject args) throws Exception;
         abstract boolean verify(JSONObject args, JSONObject result) throws Exception;   // observable-state check
+        /** A harness-written line telling the user what is still theirs to do (drafts are not sent, panels are not switched). */
+        String note(JSONObject result) { return null; }
     }
     private final Context ctx; private final File notes; public final Map<String, Tool> registry = new LinkedHashMap<>();
 
@@ -46,7 +48,8 @@ public final class Tools {
             boolean verify(JSONObject a, JSONObject r) throws Exception { return readNotes().isEmpty(); } });
         addPhoneTools();
     }
-    private void add(Tool t) { registry.put(t.name, t); }
+    void add(Tool t) { registry.put(t.name, t); }
+    Context context() { return ctx; }
 
     // ---------- phone actions through standard, user-visible Android intents (no special permissions) ----------
     /** Starts an intent from the app context. Returns the component that handled it; throws if nothing on the phone can. */
@@ -81,7 +84,9 @@ public final class Tools {
     }
     /** Arithmetic only: + - * / % ^ and parentheses, decimals. A recursive-descent parser, not an eval of code. */
     static double calc(String e) {
-        final String x = e.replace("x", "*").replace("×", "*").replace("÷", "/").replaceAll("\\s+", ""); final int[] i = {0};
+        // written the way people write it: "15% of 2,400", "20 percent of 80", "2,340 / 6", "3 x 4" (percent = /100; "of" = times)
+        String pre = e.toLowerCase(Locale.ROOT).replace(",", "").replaceAll("\\bpercent\\b", "%").replaceAll("(\\d+(?:\\.\\d+)?)\\s*%\\s*(?:of\\b)?", "($1/100)*").replaceAll("\\bof\\b", "*").replaceAll("\\*\\s*$", "");
+        final String x = pre.replace("x", "*").replace("×", "*").replace("÷", "/").replaceAll("\\s+", ""); final int[] i = {0};
         class P { double expr() { double v = term(); while (i[0] < x.length()) { char c = x.charAt(i[0]); if (c == '+') { i[0]++; v += term(); } else if (c == '-') { i[0]++; v -= term(); } else break; } return v; }
             double term() { double v = pow(); while (i[0] < x.length()) { char c = x.charAt(i[0]); if (c == '*') { i[0]++; v *= pow(); } else if (c == '/') { i[0]++; v /= pow(); } else if (c == '%') { i[0]++; v %= pow(); } else break; } return v; }
             double pow() { double b = unary(); if (i[0] < x.length() && x.charAt(i[0]) == '^') { i[0]++; return Math.pow(b, pow()); } return b; }
@@ -109,6 +114,64 @@ public final class Tools {
     String number(String to) throws Exception {
         if (!to.matches(".*[A-Za-z].*")) return to;
         JSONArray m = contacts(to); if (m.length() == 0) throw new IllegalStateException("no contact matches '" + to + "'"); return m.getJSONObject(0).getString("number");
+    }
+    JSONArray missedCalls() throws Exception {
+        if (ctx.checkSelfPermission(android.Manifest.permission.READ_CALL_LOG) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            throw new IllegalStateException("PermissionRequired: call log access is not granted; allow it when Meridian asks (or in Settings > Apps > Meridian > Permissions)");
+        JSONArray out = new JSONArray();
+        try (android.database.Cursor c = ctx.getContentResolver().query(android.provider.CallLog.Calls.CONTENT_URI, new String[]{android.provider.CallLog.Calls.CACHED_NAME, android.provider.CallLog.Calls.NUMBER, android.provider.CallLog.Calls.DATE},
+                android.provider.CallLog.Calls.TYPE + "=?", new String[]{String.valueOf(android.provider.CallLog.Calls.MISSED_TYPE)}, android.provider.CallLog.Calls.DATE + " DESC")) {
+            while (c != null && c.moveToNext() && out.length() < 8) out.put(new JSONObject().put("name", c.getString(0) == null ? "" : c.getString(0)).put("number", c.getString(1))
+                .put("time", String.format(Locale.ROOT, "%1$tF %1$tR", c.getLong(2)))); }
+        return out;
+    }
+    JSONObject location() throws Exception {
+        if (ctx.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            throw new IllegalStateException("PermissionRequired: location access is not granted; allow it when Meridian asks");
+        android.location.LocationManager lm = (android.location.LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE); android.location.Location best = null;
+        for (String prov : lm.getProviders(true)) { try { android.location.Location l = lm.getLastKnownLocation(prov); if (l != null && (best == null || l.getTime() > best.getTime())) best = l; } catch (SecurityException ignored) { } }
+        if (best == null && Build.VERSION.SDK_INT >= 30 && lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)) {
+            final android.location.Location[] got = {null}; final java.util.concurrent.CountDownLatch l = new java.util.concurrent.CountDownLatch(1);
+            lm.getCurrentLocation(android.location.LocationManager.NETWORK_PROVIDER, null, ctx.getMainExecutor(), loc -> { got[0] = loc; l.countDown(); }); l.await(15, java.util.concurrent.TimeUnit.SECONDS); best = got[0]; }
+        if (best == null) throw new IllegalStateException("no location fix: location may be turned off");
+        JSONObject o = new JSONObject().put("lat", best.getLatitude()).put("lon", best.getLongitude()).put("accuracy_m", Math.round(best.getAccuracy())).put("age_min", (System.currentTimeMillis() - best.getTime()) / 60000);
+        try { List<android.location.Address> ad = new android.location.Geocoder(ctx, Locale.ENGLISH).getFromLocation(best.getLatitude(), best.getLongitude(), 1);
+            if (ad != null && !ad.isEmpty()) { android.location.Address x = ad.get(0); o.put("area", x.getSubLocality() != null ? x.getSubLocality() : x.getLocality()).put("city", x.getLocality()).put("country", x.getCountryName()); } }
+        catch (Exception e) { o.put("area", JSONObject.NULL).put("geocoder", "unavailable: " + e.getMessage()); }
+        return o;
+    }
+    static String httpGet(String url) throws Exception {
+        for (int attempt = 0; attempt < 2; attempt++) {
+            java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection(); c.setConnectTimeout(12000); c.setReadTimeout(15000);
+            c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) meridian/0.2"); c.setInstanceFollowRedirects(true);
+            try { int code = c.getResponseCode(); if (code == 200) return new String(RemoteGguf.readUpTo(c.getInputStream(), 2 << 20), "UTF-8");
+                if (attempt == 1) throw new java.io.IOException("HTTP " + code + " from " + new java.net.URL(url).getHost()); } finally { c.disconnect(); }
+            sleep(1500);
+        }
+        throw new java.io.IOException("unreachable");
+    }
+    static String strip(String h) { return android.text.Html.fromHtml(h, android.text.Html.FROM_HTML_MODE_LEGACY).toString().replaceAll("\\s+", " ").trim(); }
+    static JSONArray webResults(String q) throws Exception {
+        String h = httpGet("https://html.duckduckgo.com/html/?q=" + java.net.URLEncoder.encode(q, "UTF-8")); JSONArray out = new JSONArray();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("class=\"result__a\"[^>]*href=\"([^\"]+)\"[^>]*>(.*?)</a>(.*?)(?=class=\"result__a\"|$)", java.util.regex.Pattern.DOTALL).matcher(h);
+        while (m.find() && out.length() < 6) { String href = m.group(1).replace("&amp;", "&"); java.util.regex.Matcher u = java.util.regex.Pattern.compile("uddg=([^&]+)").matcher(href);
+            String url = u.find() ? java.net.URLDecoder.decode(u.group(1), "UTF-8") : (href.startsWith("//") ? "https:" + href : href);
+            java.util.regex.Matcher sn = java.util.regex.Pattern.compile("class=\"result__snippet\"[^>]*>(.*?)</a>", java.util.regex.Pattern.DOTALL).matcher(m.group(3));
+            out.put(new JSONObject().put("title", strip(m.group(2))).put("url", url).put("snippet", sn.find() ? strip(sn.group(1)) : "")); }
+        return out;
+    }
+    static String pageText(String url) throws Exception {
+        String h = httpGet(url).replaceAll("(?is)<(script|style|noscript|svg)[^>]*>.*?</\\1>", " "); String t = strip(h);
+        return t.length() > 1500 ? t.substring(0, 1500) + " ..." : t;
+    }
+    /** Task memory: each finished agent task (request, answer, verified actions) is appended to files/memory.jsonl by Agent. */
+    JSONArray recallMemory(String about) throws Exception {
+        File f = new File(ctx.getFilesDir(), "memory.jsonl"); List<JSONObject> all = new ArrayList<>(); if (!f.exists()) return new JSONArray();
+        try (BufferedReader r = new BufferedReader(new FileReader(f))) { String l; while ((l = r.readLine()) != null) try { all.add(new JSONObject(l)); } catch (JSONException ignored) { } }
+        String[] words = about.toLowerCase(Locale.ROOT).split("\\W+"); List<JSONObject> hit = new ArrayList<>();
+        for (int i = all.size() - 1; i >= 0 && hit.size() < 5; i--) { String t = all.get(i).toString().toLowerCase(Locale.ROOT); int n = 0; for (String w : words) if (w.length() > 3 && t.contains(w)) n++;
+            if (n > 0 || about.trim().isEmpty() || about.toLowerCase(Locale.ROOT).matches(".*\\b(last|recent|summary|everything|all)\\b.*")) hit.add(all.get(i)); }
+        return new JSONArray(hit);
     }
     static void sleep(long ms) { try { Thread.sleep(ms); } catch (InterruptedException ignored) { } }
 
@@ -143,13 +206,16 @@ public final class Tools {
                 Intent i = new Intent(Intent.ACTION_INSERT).setData(android.provider.CalendarContract.Events.CONTENT_URI).putExtra(android.provider.CalendarContract.Events.TITLE, a.getString("title"))
                     .putExtra(android.provider.CalendarContract.EXTRA_EVENT_BEGIN_TIME, c.getTimeInMillis()).putExtra(android.provider.CalendarContract.EXTRA_EVENT_END_TIME, c.getTimeInMillis() + 3600000);
                 return new JSONObject().put("title", a.getString("title")).put("starts", c.getTime().toString()).put("handled_by", launch(i)); }
+            String note(JSONObject r) { return "The new event is filled in on the calendar screen; it is saved only when you press save."; }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
         add(new Tool("send_message", "Open a text message to a phone number or contact name with the text filled in; the user presses send.", "external", true, "every_time", "the messaging app opened with the recipient and text (nothing is sent without the user)", obj("to", "string", "text", "string")) {
             JSONObject execute(JSONObject a) throws Exception { String n = number(a.getString("to")); Intent i = new Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("smsto:" + android.net.Uri.encode(n))).putExtra("sms_body", a.getString("text"));
                 return new JSONObject().put("to", a.getString("to")).put("number", n).put("handled_by", launch(i)).put("note", "composer opened; the user sends it"); }
+            String note(JSONObject r) { return "Draft only: the message is open in the messaging app and has NOT been sent; press send there."; }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
         add(new Tool("call", "Open the dialer with a phone number or contact name filled in; the user presses call.", "external", true, "every_time", "the dialer opened with the number (no call is placed without the user)", obj("number", "string")) {
             JSONObject execute(JSONObject a) throws Exception { String n = number(a.getString("number")); return new JSONObject().put("number", n).put("handled_by", launch(new Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:" + android.net.Uri.encode(n))))); }
+            String note(JSONObject r) { return "The dialer is open with the number; no call is placed until you press call."; }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
         add(new Tool("navigate", "Show a place or directions in the maps app. Only when the user asks where something is or how to get there.", "ui", true, "none", "a maps app accepted the place query", obj("place", "string")) {
             JSONObject execute(JSONObject a) throws Exception { return new JSONObject().put("place", a.getString("place")).put("handled_by", launch(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("geo:0,0?q=" + android.net.Uri.encode(a.getString("place")))))); }
@@ -178,6 +244,7 @@ public final class Tools {
                   : p.contains("app") ? android.provider.Settings.ACTION_APPLICATION_SETTINGS : p.contains("stor") ? android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS : p.contains("notif") ? "android.settings.NOTIFICATION_SETTINGS"
                   : android.provider.Settings.ACTION_SETTINGS;
                 return new JSONObject().put("page", p).put("handled_by", launch(new Intent(act))); }
+            String note(JSONObject r) { return "The settings page is open; change the setting there (Android does not let apps change it directly)."; }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
         add(new Tool("copy_text", "Copy text to the clipboard.", "write", true, "none", "the clipboard holds exactly the text", obj("text", "string")) {
             JSONObject execute(JSONObject a) throws Exception { final String t = a.getString("text"); final java.util.concurrent.CountDownLatch l = new java.util.concurrent.CountDownLatch(1);
@@ -187,12 +254,13 @@ public final class Tools {
                 l.await(); return a.getString("text").equals(got[0]); } });
         add(new Tool("share_text", "Share text with another app (the user picks the app). Only when the user asks to share.", "external", true, "none", "the share sheet opened", obj("text", "string")) {
             JSONObject execute(JSONObject a) throws Exception { Intent s = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, a.getString("text")); ctx.startActivity(Intent.createChooser(s, "Share").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return new JSONObject().put("shared", true); }
+            String note(JSONObject r) { return "The share sheet is open; pick an app to finish sharing."; }
             boolean verify(JSONObject a, JSONObject r) { return r.optBoolean("shared"); } });
         add(new Tool("take_photo", "Open the camera to take a photo. Only when the user wants to take a picture.", "ui", true, "none", "a camera app accepted the still-image intent", obj()) {
             JSONObject execute(JSONObject a) throws Exception { return new JSONObject().put("handled_by", launch(new Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))); }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
         add(new Tool("calculate", "Compute an arithmetic expression exactly. Write the expression from the numbers in the request.", "read", true, "none", "the result re-computes to the same value", obj("expression", "string")) {
-            JSONObject execute(JSONObject a) throws Exception { double v = calc(a.getString("expression")); return new JSONObject().put("expression", a.getString("expression")).put("result", v == Math.rint(v) && Math.abs(v) < 1e15 ? (Object) (long) v : (Object) v); }
+            JSONObject execute(JSONObject a) throws Exception { double v = new java.math.BigDecimal(calc(a.getString("expression"))).round(new java.math.MathContext(12)).doubleValue(); return new JSONObject().put("expression", a.getString("expression")).put("result", v == Math.rint(v) && Math.abs(v) < 1e15 ? (Object) (long) v : (Object) v); }
             boolean verify(JSONObject a, JSONObject r) throws Exception { return Math.abs(calc(a.getString("expression")) - r.getDouble("result")) < 1e-9 * Math.max(1, Math.abs(r.getDouble("result"))); } });
         add(new Tool("time_now", "Read the current date, time and weekday. Only when the answer depends on the date or time.", "read", true, "none", "the time is within 5 seconds of the system clock", obj()) {
             JSONObject execute(JSONObject a) throws Exception { Calendar c = Calendar.getInstance(); return new JSONObject().put("date", String.format(Locale.ROOT, "%tF", c)).put("time", String.format(Locale.ROOT, "%tR", c))
@@ -205,6 +273,7 @@ public final class Tools {
             JSONObject execute(JSONObject a) throws Exception { Intent i = new Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:" + android.net.Uri.encode(a.getString("to"))))
                     .putExtra(Intent.EXTRA_SUBJECT, a.getString("subject")).putExtra(Intent.EXTRA_TEXT, a.getString("text"));
                 return new JSONObject().put("to", a.getString("to")).put("handled_by", launch(i)).put("note", "draft opened; the user sends it"); }
+            String note(JSONObject r) { return "Draft only: the email is open in the mail app and has NOT been sent; press send there."; }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
         add(new Tool("media_control", "Control whatever music or video is playing: play, pause, next or previous.", "write", true, "none", "for play/pause the audio service reports music active/inactive afterwards", obj("action", "string")) {
             JSONObject execute(JSONObject a) throws Exception { String x = a.getString("action").toLowerCase(Locale.ROOT); int key = x.contains("next") || x.contains("skip") ? android.view.KeyEvent.KEYCODE_MEDIA_NEXT
@@ -218,6 +287,7 @@ public final class Tools {
             JSONObject execute(JSONObject a) throws Exception { String p = a.getString("panel").toLowerCase(Locale.ROOT);
                 String act = p.contains("wi") ? android.provider.Settings.Panel.ACTION_WIFI : p.contains("vol") ? android.provider.Settings.Panel.ACTION_VOLUME : p.contains("nfc") ? android.provider.Settings.Panel.ACTION_NFC : android.provider.Settings.Panel.ACTION_INTERNET_CONNECTIVITY;
                 return new JSONObject().put("panel", act).put("handled_by", launch(new Intent(act))); }
+            String note(JSONObject r) { return "The system panel is open; switch the setting there (Android does not let apps switch it directly)."; }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
         add(new Tool("set_brightness", "Set the screen brightness to a percentage, 0 to 100.", "write", true, "none", "the system brightness setting reads back the value written", obj("percent", "string")) {
             JSONObject execute(JSONObject a) throws Exception {
@@ -227,6 +297,22 @@ public final class Tools {
                 android.content.ContentResolver cr = ctx.getContentResolver(); android.provider.Settings.System.putInt(cr, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
                 int v = (int) Math.round(pct / 100 * 255); android.provider.Settings.System.putInt(cr, android.provider.Settings.System.SCREEN_BRIGHTNESS, v); return new JSONObject().put("value", v).put("percent", Math.round(pct)); }
             boolean verify(JSONObject a, JSONObject r) throws Exception { return android.provider.Settings.System.getInt(ctx.getContentResolver(), android.provider.Settings.System.SCREEN_BRIGHTNESS) == r.getInt("value"); } });
+        add(new Tool("missed_calls", "Read the most recent missed calls (name, number, time).", "read", true, "none", "the returned calls re-query identically from the call log", obj()) {
+            JSONObject execute(JSONObject a) throws Exception { return new JSONObject().put("missed", missedCalls()); }
+            boolean verify(JSONObject a, JSONObject r) throws Exception { return missedCalls().toString().equals(r.getJSONArray("missed").toString()); } });
+        add(new Tool("my_location", "Find where the phone is: the area or city name and coordinates.", "read", true, "none", "coordinates are valid and come from the location service", obj()) {
+            JSONObject execute(JSONObject a) throws Exception { return location(); }
+            boolean verify(JSONObject a, JSONObject r) throws Exception { double la = r.getDouble("lat"), lo = r.getDouble("lon"); return Math.abs(la) <= 90 && Math.abs(lo) <= 180 && !(la == 0 && lo == 0); } });
+        add(new Tool("web_results", "Search the internet and read the top results (titles, links, snippets) as text, to answer or compare things.", "read", true, "none", "the results were parsed from the search page and each has a title and link", obj("query", "string")) {
+            JSONObject execute(JSONObject a) throws Exception { return new JSONObject().put("query", a.getString("query")).put("results", webResults(a.getString("query"))).put("source", "DuckDuckGo HTML results"); }
+            boolean verify(JSONObject a, JSONObject r) throws Exception { JSONArray x = r.getJSONArray("results"); if (x.length() == 0) return false;
+                for (int i = 0; i < x.length(); i++) if (x.getJSONObject(i).optString("title").isEmpty() || !x.getJSONObject(i).optString("url").startsWith("http")) return false; return true; } });
+        add(new Tool("read_page", "Read the visible text of a web page (first part), to get details from a result.", "read", true, "none", "text was extracted from the fetched page", obj("url", "string")) {
+            JSONObject execute(JSONObject a) throws Exception { String u = a.getString("url").trim(); if (!u.matches("(?i)https?://.*")) u = "https://" + u; String t = pageText(u); return new JSONObject().put("url", u).put("text", t); }
+            boolean verify(JSONObject a, JSONObject r) { return r.optString("text").length() > 40; } });
+        add(new Tool("recall", "Look up what earlier tasks found and did (from this app's own task memory), e.g. for a summary later.", "read", true, "none", "the returned entries re-read identically from the task memory", obj("about", "string")) {
+            JSONObject execute(JSONObject a) throws Exception { return new JSONObject().put("tasks", recallMemory(a.getString("about"))); }
+            boolean verify(JSONObject a, JSONObject r) throws Exception { return recallMemory(a.getString("about")).toString().equals(r.getJSONArray("tasks").toString()); } });
         add(new Tool("device_info", "Read this phone's model, Android version, RAM and battery.", "read", true, "none", "fields match the OS build and memory services", obj()) {
             JSONObject execute(JSONObject a) throws Exception { android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo(); ((android.app.ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE)).getMemoryInfo(mi);
                 return new JSONObject().put("model", Build.MANUFACTURER + " " + Build.MODEL).put("android", Build.VERSION.RELEASE).put("ram_gb", Math.round(mi.totalMem / 1e8) / 10.0).put("ram_free_gb", Math.round(mi.availMem / 1e8) / 10.0)
@@ -270,6 +356,8 @@ public final class Tools {
     }
     /** {"intent": <string>}: the request restated as one direct instruction. */
     public String intentGrammar() { return BASE_RULES + "root ::= \"{\\\"intent\\\":\" ws string \"}\"\n"; }
+    /** {"steps": [1..8 strings]}: the request broken into ordered sub-tasks. */
+    public String stepsGrammar() { return BASE_RULES + "root ::= \"{\\\"steps\\\":[\" ws string (\",\" ws string){0,7} \"]}\"\n"; }
     /** {"answer": "yes"} or {"answer": "no"}: a constrained decision (tool needed? instruction done?). */
     public String yesNoGrammar() { return "root ::= \"{\\\"answer\\\":\\\"\" (\"yes\" | \"no\") \"\\\"}\"\n"; }
     /** Only {"final": <string>}. */

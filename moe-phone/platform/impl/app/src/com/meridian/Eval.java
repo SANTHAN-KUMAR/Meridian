@@ -81,7 +81,7 @@ public final class Eval {
             final Task tk = t; Agent.UI ui = new Agent.UI() { public void log(String s) { } public void token(String s) { } public boolean consent(String tool, String a) { return tk.consent && tk.expects.contains(tool); } };
             St st = new St(); long t0 = System.currentTimeMillis(); List<String> trace = new ArrayList<>();
             try {
-                if (v.equals("loop")) { st.answer = agent.runLoop(t.prompt, 8, ui); trace = new ArrayList<>(agent.trace); st.calls = new ArrayList<>(agent.calls); st.consentAsked = new ArrayList<>(agent.consentAsked); }
+                if (v.equals("loop")) { st.answer = agent.runLoop(t.prompt, 12, ui); trace = new ArrayList<>(agent.trace); st.calls = new ArrayList<>(agent.calls); st.consentAsked = new ArrayList<>(agent.consentAsked); }
                 else if (v.equals("plan_act_answer")) { st.answer = agent.run(t.prompt, 5, ui); trace = new ArrayList<>(agent.trace); }
                 else if (v.equals("free_form")) { st.answer = agent.runFreeForm(t.prompt, 5, ui); trace = new ArrayList<>(agent.trace); }
                 else if (v.equals("keyword_router")) st.answer = keywordRun(tools, t.prompt, ui, trace);

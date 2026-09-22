@@ -9,6 +9,9 @@ import java.io.File;
  *  measured keepable. The heartbeat reads the engine child's /proc status; growth of swapped memory or of major faults is a pressure signal. */
 public final class Lease {
     public interface Listener { void onPressure(String why, JSONObject state); }
+    /** Swap growth that counts as pressure. Design threshold: sub-MiB drift is normal kernel accounting and, before
+     *  2026-09-22, a +0 MiB reading unloaded the engine mid-session (15R, Qwen3-4B). */
+    static final long SWAP_PRESSURE_BYTES = 64L << 20;
     public long floor, target, granted, verifiedResident, swapped; public boolean revoked; public int pid = -1;
     private Handler h; private Listener l; private volatile boolean stop; private long lastSwap = -1, lastMajflt = -1;
     private JSONObject last = new JSONObject();
@@ -41,7 +44,7 @@ public final class Lease {
         h.postDelayed(new Runnable() { public void run() { if (stop || revoked) return;
             try { long sw = Math.max(0, statusKb(pid, "VmSwap")) * 1024, mf = majflt(pid), avail = Profile.meminfoKb("MemAvailable") * 1024, rss = statusKb(pid, "VmRSS") * 1024;
                 last = new JSONObject().put("lease_granted", granted).put("verified_resident", rss).put("swapped", sw).put("mem_available", avail).put("majflt", mf);
-                if (lastSwap >= 0 && sw > lastSwap) l.onPressure("engine memory grew in compressed swap (+" + ((sw - lastSwap) >> 20) + " MiB)", last);
+                if (lastSwap >= 0 && sw - lastSwap >= SWAP_PRESSURE_BYTES) l.onPressure("engine memory grew in compressed swap (+" + ((sw - lastSwap) >> 20) + " MiB)", last);
                 else if (rss > 0 && rss + (256L << 20) < verifiedResident) l.onPressure("engine resident set shrank from " + (verifiedResident >> 20) + " to " + (rss >> 20) + " MiB (the OS reclaimed it)", last);
                 lastSwap = sw; lastMajflt = mf; } catch (Exception ignored) { }
             h.postDelayed(this, periodMs); } }, periodMs);
