@@ -312,7 +312,7 @@ public class MainActivity extends Activity {
     // Home: the task hub
     // =====================================================================================================================
     View buildHome() {
-        String sub = chat != null && selectedModel != null ? "Ready · " + UiHumanize.modelName(selectedModel.getName()) : busy && task != null && task.status == UiTask.Status.STARTING ? "Getting ready…" : null;
+        String sub = warming ? "Getting ready…" : chat != null && selectedModel != null ? "Ready · " + UiHumanize.modelName(selectedModel.getName()) : busy && task != null && task.status == UiTask.Status.STARTING ? "Getting ready…" : null;
         View right = K.iconButton("phone", "This phone", T.ink, v -> go("phone"));
         LinearLayout h = header("menu", "Open menu", v -> openDrawer(), "Meridian", sub, true, right);
         final UiKit.Composer comp = K.composer("Give Meridian a task", true, null, null);
@@ -475,15 +475,14 @@ public class MainActivity extends Activity {
         if (tk.status == UiTask.Status.PROBLEM && tk.problem != null) addGap(problemCard(tk.problem), 12);
         if (tk.status == UiTask.Status.STOPPED) addGap(K.pill("stop", "Stopped. Nothing else will happen for this task.", T.surface2, T.ink2), 12);
     }
-    /** Stop means stop. Cancelling the current generation is not enough: the agent loop would go on to its next step (seen on
-     *  the Nord, 2026-09-22: a tool ran after Stop). So Stop also denies any pending approval and closes the engine session;
-     *  the agent's next ask() then fails and runLoop exits. The engine reloads on the next task. */
-    Runnable denyPending;
+    /** Stop means stop: deny any pending approval and cancel the agent, which checks before every model call and every tool
+     *  (Agent.cancel). Cancelling only the current generation was not enough: on the Nord (2026-09-22) a tool ran after Stop. */
+    Runnable denyPending; volatile Agent runningAgent; volatile boolean warming;
     void stopTask() {
         if (task == null || task.finished()) return;
         task.stopRequested = true; task.now = "Stopping…";
         if (denyPending != null) { Runnable d = denyPending; denyPending = null; d.run(); }
-        if (chat != null) { try { chat.cancel(); } catch (Exception ignored) { } unloadEngine(); if (loadBtn != null) loadBtn.setText("Load engine with selected model"); engineStatus("Engine closed: the task was stopped."); }
+        Agent a = runningAgent; if (a != null) a.cancel();   // checked before every model call and tool run (harness, 2026-09-22)
         refresh("task", "home");
     }
     boolean taskFooterRunning;
@@ -1146,8 +1145,17 @@ public class MainActivity extends Activity {
     /** Load the engine with `cfg`; when a plan is given, register its lease and start the governor with its ladder and falsification rule. */
     void loadEngine(final Engine.Config cfg, final JSONObject plan) {
         setBusy(true); onUi(() -> engineStatus("Loading " + cfg.describe() + " ..."));
-        run(() -> { try { loadEngineNow(cfg, plan); onUi(() -> { modelMsg = UiHumanize.modelName(cfg.model.getName()) + " is ready."; modelProblem = null; refresh("models", "home"); }); }
+        run(() -> { try { loadEngineNow(cfg, plan); onUi(() -> { modelMsg = UiHumanize.modelName(cfg.model.getName()) + " is ready."; modelProblem = null; refresh("models", "home"); }); warmAgent(); }
             catch (Exception e) { chat = null; onUi(() -> { engineStatus("Engine failed: " + e.getMessage()); modelMsg = null; modelProblem = UiHumanize.of("Engine failed: " + e.getMessage()); refresh("models", "home"); }); } finally { setBusy(false); } });
+    }
+    /** Prefill the agent's tool prefix right after a load, so the first task does not pay for it (Agent.warm, ~2 min on the 15R).
+     *  Queued on the same single worker, so a task sent meanwhile simply starts after it; it shows as "Getting ready". */
+    void warmAgent() {
+        run(() -> { final Chat c = chat; if (c == null || selectedModel == null) return;
+            warming = true; onUi(() -> { engineNote = "Preparing the assistant. This happens once after it loads."; refresh("home", "task"); });
+            try { Agent.warm(this, c, tools, rec, selectedModel.getName()); }
+            catch (Exception e) { try { rec.write(new JSONObject().put("event", "warm_failed").put("why", String.valueOf(e.getMessage()))); } catch (JSONException ignored) { } }
+            finally { warming = false; onUi(() -> { engineNote = null; refresh("home", "task"); }); } });
     }
     /** Autonomy: the agent and chat never make the user press "Load": if no engine is running, plan and load the selected model
      *  (or the most capable downloaded model that fits, by the same ranking the recommendations use). Runs on the executor thread. */
@@ -1243,18 +1251,16 @@ public class MainActivity extends Activity {
             StringBuilder why = new StringBuilder(); if (!ensureEngineNow(why)) { final String w = why.toString(); onUi(() -> { agentLog.append("Cannot start: " + w + "\n"); tk.onFailure(w); taskChanged(); }); saveText("last_agent.txt", "Task: " + taskText + "\nFailed: " + w); return; }
             if (tk.stopRequested) throw new CancellationException("Stopped by the user before the task started.");
             onUi(() -> { if (tk.status == UiTask.Status.STARTING) { tk.status = UiTask.Status.RUNNING; tk.now = "Planning"; } taskChanged(); });
-            final Agent a = new Agent(this, chat, tools, rec, selectedModel.getName());
+            final Agent a = new Agent(this, chat, tools, rec, selectedModel.getName()); runningAgent = a;
             String res = a.runLoop(taskText, 12, new Agent.UI() {
-                // The agent logs every model reply before it acts on it, on this worker thread. After Stop, the next log call
-                // aborts the loop, so no further tool runs even if the engine has not yet noticed the session closing.
-                public void log(String s) { onUi(() -> { agentLog.append(s + "\n"); if (tk.onLog(s)) taskChanged(); });
-                    if (tk.stopRequested) throw new CancellationException("Stopped by the user."); }
+                // runLoop clears its cancel flag when it starts, so a Stop that lands in that gap is re-issued here.
+                public void log(String s) { onUi(() -> { agentLog.append(s + "\n"); if (tk.onLog(s)) taskChanged(); }); if (tk.stopRequested) a.cancel(); }
                 public void token(String t) { }
                 public boolean consent(String tool, String text) { return !tk.stopRequested && askConsent(tk, tool, text); }
             });
             onUi(() -> { agentLog.append("\nResult: " + res + "\n"); saveText("last_agent.txt", agentLog.getText().toString()); tk.onResult(res); taskChanged(); });
         } catch (Exception e) { onUi(() -> { agentLog.append("\nFailed: " + e.getMessage() + "\n"); saveText("last_agent.txt", agentLog.getText().toString()); tk.onFailure(String.valueOf(e.getMessage())); taskChanged(); }); }
-        finally { setBusy(false); if (tk.stopRequested) onUi(() -> { if (chat != null) { unloadEngine(); if (loadBtn != null) loadBtn.setText("Load engine with selected model"); } }); } });   // stopped = nothing left running
+        finally { runningAgent = null; setBusy(false); } });
     }
     void saveText(String name, String t) { try (FileWriter w = new FileWriter(new File(getFilesDir(), name))) { w.write(t); } catch (IOException ignored) { } }
 

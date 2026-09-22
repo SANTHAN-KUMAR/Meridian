@@ -9,8 +9,9 @@ import java.util.regex.Pattern;
 
 /** One agent task as the user sees it: a plan of steps, what is happening now, and the outcome. It is built only from the
  *  agent's own log lines (Agent.UI.log) and its result string, so the screen can never show progress the agent did not make.
- *  Log shapes (agreed with the harness session, 2026-09-22): "plan: [..]", "step i/n: text", "<label>> reply" with labels
- *  need<N>, s<N>.<k>, text<N>, done<N>.<k>, final; "tool name{args} -> result [verified: ..]|[NOT verified]"; "context full ...". */
+ *  Log shapes (agreed with the harness session, 2026-09-22, loop v2): "plan: [..]", "plan corrected: [raw] -> [kept]",
+ *  "step i/n: text", "s<N>.<k>> reply" (a tool call or {"final":..}), "final> ..", "tool name{args} -> result [verified: ..]|
+ *  [NOT verified]", "context full ...". The older need<N>/done<N>.<k>/text<N> labels are still understood. */
 final class UiTask {
     enum Status { STARTING, RUNNING, NEEDS_YOU, DONE, PROBLEM, STOPPED }
     static final class Step { String title; UiKit.StepState state = UiKit.StepState.NEXT; String sub; final List<String> did = new ArrayList<>(); }
@@ -34,6 +35,11 @@ final class UiTask {
             if (steps.isEmpty()) { for (String x : s.substring(7, s.length() - 1).split(", ")) { if (x.trim().isEmpty()) continue; Step st = new Step(); st.title = sentence(x); steps.add(st); } }
             status = Status.RUNNING; now = "Planning done"; return true;
         }
+        if (s.startsWith("plan corrected: ") && s.contains("] -> [") && s.endsWith("]")) {   // the harness dropped junk steps: show only what it kept
+            String kept = s.substring(s.lastIndexOf("] -> [") + 6, s.length() - 1); steps.clear();
+            for (String x : kept.split(", ")) { if (x.trim().isEmpty()) continue; Step st = new Step(); st.title = sentence(x); steps.add(st); }
+            status = Status.RUNNING; now = "Planning done"; return true;
+        }
         if ((m = STEP.matcher(s)).matches()) {
             int i = Integer.parseInt(m.group(1)) - 1, n = Integer.parseInt(m.group(2));
             if (steps.size() != n) {   // the bracketed plan was split on commas inside a step: rebuild from the authoritative count
@@ -49,7 +55,8 @@ final class UiTask {
             if (st == null) return false;
             if (kind.equals("need") && body.contains("\"no\"")) { st.sub = "Worked this out myself"; now = "Thinking it through"; return true; }
             if (kind.equals("need")) { now = "Choosing what to do"; return true; }
-            if (kind.equals("s")) { String tool = field(body, "tool"); if (tool != null) now = verbing(tool); return tool != null; }
+            if (kind.equals("s")) { if (body.contains("\"final\"")) { st.state = UiKit.StepState.DONE; now = "Writing it up"; return true; }
+                String tool = field(body, "tool"); if (tool != null) now = verbing(tool); return tool != null; }
             if (kind.equals("text") || kind.equals("done") && body.contains("\"yes\"")) { st.state = UiKit.StepState.DONE; if (kind.equals("text") && st.sub == null) st.sub = "Worked this out myself"; return true; }
             return false;
         }
