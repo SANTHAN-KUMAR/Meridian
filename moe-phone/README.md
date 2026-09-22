@@ -98,7 +98,7 @@ The Kaggle notebook is **generated** from `gates/traces_sparsity.py` and `gates/
 `kaggle/build_notebook.py`; a test asserts the checked-in notebook matches, so the Kaggle run is
 always a run of the code in this repository.
 
-Artifacts go to `results/<date>/` via `gates/_paths.py` (dated, write-once; tests never write there).
+Artifacts go to [`results/<date>/`](results/README.md) via `gates/_paths.py` (dated, write-once; tests never write there).
 
 ## Defects found during 15R bring-up (2026-09-14)
 

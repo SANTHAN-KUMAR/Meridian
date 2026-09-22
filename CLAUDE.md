@@ -390,14 +390,15 @@ warranted, stop and ask; do not proceed and document it.
 
 ---
 
-**Project-specific context lives with each project, not here.** This repository holds two:
+**Project-specific context lives with the project, not here.** This repository holds one:
 
-- [`vaers/`](vaers/) — LLM extraction and label-efficient inference for a regulatory case
-  definition. Start at [`vaers/ROADMAP.md`](vaers/ROADMAP.md).
-- [`aegis/`](aegis/) — proximal causal inference for insulin sensitivity. **Retired**: its
-  headline is retracted and its benchmark is uninformative (§4.3). Start at
-  [`aegis/PROJECT.md`](aegis/PROJECT.md) and read it before touching anything under `aegis/`.
+- [`moe-phone/`](moe-phone/) — running large Mixture-of-Experts language models on Android phones
+  by streaming expert weights from flash, plus the Meridian on-device agent app built on that
+  engine. The research phase (10 tok/s target on a OnePlus 15R) is **closed**: see
+  [`moe-phone/research/2026-09-19_CLOSURE.md`](moe-phone/research/2026-09-19_CLOSURE.md). The
+  platform/app phase is active: start at [`moe-phone/platform/README.md`](moe-phone/platform/README.md).
 
-Read [`README.md`](README.md) for the routing, then the relevant project file, before your first
-edit. AEGIS's record of what went wrong is in [`aegis/audit/`](aegis/audit/); its line-number
-references describe frozen copies under [`aegis/archive/`](aegis/archive/), not current code.
+Read [`README.md`](README.md) for the 60-second overview and routing, then
+[`moe-phone/README.md`](moe-phone/README.md) (the gate record) or
+[`moe-phone/HANDOFF.md`](moe-phone/HANDOFF.md) (live state for a new session), before your first
+edit.
