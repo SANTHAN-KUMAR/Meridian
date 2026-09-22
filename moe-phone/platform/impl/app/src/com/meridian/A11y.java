@@ -38,7 +38,7 @@ public final class A11y extends AccessibilityService {
     }
 
     // ---------------- observation ----------------
-    static final int MAX_NODES = 60, MAX_CHARS = 1800, MAX_LABEL = 70;
+    static final int MAX_NODES = 70, MAX_CHARS = 2000, MAX_LABEL = 70;
     /** One snapshot: header + one line per kept node, e.g. `n7 button "Send" [tap]`. Ids are valid until the next snapshot. */
     synchronized String snapshot() {
         AccessibilityNodeInfo root = getRootInActiveWindow();
@@ -60,7 +60,9 @@ public final class A11y extends AccessibilityService {
         CharSequence t = x.getText(), d = x.getContentDescription(); CharSequence h = Build.VERSION.SDK_INT >= 26 ? x.getHintText() : null;
         String label = x.isPassword() ? "(password field)" : t != null && t.length() > 0 ? t.toString() : d != null && d.length() > 0 ? d.toString() : "";
         boolean tap = x.isClickable() || x.isLongClickable(), edit = x.isEditable(), check = x.isCheckable(), scroll = x.isScrollable();
-        if (!label.isEmpty() || tap || edit || check || scroll) {
+        // unlabelled containers are skipped (a tap on any label walks up to its tappable parent): a WhatsApp chat row went from
+        // ~7 lines to ~4, so the chat list fits the observation (15R, 2026-09-22); text fields and switches are kept even unlabelled
+        if (!label.isEmpty() || edit || check) {
             if (n[0] >= MAX_NODES || b.length() > MAX_CHARS) { cut[0] = true; return; }
             String id = "n" + (++n[0]); ids.put(id, x);
             label = label.replaceAll("\\s+", " ").trim(); if (label.length() > MAX_LABEL) label = label.substring(0, MAX_LABEL) + "...";

@@ -160,6 +160,7 @@ public final class Agent {
         if (ok.isEmpty() || (!multi && ok.size() > 1)) { ok.clear(); ok.add(task.trim()); }
         return ok;
     }
+    static final java.util.regex.Pattern COMPOUND = java.util.regex.Pattern.compile("(?i)(\\band\\b|\\bthen\\b|,|;|\\btell me\\b|\\bwhat\\b|\\bwho\\b|\\bwhich\\b|\\bhow\\b)");
     static final java.util.regex.Pattern MULTI = java.util.regex.Pattern.compile("(?i)\\b(each|every|all|them|both|those|these)\\b");
 
     /** Planner-executor (07_AGENT_RUNTIME.md section 2). Per step: ONE grammar-constrained call that is either a tool call or the step's
@@ -206,7 +207,11 @@ public final class Agent {
                 String name = out.optString("tool"); JSONObject args = out.optJSONObject("args"); if (args == null) args = new JSONObject();
                 Tools.Tool tool = tools.registry.get(name); String problem = tool == null ? "unknown tool '" + name + "'" : Tools.validate(tool, args);
                 if (problem != null) { prompt = "Error: " + problem + ". Reply with a valid tool call, or final."; continue; }
-                String sig = name + args; if (sig.equals(lastSig)) { stepDone = true; break; }   // a repeat: nothing new to do for this step
+                String sig = name + args;
+                if (sig.equals(lastSig)) {   // a repeat: nothing new to do; if a screen is in view, the step is answered from it
+                    if (obs != null) { JSONObject a2 = ask(ctxText + "Current screen:\n" + obs + "\nAnswer the current step from this screen, using only what it shows. Reply as final.", 200, false, true, finalOnly, taskId, label + "a", ui);
+                        scratch.append("step ").append(si + 1).append(" (").append(st).append("): ").append(a2 == null ? "(no answer)" : clip(a2.optString("final"), 400)).append('\n'); }
+                    stepDone = true; break; }
                 lastSig = sig;
                 JSONObject act = new JSONObject().put("tool", name).put("consent", tool.consentFor(args));
                 String denied = gate(tool, args, taskId, ui);   // asked every time (or once per app for this task) and never inferred
@@ -222,7 +227,9 @@ public final class Agent {
                     scratch.append("step ").append(si + 1).append(" ").append(name).append(args).append(" -> ").append(clip(brief.toString(), 300)).append(verified ? " (verified)" : " (NOT verified)").append('\n'); }
                 else { obs = null; scratch.append("step ").append(si + 1).append(" ").append(name).append(args).append(" -> ").append(res).append('\n'); }
                 // a verified single action completes a single-item step without another model call
-                if (verified && !multi && !tool.observes()) { stepDone = true; break; }
+                // ...only for a single-clause step: "Open WhatsApp and tell me who wrote" is NOT done when WhatsApp opens (15R, 2026-09-22:
+                // ending there made the model invent "[Name]" placeholders); open_app always leads somewhere, so it never ends a step
+                if (verified && !multi && !tool.observes() && !name.equals("open_app") && !COMPOUND.matcher(st).find()) { stepDone = true; break; }
                 prompt = "Result of " + name + ": " + (tool.observes() ? "(the screen is shown above) " + clip(new JSONObject(result.toString()).put("screen", "").toString(), 300) : res)
                     + "\nIf the current step (" + st + ") still needs an action, reply with the next tool call; if it is done, reply with final (the step's result in words).";
             }
@@ -239,6 +246,8 @@ public final class Agent {
             catch (IllegalStateException e) { if (!String.valueOf(e.getMessage()).contains("exceeds the session n_ctx")) throw e; overflows++; ui.log("context full (" + overflows + " this task): shortening the results for the final answer"); }
         }
         ans = fin == null ? salvageFinal(chat.lastText) : fin.optString("final").trim();
+        // a template placeholder ("[Name]") is an invented answer: replace it rather than show it
+        if (ans.matches("(?s).*\\[(Name|name|NAME|Number|Place|Contact|X|Y|\\.\\.\\.)\\].*")) { ui.log("final answer contained a placeholder; replaced"); ans = "I could not finish reading what was needed to answer; the verified actions are listed below."; }
         if (ans.length() < 2 && !calls.isEmpty()) ans = "Done. The steps and their verified results are listed below.";
         String out = (ans.length() < 2 ? "NoProgress: empty answer" : ans) + groundTruth();
         remember(task, steps, ans);
