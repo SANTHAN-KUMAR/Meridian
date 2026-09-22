@@ -112,9 +112,10 @@ public class MainActivity extends Activity {
         T = new UiTheme(this); K = new UiKit(this, T); initColors(); applyWindowColors(); root.setBackgroundColor(T.bg);
         String keepDev = devTab; buildDeveloperViewsKeepingText(); devTab = keepDev;
         closeDrawer(); render();
+        Consent pc = pendingConsent; if (pc != null && pc.dialog != null) { try { pc.dialog.dismiss(); } catch (Exception ignored) { } pc.dialog = null; reshowConsent(); }   // re-themed sheet
     }
     // Debug-build automation (ignored unless the APK is debuggable): am start -n com.meridian.app/.MainActivity --es auto load|agent|chat [--es task "..."]
-    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); autoRun(i); }
+    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); autoRun(i); reshowConsent(); }
     void autoRun(Intent i) {
         if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0 || i == null || i.getStringExtra("auto") == null) return;
         final String what = i.getStringExtra("auto"), task = i.getStringExtra("task");
@@ -143,7 +144,7 @@ public class MainActivity extends Activity {
             else if (what.equals("use")) { useModel(task); }
         }, 500);
     }
-    @Override protected void onResume() { super.onResume(); Regime.appForeground = true; if (screen.equals("settings")) refresh("settings"); }
+    @Override protected void onResume() { super.onResume(); Regime.appForeground = true; if (screen.equals("settings")) refresh("settings"); reshowConsent(); }
     @Override protected void onPause() { super.onPause(); Regime.appForeground = false; }
     @Override protected void onDestroy() { super.onDestroy(); if (chat != null) chat.close(); }
     /** Legacy tab names (debug automation) map onto the new screens. */
@@ -450,6 +451,7 @@ public class MainActivity extends Activity {
             r.addView(K.text(tk.status == UiTask.Status.NEEDS_YOU ? "Waiting for your OK" : "Working now", UiTheme.Text.LABEL, T.ink), p);
             c.addView(r);
             K.add(c, K.text(tk.now, UiTheme.Text.BODY_L, T.ink), 8);
+            if (tk.status == UiTask.Status.NEEDS_YOU && pendingConsent != null) { LinearLayout ra = K.row(); ra.setPadding(0, dp(10), 0, 0); ra.addView(K.button("Review", UiKit.Kind.PRIMARY, v -> reshowConsent())); c.addView(ra); }
             c.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); c.setContentDescription("Working now: " + tk.now); addGap(c, 16);
         }
         if (!tk.steps.isEmpty()) {
@@ -477,11 +479,11 @@ public class MainActivity extends Activity {
     }
     /** Stop means stop: deny any pending approval and cancel the agent, which checks before every model call and every tool
      *  (Agent.cancel). Cancelling only the current generation was not enough: on the Nord (2026-09-22) a tool ran after Stop. */
-    Runnable denyPending; volatile Agent runningAgent; volatile boolean warming;
+    volatile Agent runningAgent; volatile boolean warming;
     void stopTask() {
         if (task == null || task.finished()) return;
         task.stopRequested = true; task.now = "Stopping…";
-        if (denyPending != null) { Runnable d = denyPending; denyPending = null; d.run(); }
+        answerConsent(pendingConsent, false);
         Agent a = runningAgent; if (a != null) a.cancel();   // checked before every model call and tool run (harness, 2026-09-22)
         refresh("task", "home");
     }
@@ -492,31 +494,44 @@ public class MainActivity extends Activity {
         else refresh("task", "home");
     }
 
-    /** Consent from the agent worker thread: shows the exact action and waits for the user's answer (never on the UI thread). */
+    /** A consent request the agent thread is waiting on. It lives in the activity, not in the dialog: a cancel is never an answer
+     *  (15R rehearsal, 2026-09-22: a sheet shown while Meridian was in the background was cancelled on return and counted as a
+     *  denial). Only "Allow once", "Don't allow" or Stop answer it; the sheet is re-shown on resume, new intent and config change. */
+    static final class Consent { final UiTask tk; final String tool, text; final CountDownLatch cd = new CountDownLatch(1); volatile boolean ok, answered; Dialog dialog;
+        Consent(UiTask tk, String tool, String text) { this.tk = tk; this.tool = tool; this.text = text; } }
+    volatile Consent pendingConsent;
     boolean askConsent(final UiTask tk, final String tool, final String text) {
-        final CountDownLatch cd = new CountDownLatch(1); final boolean[] ok = {false};
-        onUi(() -> {
-            if (tk != null) { tk.status = UiTask.Status.NEEDS_YOU; tk.now = "Waiting for your OK"; taskChanged(); }
-            LinearLayout c = K.col();
-            c.addView(K.heading("Allow this?", UiTheme.Text.HEADLINE));
-            K.add(c, K.text(UiTask.verbing(tool), UiTheme.Text.CAPTION, T.ink2), 4);
-            TextView what = K.text(text, UiTheme.Text.BODY_L, T.ink); what.setBackground(T.rounded(T.surface2, 16, 1, T.line)); what.setPadding(dp(16), dp(14), dp(16), dp(14)); what.setTextIsSelectable(true);
-            K.add(c, what, 16);
-            K.add(c, K.text("Meridian will do exactly this and nothing else.", UiTheme.Text.BODY, T.ink2), 12);
-            final Dialog[] d = {null}; final boolean[] answered = {false};
-            if (tk != null && tk.stopRequested) { cd.countDown(); return; }
-            final Runnable finish = () -> { denyPending = null; if (tk != null && !tk.finished()) { tk.status = UiTask.Status.RUNNING; tk.now = ok[0] ? "Doing it now" : "Skipping that"; taskChanged(); } cd.countDown(); };
-            Button allow = K.button("Allow once", UiKit.Kind.PRIMARY, v -> { if (answered[0]) return; answered[0] = true; ok[0] = true; d[0].dismiss(); finish.run(); }); allow.setMinHeight(dp(56));
-            Button deny = K.button("Don't allow", UiKit.Kind.SECONDARY, v -> { if (answered[0]) return; answered[0] = true; d[0].dismiss(); finish.run(); }); deny.setMinHeight(dp(52));
-            K.add(c, allow, 20); K.add(c, deny, 8);
-            d[0] = K.sheet(c, true); d[0].setCanceledOnTouchOutside(false);
-            d[0].setOnCancelListener(x -> { if (!answered[0]) { answered[0] = true; finish.run(); } });
-            denyPending = () -> { if (!answered[0]) { answered[0] = true; ok[0] = false; try { d[0].dismiss(); } catch (Exception ignored) { } finish.run(); } };
-            d[0].show();
-        });
-        try { cd.await(); } catch (InterruptedException e) { return false; }
-        return ok[0];
+        if (tk != null && tk.stopRequested) return false;
+        final Consent c = new Consent(tk, tool, text); pendingConsent = c;
+        onUi(() -> { if (tk != null && !tk.finished()) { tk.status = UiTask.Status.NEEDS_YOU; tk.now = "Waiting for your OK"; taskChanged(); } showConsent(c); });
+        try { c.cd.await(); } catch (InterruptedException e) { return false; } finally { if (pendingConsent == c) pendingConsent = null; }
+        return c.ok;
     }
+    void answerConsent(Consent c, boolean ok) {
+        if (c == null || c.answered) return; c.answered = true; c.ok = ok;
+        if (c.dialog != null) { try { c.dialog.dismiss(); } catch (Exception ignored) { } c.dialog = null; }
+        if (pendingConsent == c) pendingConsent = null;
+        if (c.tk != null && !c.tk.finished()) { c.tk.status = UiTask.Status.RUNNING; c.tk.now = ok ? "Doing it now" : "Skipping that"; taskChanged(); }
+        c.cd.countDown();
+    }
+    /** Show (or re-show) the sheet for a pending consent; idempotent. */
+    void showConsent(final Consent c) {
+        if (c == null || c.answered || isFinishing() || isDestroyed()) return;
+        if (c.dialog != null && c.dialog.isShowing()) return;
+        LinearLayout box = K.col();
+        box.addView(K.heading("Allow this?", UiTheme.Text.HEADLINE));
+        K.add(box, K.text(UiTask.verbing(c.tool), UiTheme.Text.CAPTION, T.ink2), 4);
+        TextView what = K.text(c.text, UiTheme.Text.BODY_L, T.ink); what.setBackground(T.rounded(T.surface2, 16, 1, T.line)); what.setPadding(dp(16), dp(14), dp(16), dp(14)); what.setTextIsSelectable(true);
+        K.add(box, what, 16);
+        K.add(box, K.text("Meridian will do exactly this and nothing else.", UiTheme.Text.BODY, T.ink2), 12);
+        Button allow = K.button("Allow once", UiKit.Kind.PRIMARY, v -> answerConsent(c, true)); allow.setMinHeight(dp(56));
+        Button deny = K.button("Don't allow", UiKit.Kind.SECONDARY, v -> answerConsent(c, false)); deny.setMinHeight(dp(52));
+        K.add(box, allow, 20); K.add(box, deny, 8);
+        Dialog d = K.sheet(box, false); d.setCancelable(false); d.setCanceledOnTouchOutside(false);
+        c.dialog = d;
+        try { d.show(); } catch (Exception e) { c.dialog = null; }   // no window yet (e.g. mid-restart): onResume shows it
+    }
+    void reshowConsent() { Consent c = pendingConsent; if (c != null) { if (c.dialog != null && !c.dialog.isShowing()) c.dialog = null; showConsent(c); } }
 
     // =====================================================================================================================
     // Chat (no phone actions), with the model's thinking when it produces some
