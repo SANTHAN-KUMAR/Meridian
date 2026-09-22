@@ -27,7 +27,8 @@ python3 "$D/../tools/make_calib_models.py" "$B/assets/calib" >/dev/null
 sh "$D/../build_probes.sh" "$B/probes" >/dev/null
 for p in devprobe dramprobe memprobe ufsbench wrbench; do cp "$B/probes/$p" "$L/lib$p.so"; done
 sed "s/@DEBUGGABLE@/$DEBUGGABLE/g" "$D/AndroidManifest.xml" > "$B/AndroidManifest.xml"
-"$BT/aapt2" link -o "$B/base.apk" -I "$PL/android.jar" --manifest "$B/AndroidManifest.xml" --min-sdk-version 29 --target-sdk-version 33
+"$BT/aapt2" compile --dir "$D/res" -o "$B/res.zip"   # accessibility-service config (window-content access is granted only from XML)
+"$BT/aapt2" link -o "$B/base.apk" -I "$PL/android.jar" --manifest "$B/AndroidManifest.xml" -R "$B/res.zip" --auto-add-overlay --min-sdk-version 29 --target-sdk-version 33
 javac --release 8 -Xlint:-options -cp "$PL/android.jar" -d "$B/classes" "$D"/src/com/meridian/*.java
 jar cf "$B/classes.jar" -C "$B/classes" .
 "$BT/d8" --min-api 29 --lib "$PL/android.jar" --output "$B" "$B/classes.jar"

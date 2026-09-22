@@ -30,7 +30,7 @@ public final class Chat implements Engine.Listener {
         engine.generate(nextId++, prompt, nPredict, clearKv, grammar, resetHistory, think);
         JSONObject d = done.poll(600, TimeUnit.SECONDS);
         if (d == null) { engine.cancel(); throw new IllegalStateException(error != null ? error : "generation timed out"); }
-        if (d.optBoolean("error")) throw new IllegalStateException(error);
+        if (d.optBoolean("error")) { String m = d.optString("msg", error == null ? "engine error" : error); if (d.optBoolean("fatal")) error = m; throw new IllegalStateException(m); }
         lastResult = d; lastText = text.toString(); return lastText;
     }
     public void close() { engine.close(); }

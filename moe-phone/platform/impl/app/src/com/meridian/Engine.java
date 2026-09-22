@@ -72,6 +72,8 @@ public final class Engine {
                     case "BMOE_READY": ready = true; readyInfo = j; listener.onReady(j); break;
                     case "BMOE_PROGRESS": listener.onToken(j.optString("delta_text", ""), j); break;
                     case "BMOE_DONE": listener.onDone(j); break;
+                    // a failed request (context overflow, empty prompt) ends the turn: without this the caller waited 600 s for a BMOE_DONE
+                    case "BMOE_ERROR": try { listener.onDone(j.put("error", true)); } catch (JSONException ignored) { } break;
                     default: break;
                 }
             }

@@ -16,6 +16,16 @@ public final class Tools {
         abstract boolean verify(JSONObject args, JSONObject result) throws Exception;   // observable-state check
         /** A harness-written line telling the user what is still theirs to do (drafts are not sent, panels are not switched). */
         String note(JSONObject result) { return null; }
+        /** Characters of the result the model sees (screen observations and listings need more than a scalar reading). */
+        int resultChars() { return 700; }
+        /** True when the result carries a fresh screen observation that replaces the previous one (Agent bounds the context with it). */
+        boolean observes() { return false; }
+        /** The consent class for these arguments; a tool may raise it (a tap on a "Send" button becomes every_time). */
+        String consentFor(JSONObject args) { return consent; }
+        /** For class "once": what one grant covers within a task (e.g. one app). Consent never carries to another task. */
+        String consentScope(JSONObject args) { return name; }
+        /** What the consent prompt shows: the exact action, recipient and content, not the raw arguments. */
+        String consentText(JSONObject args) { return args.toString(); }
     }
     private final Context ctx; private final File notes; public final Map<String, Tool> registry = new LinkedHashMap<>();
 
@@ -47,6 +57,7 @@ public final class Tools {
             JSONObject execute(JSONObject a) throws Exception { int n = readNotes().size(); writeNotes(new ArrayList<String>()); return new JSONObject().put("deleted", n); }
             boolean verify(JSONObject a, JSONObject r) throws Exception { return readNotes().isEmpty(); } });
         addPhoneTools();
+        ToolsScreen.register(this); ToolsComms.register(this); ToolsDaily.register(this);   // 2026-09-22: screen control, communication, daily tasks
     }
     void add(Tool t) { registry.put(t.name, t); }
     Context context() { return ctx; }
@@ -140,10 +151,13 @@ public final class Tools {
         catch (Exception e) { o.put("area", JSONObject.NULL).put("geocoder", "unavailable: " + e.getMessage()); }
         return o;
     }
-    static String httpGet(String url) throws Exception {
+    static String httpGet(String url) throws Exception { return httpGet(url, "Mozilla/5.0 (Linux; Android 14) meridian/0.2"); }
+    /** OpenStreetMap services (Nominatim, Overpass) require an identifying User-Agent and refuse browser-like ones (HTTP 406). */
+    static final String OSM_UA = "Meridian/0.2 (on-device phone assistant)";
+    static String httpGet(String url, String userAgent) throws Exception {
         for (int attempt = 0; attempt < 2; attempt++) {
-            java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection(); c.setConnectTimeout(12000); c.setReadTimeout(15000);
-            c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) meridian/0.2"); c.setInstanceFollowRedirects(true);
+            java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection(); c.setConnectTimeout(12000); c.setReadTimeout(25000);
+            c.setRequestProperty("User-Agent", userAgent); c.setInstanceFollowRedirects(true);
             try { int code = c.getResponseCode(); if (code == 200) return new String(RemoteGguf.readUpTo(c.getInputStream(), 2 << 20), "UTF-8");
                 if (attempt == 1) throw new java.io.IOException("HTTP " + code + " from " + new java.net.URL(url).getHost()); } finally { c.disconnect(); }
             sleep(1500);
@@ -176,7 +190,11 @@ public final class Tools {
     static void sleep(long ms) { try { Thread.sleep(ms); } catch (InterruptedException ignored) { } }
 
     void addPhoneTools() throws JSONException {
-        add(new Tool("open_app", "Open an installed app by name. Only when the user asks to open or use a specific app.", "ui", true, "none", "an installed launcher app matched the name and its activity was started", obj("name", "string")) {
+        add(new Tool("open_app", "Open an installed app by name. Only when the user asks to open or use a specific app.", "ui", true, "once", "an installed launcher app matched the name and its activity was started", obj("name", "string")) {
+            // one approval covers opening the app AND operating it with the screen tools in this task (same scope as ToolsScreen)
+            @Override String consentScope(JSONObject a) { android.content.pm.ResolveInfo r = findApp(a.optString("name")); return r == null ? name : "screen:" + r.activityInfo.packageName; }
+            @Override String consentText(JSONObject a) { android.content.pm.ResolveInfo r = findApp(a.optString("name")); String l = r == null ? a.optString("name") : String.valueOf(r.loadLabel(ctx.getPackageManager()));
+                return "Open " + l + " and let Meridian read and operate it for this task (taps, typing). Anything that sends, pays or deletes still asks you each time."; }
             JSONObject execute(JSONObject a) throws Exception { android.content.pm.ResolveInfo r = findApp(a.getString("name")); if (r == null) throw new IllegalStateException("no installed app is called '" + a.getString("name") + "'");
                 Intent i = ctx.getPackageManager().getLaunchIntentForPackage(r.activityInfo.packageName); launch(i);
                 return new JSONObject().put("opened", String.valueOf(r.loadLabel(ctx.getPackageManager()))).put("package", r.activityInfo.packageName); }
@@ -237,13 +255,14 @@ public final class Tools {
                 int max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC), step = (int) Math.round(pct / 100 * max); am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, step, 0);
                 return new JSONObject().put("step", step).put("max", max).put("percent", Math.round(100.0 * step / max)); }
             boolean verify(JSONObject a, JSONObject r) throws Exception { return ((android.media.AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE)).getStreamVolume(android.media.AudioManager.STREAM_MUSIC) == r.getInt("step"); } });
-        add(new Tool("open_settings", "Open a settings page: wifi, bluetooth, display, sound, battery, location, apps, storage, notifications, or main.", "ui", true, "none", "the settings app accepted the page intent", obj("page", "string")) {
+        add(new Tool("open_settings", "Open a settings page: wifi, bluetooth, display, sound, battery, location, apps, storage, notifications, or main.", "ui", true, "once", "the settings app accepted the page intent", obj("page", "string")) {
             JSONObject execute(JSONObject a) throws Exception { String p = a.getString("page").toLowerCase(Locale.ROOT); String act =
                     p.contains("wi") ? android.provider.Settings.ACTION_WIFI_SETTINGS : p.contains("blue") ? android.provider.Settings.ACTION_BLUETOOTH_SETTINGS : p.contains("display") || p.contains("bright") ? android.provider.Settings.ACTION_DISPLAY_SETTINGS
                   : p.contains("sound") || p.contains("volume") ? android.provider.Settings.ACTION_SOUND_SETTINGS : p.contains("batt") ? Intent.ACTION_POWER_USAGE_SUMMARY : p.contains("loc") ? android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS
                   : p.contains("app") ? android.provider.Settings.ACTION_APPLICATION_SETTINGS : p.contains("stor") ? android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS : p.contains("notif") ? "android.settings.NOTIFICATION_SETTINGS"
                   : android.provider.Settings.ACTION_SETTINGS;
                 return new JSONObject().put("page", p).put("handled_by", launch(new Intent(act))); }
+            @Override String consentText(JSONObject a) { return "Open the " + a.optString("page") + " settings page."; }
             String note(JSONObject r) { return "The settings page is open; change the setting there (Android does not let apps change it directly)."; }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
         add(new Tool("copy_text", "Copy text to the clipboard.", "write", true, "none", "the clipboard holds exactly the text", obj("text", "string")) {
@@ -256,7 +275,7 @@ public final class Tools {
             JSONObject execute(JSONObject a) throws Exception { Intent s = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, a.getString("text")); ctx.startActivity(Intent.createChooser(s, "Share").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return new JSONObject().put("shared", true); }
             String note(JSONObject r) { return "The share sheet is open; pick an app to finish sharing."; }
             boolean verify(JSONObject a, JSONObject r) { return r.optBoolean("shared"); } });
-        add(new Tool("take_photo", "Open the camera to take a photo. Only when the user wants to take a picture.", "ui", true, "none", "a camera app accepted the still-image intent", obj()) {
+        add(new Tool("take_photo", "Open the camera to take a photo. Only when the user wants to take a picture.", "ui", true, "once", "a camera app accepted the still-image intent", obj()) {
             JSONObject execute(JSONObject a) throws Exception { return new JSONObject().put("handled_by", launch(new Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))); }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
         add(new Tool("calculate", "Compute an arithmetic expression exactly. Write the expression from the numbers in the request.", "read", true, "none", "the result re-computes to the same value", obj("expression", "string")) {
@@ -283,13 +302,13 @@ public final class Tools {
                 return new JSONObject().put("key", android.view.KeyEvent.keyCodeToString(key)).put("music_active", am.isMusicActive()); }
             boolean verify(JSONObject a, JSONObject r) throws Exception { String k = r.getString("key"); boolean act = ((android.media.AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE)).isMusicActive();
                 return k.endsWith("PLAY") ? act : k.endsWith("PAUSE") ? !act : true; } });
-        add(new Tool("quick_panel", "Show the system panel for wifi, internet, volume or nfc, where the user can switch it (apps cannot toggle these directly).", "ui", true, "none", "the system panel intent was accepted", obj("panel", "string")) {
+        add(new Tool("quick_panel", "Show the system panel for wifi, internet, volume or nfc, where the user can switch it (apps cannot toggle these directly).", "ui", true, "once", "the system panel intent was accepted", obj("panel", "string")) {
             JSONObject execute(JSONObject a) throws Exception { String p = a.getString("panel").toLowerCase(Locale.ROOT);
                 String act = p.contains("wi") ? android.provider.Settings.Panel.ACTION_WIFI : p.contains("vol") ? android.provider.Settings.Panel.ACTION_VOLUME : p.contains("nfc") ? android.provider.Settings.Panel.ACTION_NFC : android.provider.Settings.Panel.ACTION_INTERNET_CONNECTIVITY;
                 return new JSONObject().put("panel", act).put("handled_by", launch(new Intent(act))); }
             String note(JSONObject r) { return "The system panel is open; switch the setting there (Android does not let apps switch it directly)."; }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
-        add(new Tool("set_brightness", "Set the screen brightness to a percentage, 0 to 100.", "write", true, "none", "the system brightness setting reads back the value written", obj("percent", "string")) {
+        add(new Tool("set_brightness", "Set the screen brightness to a percentage, 0 to 100.", "write", true, "once", "the system brightness setting reads back the value written", obj("percent", "string")) {
             JSONObject execute(JSONObject a) throws Exception {
                 if (!android.provider.Settings.System.canWrite(ctx)) { launch(new Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS, android.net.Uri.parse("package:" + ctx.getPackageName())));
                     throw new IllegalStateException("PermissionRequired: opened the system page to allow Meridian to change settings; allow it, then ask again"); }
@@ -324,7 +343,8 @@ public final class Tools {
         StringBuilder sb = new StringBuilder();
         for (Tool t : registry.values()) {
             JSONObject props = t.params.getJSONObject("properties"); StringBuilder sig = new StringBuilder();
-            Iterator<String> it = props.keys(); while (it.hasNext()) { String k = it.next(); if (sig.length() > 0) sig.append(", "); sig.append(k).append(": ").append(props.getJSONObject(k).getString("type")).append(" (required)"); }
+            // every argument is a required string (the grammar enforces it), so the signature lists names only: fewer prefix tokens per tool
+            Iterator<String> it = props.keys(); while (it.hasNext()) { String k = it.next(); if (sig.length() > 0) sig.append(", "); sig.append(k); }
             sb.append("- ").append(t.name).append("(").append(sig).append("): ").append(t.description).append('\n');
         }
         return sb.toString();

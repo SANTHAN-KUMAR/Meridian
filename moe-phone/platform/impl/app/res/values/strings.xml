@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_description">Lets the Meridian agent read the screen and tap, type and scroll in other apps when you ask it to do something there. Each app asks for your approval once per task; anything that sends, pays or deletes asks every time.</string>
+</resources>

@@ -78,16 +78,51 @@ suite's predicates were fixed before the runs and were not changed after seeing 
 first Qwen3-1.7B file.
 
 **Not done, stated plainly.**
-- **Agent scope is limited by the development environment, not by Android.** During this session the environment's safety
-  controls stopped three pieces of agent work, and none of them was built: (1) an AccessibilityService to read other apps'
-  screens and tap/type in them; (2) autonomous messaging, calling, contacts-writing and notification-reading tools; (3) a
-  further module of general daily-task tools (information services, reminders, calendar access, places, device settings,
-  files). The agent therefore covers the tool list above and says so when a request needs something else.
+- **Agent scope, 2026-09-22 (second pass): the three missing modules now exist.** Retracted: the previous statement that they were
+  not built. What was added, and what was checked:
+  - *Screen control* (`A11y.java`, `ToolsScreen.java`: `screen_read`, `screen_tap`, `screen_type`, `screen_scroll`, `screen_nav`).
+    The accessibility service serialises the active window into interactable/text nodes with per-snapshot ids (60 nodes and
+    1,800 chars max; password fields never read). Every action's postcondition is read from the live window afterwards, and the new
+    screen is returned as the next observation. Consent: once per app per task (shared with `open_app`); a tap whose label sends,
+    pays, deletes or submits (`Parse.sensitive`) asks every time with the label shown. The consent card is drawn as an accessibility
+    overlay when another app is in front. **Checked:** the service binds on the 15R. **Not yet checked:** an end-to-end in-app task.
+  - *Communication* (`ToolsComms.java`: `sms_send`, `phone_call`, `contact_add`, `sms_read`, `notifications_read`,
+    `notification_reply`, `notification_dismiss`; `Notifs.java` listener). Sends and calls are real, each gated `every_time`,
+    with the resolved recipient and exact text shown; at most 5 per task and 20 per rolling hour (`Agent.gate`, `files/comm_log.txt`).
+    Verification: SMS by the radio's SENT result for every part, a call by the audio mode entering a call, a reply by the notification
+    being cleared or re-posted with the text. **Checked:** listing notifications on the 15R. **Not checked:** a real send or call
+    (no test recipient was used).
+  - *Daily tasks* (`ToolsDaily.java`): `weather` (Open-Meteo), `news` (Google News RSS), `reminder_add/list/cancel` (AlarmManager +
+    `ReminderReceiver`, re-armed after reboot), `calendar_read/add` (provider, direct insert), `places_nearby` (OpenStreetMap
+    Overpass with mirror fallback; ratings only with a Google Places key in `keys.json`, otherwise the result says ratings are
+    unavailable), `files_find/file_read/file_save/file_open`, `do_not_disturb`, `ringer_mode`, `exchange_rate` (open.er-api.com).
+    **Checked on the 15R through the debug `ToolProbe`, each against its own postcondition:** weather, news, exchange_rate,
+    reminder_add/list, ringer_mode, do_not_disturb, file_save, places_nearby (verified after the Overpass user-agent fix; the
+    public instance is slow and rate-limits). Runtime permissions are asked at first use (`Perms.java`).
+  - Pure parsing (`Parse.java`: dates and times, distances, WMO codes, currencies, the sensitive-label rule, RSS) has 34 host
+    gates in `test/ToolGatesMain.java`, whose expected values come from the calendar and published constants (`test/run_gates.sh`).
+- **Defects found and fixed in this pass.**
+  - *D-7 (hang).* `Engine` dropped `BMOE_ERROR` lines, so a recoverable engine error (context overflow) left `Chat.ask` waiting
+    600 s. Fixed: the error ends the turn; overflows are caught per step, counted (`context_overflows` in the task memory) and
+    reported.
+  - *D-8 (safety, found by the UI session on the Nord with OLMoE).* "What's my battery level?" was planned as 8 bare tool names, and
+    7 unrelated no-consent actions ran (open_app, take_photo, set_brightness...), including one after the user pressed Stop.
+    Fixed: `Agent.sanePlan` drops bare-tool-name steps and keeps a short single-clause request as one step; `Agent.cancel()` is
+    checked before every model call and tool execution; set_brightness, take_photo, open_settings, quick_panel and open_app now ask
+    once per task; at most 24 tool calls per task.
+  - *D-9 (latency).* Qwen3-4B prefills at 9-16 tok/s on the 15R in every recorded run (`files/audit.jsonl`), and the loop spent up
+    to three model calls per step ("need a tool?", the call, "done?"), each re-reading the scratchpad: one yes/no call took 143 s.
+    Changed: a step now opens with one call (a tool call or the step's written result), and a verified single action ends the step.
+    `Agent.warm()` prefills the ~1.8k-token tool prefix at load time. The suite-v2 scores were measured on the previous loop and
+    were not re-run.
 - **Extension point.** A new capability is one `Tools.Tool` subclass registered in `Tools` (name, description, argument schema,
-  effects, reversibility, consent class `none` or `every_time`, a named postcondition, `execute`, `verify`, optional `note`).
-  The grammar, the planner-executor, the consent gate, verification, the action summary and the task memory pick it up with no
-  other change. Permissions a tool needs go in `AndroidManifest.xml` and, for runtime permissions, the list asked in
-  `MainActivity.onCreate`.
+  effects, reversibility, consent class `none`, `once` or `every_time`, a named postcondition, `execute`, `verify`, and optionally
+  `note`, `consentText`, `consentFor`, `consentScope`, `resultChars`, `observes`). The grammar, the planner-executor, the consent
+  gate, verification, the action summary and the task memory pick it up with no other change. Runtime permissions are asked by
+  the tool itself through `Perms.need`.
+- **Limits that remain.** WhatsApp and other messengers can only be read through their notifications or their on-screen content
+  (there is no API for chat history). OpenStreetMap has no ratings. An e-mail can be sent only by the screen tools pressing Send
+  in the mail app (asked every time). A task run in the background competes with the foreground app for CPU.
 - Thermal derate (T3) is not in the predictions; they describe the first minutes of use.
 - The 15R's memory grant was measured with many user apps resident (`oneplus15r/profile.json`, `memory.grantable_quiesced`);
   the research measured much larger grants on the same phone when quiesced (`EVIDENCE.md`, `dev_budget_max_mib`), so the

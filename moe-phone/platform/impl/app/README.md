@@ -24,7 +24,9 @@ adb install -r app/dist/meridian.apk        # or copy the APK to a phone and ope
    step by step (apps, alarms, timers, calendar, messages and calls via the composer/dialer, email, maps, music and media keys,
    flashlight, volume, brightness, settings panels, clipboard, contacts, calculator, time, device info, notes), checks each
    result against the phone's real state, and ends every answer with the list of actions actually taken. Anything that reaches
-   other people asks first, every time. It cannot operate inside other apps' screens (see STATUS.md).
+   other people asks first, every time. With Meridian's accessibility service on, it can also read and operate other apps' screens; with
+   notification access it can read and reply to messages. Weather, news, reminders, calendar, nearby places, files, Do Not Disturb
+   and exchange rates are built in (see STATUS.md for what was verified).
 
 Requirements: Android 10+ (API 29), arm64, a CPU with dotprod and fp16. An i8mm engine build is also bundled and used when it
 measures faster on the device.
