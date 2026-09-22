@@ -158,6 +158,10 @@ final class UiKit {
     static final class BasisDot extends View {
         final Basis b; final int fg, bg; final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         BasisDot(Context c, Basis b, int fg, int bg) { super(c); this.b = b; this.fg = fg; this.bg = bg; }
+        static final int SIZE_DP = 14;
+        @Override protected void onMeasure(int ws, int hs) { int d = Math.round(SIZE_DP * getResources().getDisplayMetrics().density);   // never grows with WRAP/MATCH params
+            setMeasuredDimension(MeasureSpec.getMode(ws) == MeasureSpec.EXACTLY ? Math.min(MeasureSpec.getSize(ws), d * 2) : d, MeasureSpec.getMode(hs) == MeasureSpec.EXACTLY ? Math.min(MeasureSpec.getSize(hs), d * 2) : d); }
+
         @Override protected void onDraw(Canvas cv) {
             float w = getWidth(), h = getHeight(), r = Math.min(w, h) / 2f - 1.5f * getResources().getDisplayMetrics().density / 2f;
             float cx = w / 2f, cy = h / 2f, sw = 1.5f * getResources().getDisplayMetrics().density; p.setColor(fg);
@@ -170,28 +174,71 @@ final class UiKit {
         }
     }
 
-    // ---------- the sun pulse: the app's single animation, shown only while Meridian works ----------
+    // ---------- the sun pulse: shown only while Meridian works ----------
+    /** A marigold dot that breathes, with a ring rippling out of it: unmistakably "working". Drawn on the animation clock only
+     *  while attached; when the system's animations are off (Remove animations) it is a steady dot. Cheap: one small view. */
     static final class Pulse extends View {
-        final int core, halo; final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG); float f = 0; ValueAnimator a;
-        Pulse(Context c, int core, int halo) { super(c); this.core = core; this.halo = halo; setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO); }
+        final int core; final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG); float f = 0; ValueAnimator a;
+        Pulse(Context c, int core) { super(c); this.core = core; setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO); }
+        static final int SIZE_DP = 22;
+        @Override protected void onMeasure(int ws, int hs) { int d = Math.round(SIZE_DP * getResources().getDisplayMetrics().density);   // never grows with WRAP/MATCH params
+            setMeasuredDimension(MeasureSpec.getMode(ws) == MeasureSpec.EXACTLY ? Math.min(MeasureSpec.getSize(ws), d * 2) : d, MeasureSpec.getMode(hs) == MeasureSpec.EXACTLY ? Math.min(MeasureSpec.getSize(hs), d * 2) : d); }
+
         @Override protected void onAttachedToWindow() { super.onAttachedToWindow();
-            if (!android.animation.ValueAnimator.areAnimatorsEnabled()) return;   // respects "remove animations"
-            a = ValueAnimator.ofFloat(0f, 1f); a.setDuration(1600); a.setRepeatCount(ValueAnimator.INFINITE); a.setRepeatMode(ValueAnimator.REVERSE);
+            if (!ValueAnimator.areAnimatorsEnabled()) return;
+            a = ValueAnimator.ofFloat(0f, 1f); a.setDuration(1400); a.setRepeatCount(ValueAnimator.INFINITE); a.setInterpolator(new android.view.animation.LinearInterpolator());
             a.addUpdateListener(v -> { f = (float) v.getAnimatedValue(); invalidate(); }); a.start(); }
         @Override protected void onDetachedFromWindow() { if (a != null) a.cancel(); a = null; super.onDetachedFromWindow(); }
         @Override protected void onDraw(Canvas cv) {
             float cx = getWidth() / 2f, cy = getHeight() / 2f, r = Math.min(cx, cy);
-            p.setColor(halo); p.setAlpha((int) (255 * (0.35f + 0.65f * (1 - f)))); cv.drawCircle(cx, cy, r * (0.62f + 0.38f * f), p);
-            p.setColor(core); p.setAlpha(255); cv.drawCircle(cx, cy, r * 0.5f, p);
+            if (a != null) {   // the ripple: grows from the dot's edge to the view's edge while fading out
+                float e = 1f - (1f - f) * (1f - f);
+                p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(r * 0.14f); p.setColor(core); p.setAlpha((int) (200 * (1f - f)));
+                cv.drawCircle(cx, cy, r * (0.42f + 0.52f * e), p);
+            }
+            float breathe = a == null ? 1f : 0.72f + 0.28f * (float) Math.cos(2 * Math.PI * f);   // the dot itself breathes
+            p.setStyle(Paint.Style.FILL); p.setColor(core); p.setAlpha((int) (255 * (0.55f + 0.45f * breathe)));
+            cv.drawCircle(cx, cy, r * (0.34f + 0.06f * breathe), p);
         }
     }
-    Pulse pulse() { Pulse v = new Pulse(c, t.sun, t.sunTint); v.setLayoutParams(new LinearLayout.LayoutParams(t.dp(20), t.dp(20))); return v; }
+    Pulse pulse() { Pulse v = new Pulse(c, t.sun); v.setLayoutParams(new LinearLayout.LayoutParams(t.dp(22), t.dp(22))); return v; }
+    Pulse pulse(int sizeDp) { Pulse v = new Pulse(c, t.sun); v.setLayoutParams(new LinearLayout.LayoutParams(t.dp(sizeDp), t.dp(sizeDp))); return v; }
+
+    // ---------- motion helpers (all skipped when the system's animations are off) ----------
+    static boolean motion() { return ValueAnimator.areAnimatorsEnabled(); }
+    /** A new item arriving: fade in and rise 8dp. Used once per item, never on a plain refresh. */
+    void appear(View v, long delayMs) {
+        if (!motion()) return;
+        v.setAlpha(0f); v.setTranslationY(t.dp(8));
+        v.animate().alpha(1f).translationY(0).setStartDelay(delayMs).setDuration(240).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+    }
+    /** A step or badge that just completed: a small pop. */
+    void pop(View v) {
+        if (!motion()) return;
+        v.setScaleX(0.4f); v.setScaleY(0.4f); v.setAlpha(0f);
+        v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(260).setInterpolator(new android.view.animation.OvershootInterpolator(2f)).start();
+    }
 
     /** Thin determinate bar (downloads, steps done). No indeterminate shimmer: waiting is shown with the pulse and words. */
     static final class Bar extends View {
         final int track, fill; float value; final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG); final RectF r = new RectF();
         Bar(Context c, int track, int fill) { super(c); this.track = track; this.fill = fill; }
+        /** Always a thin bar: a WRAP_CONTENT height would otherwise take all the space offered (15R, 2026-09-22: the plan bar
+         *  filled its card and drew as a giant circle). Only an EXACT height from the parent is honoured. */
+        @Override protected void onMeasure(int ws, int hs) {
+            int thin = Math.round(6 * getResources().getDisplayMetrics().density);
+            int h = MeasureSpec.getMode(hs) == MeasureSpec.EXACTLY ? Math.min(MeasureSpec.getSize(hs), thin * 2) : thin;
+            setMeasuredDimension(getDefaultSize(getSuggestedMinimumWidth(), ws), h);
+        }
+        static final java.util.Map<String, Float> LAST = new java.util.HashMap<>();
         void set(float v) { value = Math.max(0, Math.min(1, v)); invalidate(); setContentDescription(Math.round(value * 100) + " percent"); }
+        /** Glide from where the bar with this key last was to `v` (views are rebuilt on refresh; the motion should not restart). */
+        void glide(String key, float v) {
+            final float to = Math.max(0, Math.min(1, v)); Float from = LAST.get(key); LAST.put(key, to);
+            if (from == null || !motion() || Math.abs(from - to) < 0.001f) { set(to); return; }
+            set(from); ValueAnimator an = ValueAnimator.ofFloat(from, to); an.setDuration(450); an.setInterpolator(new android.view.animation.DecelerateInterpolator());
+            an.addUpdateListener(x -> set((float) x.getAnimatedValue())); an.start();
+        }
         @Override protected void onDraw(Canvas cv) { float h = getHeight(), w = getWidth(); r.set(0, 0, w, h); p.setColor(track); cv.drawRoundRect(r, h / 2, h / 2, p);
             if (value > 0) { r.set(0, 0, Math.max(h, w * value), h); p.setColor(fill); cv.drawRoundRect(r, h / 2, h / 2, p); } }
     }
@@ -206,9 +253,7 @@ final class UiKit {
             case DONE: mark = badge("check", t.good, t.dark ? 0xFF0D1120 : 0xFFFFFFFF, 22); break;
             case FAILED: mark = badge("close", t.warmTint, t.warm, 22); break;
             case SKIPPED: mark = badge("close", t.surface2, t.ink3, 22); break;
-            case NOW: { FrameLayout f = new FrameLayout(c); f.setBackground(t.rounded(Color.TRANSPARENT, 999, 2, t.sun));
-                View core = new View(c); core.setBackground(t.rounded(t.sun, 999)); f.addView(core, new FrameLayout.LayoutParams(t.dp(8), t.dp(8), Gravity.CENTER));
-                f.setLayoutParams(new LinearLayout.LayoutParams(t.dp(22), t.dp(22))); mark = f; break; }
+            case NOW: mark = pulse(22); break;
             default: { View v = new View(c); v.setBackground(t.dashed(Color.TRANSPARENT, 999, t.lineStrong)); v.setLayoutParams(new LinearLayout.LayoutParams(t.dp(22), t.dp(22))); mark = v; }
         }
         r.addView(mark);
@@ -241,6 +286,10 @@ final class UiKit {
         r.addView(e, weight());
         if (withMic) { k.mic = roundButton("mic", "Speak your task", t.surface2, t.ink, 44, onMic); LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(t.dp(44), t.dp(44)); p.leftMargin = t.dp(6); r.addView(k.mic, p); }
         k.send = roundButton("send", "Send", t.primary, t.onPrimary, 44, onSend); LinearLayout.LayoutParams p2 = new LinearLayout.LayoutParams(t.dp(44), t.dp(44)); p2.leftMargin = t.dp(6); r.addView(k.send, p2);
+        final ImageButton send = k.send;
+        send.setAlpha(0.35f); send.setEnabled(false);
+        e.addTextChangedListener(new android.text.TextWatcher() { public void beforeTextChanged(CharSequence x, int a, int b, int d) { } public void onTextChanged(CharSequence x, int a, int b, int d) { }
+            public void afterTextChanged(android.text.Editable x) { boolean has = x.toString().trim().length() > 0; if (has != send.isEnabled()) { send.setEnabled(has); send.animate().alpha(has ? 1f : 0.35f).setDuration(motion() ? 150 : 0).start(); } } });
         k.view = r; k.input = e; return k;
     }
     LinearLayout switchRow(String title, String sub, boolean on, View.OnClickListener l) {
@@ -281,7 +330,7 @@ final class UiKit {
         if (w != null) { w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT)); w.setGravity(Gravity.BOTTOM);
             int width = Math.min(c.getResources().getDisplayMetrics().widthPixels, t.dp(560));
             w.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT); w.setDimAmount(t.dark ? 0.6f : 0.4f);
-            w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND); }
+            w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND); w.setWindowAnimations(android.R.style.Animation_InputMethod); }
         return d;
     }
 }

@@ -20,6 +20,33 @@ final class UiTask {
     Status status = Status.STARTING; String now = "Getting ready"; final List<Step> steps = new ArrayList<>();
     String answer, actionsTaken, raw; UiHumanize.Problem problem; boolean stopRequested;
     int current = -1;
+    /** The activity feed: every real event the agent reported, in order, in plain words (the task's "thought process"). */
+    static final class Event { final long t; final String kind, text; Event(long t, String kind, String text) { this.t = t; this.kind = kind; this.text = text; } }
+    final List<Event> feed = new ArrayList<>();
+    void event(String kind, String text) { if (text == null || text.isEmpty()) return; if (!feed.isEmpty() && feed.get(feed.size() - 1).text.equals(text)) return; feed.add(new Event(System.currentTimeMillis() - started, kind, text)); }
+    /** What the model is writing right now, from its token stream (reset at every model call). */
+    private final StringBuilder tokens = new StringBuilder();
+    synchronized void onToken(String t) { tokens.append(t); }
+    synchronized void clearTokens() { tokens.setLength(0); }
+    /** A live, human reading of the partial model output: the answer as it types, or the action being chosen. Null when idle. */
+    synchronized String live() {
+        String b = tokens.toString(); if (b.isEmpty()) return null;
+        Matcher f = Pattern.compile("\"final\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)").matcher(b);
+        if (f.find()) return unescape(f.group(1));
+        String tool = field(b, "tool");
+        if (tool != null) { String arg = firstArg(b); return "Choosing: " + lower(verbing(tool)) + (arg == null ? "" : " · “" + arg + "”") + "…"; }
+        Matcher st = Pattern.compile("\"steps\"\\s*:\\s*\\[(.*)").matcher(b);
+        if (st.find()) { String[] items = st.group(1).split("\",\\s*\""); String lastItem = unescape(items[items.length - 1].replace("\"", "").replace("]", "").replace("}", "")).trim();
+            return "Planning step " + items.length + (lastItem.isEmpty() ? "…" : ": " + lastItem + "…"); }
+        if (b.contains("\"answer\"")) return "Deciding…";
+        return "Thinking…";
+    }
+    static String unescape(String s) { return s.replace("\\n", " ").replace("\\\"", "\"").replace("\\\\", "\\"); }
+    static String lower(String s) { return s.isEmpty() ? s : Character.toLowerCase(s.charAt(0)) + s.substring(1); }
+    private static String firstArg(String json) {
+        int a = json.indexOf("\"args\""); if (a < 0) return null;
+        Matcher m = Pattern.compile("\"[a-z_]+\"\\s*:\\s*\"([^\"]{1,60})").matcher(json.substring(a)); return m.find() ? m.group(1) : null;
+    }
 
     UiTask(String request) { this.request = request; }
 
@@ -33,12 +60,12 @@ final class UiTask {
         if (line == null) return false; String s = line.trim(); Matcher m;
         if (s.startsWith("plan: [") && s.endsWith("]")) {
             if (steps.isEmpty()) { for (String x : s.substring(7, s.length() - 1).split(", ")) { if (x.trim().isEmpty()) continue; Step st = new Step(); st.title = sentence(x); steps.add(st); } }
-            status = Status.RUNNING; now = "Planning done"; return true;
+            status = Status.RUNNING; now = "Planning done"; event("plan", "Made a plan"); clearTokens(); return true;
         }
         if (s.startsWith("plan corrected: ") && s.contains("] -> [") && s.endsWith("]")) {   // the harness dropped junk steps: show only what it kept
             String kept = s.substring(s.lastIndexOf("] -> [") + 6, s.length() - 1); steps.clear();
             for (String x : kept.split(", ")) { if (x.trim().isEmpty()) continue; Step st = new Step(); st.title = sentence(x); steps.add(st); }
-            status = Status.RUNNING; now = "Planning done"; return true;
+            status = Status.RUNNING; now = "Planning done"; event("plan", "Simplified the plan to " + steps.size() + (steps.size() == 1 ? " step" : " steps")); clearTokens(); return true;
         }
         if ((m = STEP.matcher(s)).matches()) {
             int i = Integer.parseInt(m.group(1)) - 1, n = Integer.parseInt(m.group(2));
@@ -48,27 +75,30 @@ final class UiTask {
             }
             for (int k = 0; k < i && k < steps.size(); k++) if (steps.get(k).state == UiKit.StepState.NOW) steps.get(k).state = UiKit.StepState.DONE;
             Step st = steps.get(i); st.title = sentence(m.group(3)); st.state = UiKit.StepState.NOW; current = i;
-            status = Status.RUNNING; now = st.title; return true;
+            status = Status.RUNNING; now = st.title; event("step", "Step " + (i + 1) + " of " + n + ": " + st.title); clearTokens(); return true;
         }
         if ((m = LABEL.matcher(s)).matches()) {
             String kind = m.group(1), body = m.group(4); int i = Integer.parseInt(m.group(2)) - 1; Step st = at(i);
             if (st == null) return false;
-            if (kind.equals("need") && body.contains("\"no\"")) { st.sub = "Worked this out myself"; now = "Thinking it through"; return true; }
+            clearTokens();
+            if (kind.equals("need") && body.contains("\"no\"")) { st.sub = "Worked this out myself"; now = "Thinking it through"; event("think", "This step needs no phone action, so I'm working it out myself"); return true; }
             if (kind.equals("need")) { now = "Choosing what to do"; return true; }
-            if (kind.equals("s")) { if (body.contains("\"final\"")) { st.state = UiKit.StepState.DONE; now = "Writing it up"; return true; }
-                String tool = field(body, "tool"); if (tool != null) now = verbing(tool); return tool != null; }
+            if (kind.equals("s")) { if (body.contains("\"final\"")) { st.state = UiKit.StepState.DONE; now = "Writing it up"; event("think", "Worked out step " + (i + 1) + " without a phone action"); return true; }
+                String tool = field(body, "tool"); if (tool != null) { now = describeCall(tool, body); event("act", now); } return tool != null; }
             if (kind.equals("text") || kind.equals("done") && body.contains("\"yes\"")) { st.state = UiKit.StepState.DONE; if (kind.equals("text") && st.sub == null) st.sub = "Worked this out myself"; return true; }
             return false;
         }
-        if (s.startsWith("final> ")) { now = "Writing up the result"; for (Step st : steps) if (st.state == UiKit.StepState.NOW) st.state = UiKit.StepState.DONE; return true; }
+        if (s.startsWith("final> ")) { clearTokens(); now = "Writing up the result"; event("write", "Wrote the answer"); for (Step st : steps) if (st.state == UiKit.StepState.NOW) st.state = UiKit.StepState.DONE; return true; }
         if ((m = TOOL.matcher(s)).matches()) {
             Step st = at(current); boolean ok = !m.group(4).startsWith("[NOT");
             String what = done(m.group(1)) + (ok ? "" : " (couldn't confirm it worked)");
+            event(ok ? "ok" : "warn", describeResult(m.group(1), m.group(3), ok));
             if (st != null) { st.did.add(what); if (!ok) st.sub = "I couldn't confirm this worked"; }
             return true;
         }
         if ((m = CTX.matcher(s)).find()) {
             if (m.group(1) != null) { Step st = at(Integer.parseInt(m.group(1)) - 1); if (st != null) { st.state = UiKit.StepState.FAILED; st.sub = "That was too much to hold at once"; } }
+            event("warn", "That was too much to hold at once, so I moved on");
             return true;
         }
         return false;
@@ -115,6 +145,33 @@ final class UiTask {
         w("set_timer", "Setting a timer", "Set a timer"); w("set_volume", "Adjusting volume", "Adjusted volume"); w("share_text", "Sharing text", "Shared text");
         w("take_photo", "Opening the camera", "Opened the camera"); w("time_now", "Checking the time", "Checked the time");
         w("web_results", "Reading search results", "Read search results"); w("web_search", "Searching the web", "Searched the web");
+    }
+    /** An action with its details: {"tool":"web_search","args":{"query":"train times"}} -> Searching the web for “train times”. */
+    static String describeCall(String tool, String json) {
+        String arg = firstArg(json); String base = verbing(tool);
+        if (arg == null) return base;
+        switch (tool) {
+            case "find_contact": return "Looking up “" + arg + "” in your contacts";
+            case "web_search": return "Searching the web for “" + arg + "”";
+            case "open_app": return "Opening " + arg;
+            case "notes_add": return "Saving a note: “" + arg + "”";
+            case "navigate": return "Getting directions to " + arg;
+            case "play_music": return "Playing “" + arg + "”";
+            case "calendar_event": return "Adding “" + arg + "” to your calendar";
+            default: return base + " · “" + arg + "”";
+        }
+    }
+    /** A tool result in plain words, from its JSON (clipped by the harness to 300 chars). Screen dumps are summarised, not shown. */
+    static String describeResult(String tool, String result, boolean verified) {
+        String r = result == null ? "" : result.trim(); String tail = verified ? "" : " (I couldn't confirm it worked)";
+        Matcher err = Pattern.compile("\"error\"\\s*:\\s*\"([^\"]{1,120})").matcher(r);
+        if (err.find()) return "That didn't work: " + err.group(1);
+        if (tool.equals("battery_status")) { Matcher b = Pattern.compile("\"level_pct\"\\s*:\\s*(\\d+)").matcher(r); Matcher c = Pattern.compile("\"charging\"\\s*:\\s*(true|false)").matcher(r);
+            if (b.find()) return "Battery is at " + b.group(1) + "%" + (c.find() ? (c.group(1).equals("true") ? ", charging" : ", not charging") : "") + tail; }
+        if (r.contains("\"screen\"")) { Matcher a = Pattern.compile("app: ([^(\\\\\"]{1,40})").matcher(r); return (a.find() ? "Looked at the " + a.group(1).trim() + " screen" : "Looked at the screen") + tail; }
+        StringBuilder sb = new StringBuilder(); Matcher kv = Pattern.compile("\"([a-z_]+)\"\\s*:\\s*(\"[^\"]{0,60}\"|-?\\d+(?:\\.\\d+)?|true|false)").matcher(r); int n = 0;
+        while (kv.find() && n < 2) { if (n++ > 0) sb.append(", "); sb.append(kv.group(1).replace('_', ' ')).append(": ").append(kv.group(2).replace("\"", "")); }
+        return done(tool) + (sb.length() > 0 ? " · " + sb : "") + tail;
     }
     static String verbing(String tool) { String[] x = WORDS.get(tool); return x != null ? x[0] : "Using " + tool.replace('_', ' '); }
     static String done(String tool) { String[] x = WORDS.get(tool); return x != null ? x[1] : "Used " + tool.replace('_', ' '); }

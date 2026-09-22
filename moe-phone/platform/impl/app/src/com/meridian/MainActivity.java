@@ -41,6 +41,10 @@ public class MainActivity extends Activity {
     // ---------- design system and navigation ----------
     UiTheme T; UiKit K; SharedPreferences prefs;
     FrameLayout root, screenHost; View drawer; String screen = "home"; final ArrayDeque<String> backStack = new ArrayDeque<>();
+    final Set<String> seen = new HashSet<>();
+    /** True the first time `key` is rendered: new items animate in once, refreshes never replay it. */
+    boolean fresh(String key) { return seen.add(key); }
+    TextView workingElapsed, runningElapsed;
     TextView headerSub; final Runnable ticker = new Runnable() { public void run() { tick(); } };
     LinearLayout body; ScrollView bodyScroll; Runnable bodyFill; boolean refreshQueued; final Set<String> pendingRefresh = new HashSet<>();
     // live state shown by the new screens
@@ -189,7 +193,10 @@ public class MainActivity extends Activity {
             default: screen = "home"; v = buildHome();
         }
         screenHost.addView(v, new FrameLayout.LayoutParams(-1, -1));
+        if (!screen.equals(lastRendered) && UiKit.motion()) { v.setAlpha(0f); v.setTranslationY(dp(10)); v.animate().alpha(1f).translationY(0).setDuration(180).setInterpolator(new android.view.animation.DecelerateInterpolator()).start(); }
+        lastRendered = screen; ui.removeCallbacks(ticker); ui.postDelayed(ticker, 1000);
     }
+    String lastRendered = "";
     View frame(View header, Runnable fill, View footer) {
         LinearLayout f = K.col();
         if (header != null) f.addView(header, new LinearLayout.LayoutParams(-1, -2));
@@ -284,7 +291,9 @@ public class MainActivity extends Activity {
             if (setupRunning) {
                 LinearLayout c = K.card(); LinearLayout r = K.row(); r.addView(K.pulse());
                 TextView tt = K.text("Checking your phone…", UiTheme.Text.TITLE, T.ink); LinearLayout.LayoutParams p = K.weight(); p.leftMargin = dp(12); r.addView(tt, p); c.addView(r);
-                TextView st = K.text(setupStage == null ? "Starting" : setupStage, UiTheme.Text.CAPTION, T.ink2); st.setMaxLines(3); K.add(c, st, 8);
+                workClock = K.text(clock((System.currentTimeMillis() - workStarted) / 1000), UiTheme.Text.CAPTION, T.ink3); r.addView(workClock);
+                stageView = K.text(setupStage == null ? "Starting" : setupStage, UiTheme.Text.BODY, T.ink2); stageView.setPadding(dp(34), 0, 0, 0); K.add(c, stageView, 8);
+                c.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
                 addGap(K.heading("This takes a few minutes.", UiTheme.Text.HEADLINE), 8);
                 addGap(K.text("Keep Meridian open and put the phone down. If you can, leave it unplugged: I measure the phone the way you'll use it.", UiTheme.Text.BODY_L, T.ink2), 8);
                 addGap(c, 20);
@@ -371,8 +380,9 @@ public class MainActivity extends Activity {
         LinearLayout c = K.pressCard(v -> go("task"));
         LinearLayout r = K.row(); r.addView(K.pulse()); TextView t = K.text(task.request, UiTheme.Text.TITLE, T.ink); t.setMaxLines(2); t.setEllipsize(TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams p = K.weight(); p.leftMargin = dp(12); r.addView(t, p); r.addView(K.iconView("chevron", T.ink3, 20)); c.addView(r);
-        TextView now = K.text(task.now, UiTheme.Text.BODY, T.ink2); now.setPadding(dp(32), 0, 0, 0); K.add(c, now, 6);
-        if (!task.steps.isEmpty()) { LinearLayout br = K.row(); br.setPadding(dp(32), dp(10), 0, 0); UiKit.Bar b = K.bar(T.primary); b.set(task.doneCount() / (float) task.steps.size());
+        LinearLayout nr = K.row(); nr.setPadding(dp(34), 0, 0, 0); TextView now = K.text(task.now, UiTheme.Text.BODY, T.ink2); nr.addView(now, K.weight());
+        runningElapsed = K.text(clock(task.elapsedS()), UiTheme.Text.CAPTION, T.ink3); nr.addView(runningElapsed); K.add(c, nr, 6);
+        if (!task.steps.isEmpty()) { LinearLayout br = K.row(); br.setPadding(dp(34), dp(10), 0, 0); UiKit.Bar b = K.bar(T.primary); b.glide("home" + task.started, task.doneCount() / (float) task.steps.size());
             br.addView(b, new LinearLayout.LayoutParams(0, dp(4), 1f)); TextView n = K.text("Step " + Math.min(task.steps.size(), task.doneCount() + 1) + " of " + task.steps.size(), UiTheme.Text.CAPTION, T.ink3);
             LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-2, -2); np.leftMargin = dp(10); br.addView(n, np); c.addView(br); }
         c.setContentDescription("Running task: " + task.request + ". " + task.now);
@@ -431,11 +441,16 @@ public class MainActivity extends Activity {
     }
     void tick() {
         ui.removeCallbacks(ticker);
+        if ((measuring || setupRunning) && (screen.equals("phone") || screen.equals("setup"))) {
+            if (workClock != null) workClock.setText(clock((System.currentTimeMillis() - workStarted) / 1000)); ui.postDelayed(ticker, 1000); return; }
         UiTask tk = viewing != null ? viewing : task;
-        if (!screen.equals("task") || tk == null || tk.finished()) { if (headerSub != null && tk != null && screen.equals("task")) headerSub.setText(statusLine(tk)); return; }
-        if (headerSub != null) headerSub.setText(statusLine(tk));
+        if (tk == null || tk.finished()) { if (headerSub != null && tk != null && screen.equals("task")) headerSub.setText(statusLine(tk)); return; }
+        if (screen.equals("task")) { if (headerSub != null) headerSub.setText(statusLine(tk)); if (workingElapsed != null) workingElapsed.setText(clock(tk.elapsedS())); }
+        else if (screen.equals("home") && runningElapsed != null) runningElapsed.setText(clock(tk.elapsedS()));
+        else return;
         ui.postDelayed(ticker, 1000);
     }
+    static String clock(long s) { return s < 60 ? s + " s" : String.format(Locale.ROOT, "%d:%02d", s / 60, s % 60); }
     void fillTask(UiTask tk) {
         if (headerSub != null) headerSub.setText(statusLine(tk));
         ui.removeCallbacks(ticker); if (!tk.finished()) ui.postDelayed(ticker, 1000);
@@ -449,17 +464,43 @@ public class MainActivity extends Activity {
         } else if (!tk.finished()) {
             LinearLayout c = K.tintCard(T.surface2); LinearLayout r = K.row(); r.addView(K.pulse()); LinearLayout.LayoutParams p = K.weight(); p.leftMargin = dp(12);
             r.addView(K.text(tk.status == UiTask.Status.NEEDS_YOU ? "Waiting for your OK" : "Working now", UiTheme.Text.LABEL, T.ink), p);
+            workingElapsed = K.text(clock(tk.elapsedS()), UiTheme.Text.CAPTION, T.ink3); r.addView(workingElapsed);
             c.addView(r);
             K.add(c, K.text(tk.now, UiTheme.Text.BODY_L, T.ink), 8);
+            liveView = K.text("", UiTheme.Text.BODY, T.ink2); liveView.setMaxLines(4); K.add(c, liveView, 6);
+            String l0 = tk.live(); if (l0 == null) liveView.setVisibility(View.GONE); else liveView.setText(withCaret(l0));
             if (tk.status == UiTask.Status.NEEDS_YOU && pendingConsent != null) { LinearLayout ra = K.row(); ra.setPadding(0, dp(10), 0, 0); ra.addView(K.button("Review", UiKit.Kind.PRIMARY, v -> reshowConsent())); c.addView(ra); }
             c.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); c.setContentDescription("Working now: " + tk.now); addGap(c, 16);
         }
         if (!tk.steps.isEmpty()) {
             LinearLayout c = K.card(); int n = tk.steps.size();
             c.addView(K.text("Plan · " + tk.doneCount() + " of " + n + " done", UiTheme.Text.OVERLINE, T.ink2));
+            UiKit.Bar pb = K.bar(tk.status == UiTask.Status.DONE ? T.good : T.primary); K.add(c, pb, 10); pb.glide("plan" + tk.started, tk.doneCount() / (float) n);
+            int i = 0, cascade = 0;
             for (UiTask.Step s : tk.steps) {
                 String sub = s.sub; if (!s.did.isEmpty()) sub = (sub == null ? "" : sub + "\n") + TextUtils.join("\n", s.did);
-                K.add(c, K.step(s.state, s.title == null ? "" : s.title, sub), 14);
+                LinearLayout row = K.step(s.state, s.title == null ? "" : s.title, sub); K.add(c, row, 14);
+                String k = tk.started + ":" + i;
+                if (fresh(k + ":row")) K.appear(row, 60L * cascade++);
+                if (s.state == UiKit.StepState.DONE && fresh(k + ":done")) K.pop(row.getChildAt(0));
+                if (!s.did.isEmpty() && fresh(k + ":did" + s.did.size())) K.appear(row.getChildAt(1), 0);
+                i++;
+            }
+            addGap(c, 12); if (fresh(tk.started + ":plan")) K.appear(c, 0);
+        }
+        if (!tk.feed.isEmpty()) {
+            LinearLayout c = K.card(); int n = tk.feed.size(); boolean all = feedAll || !tk.finished(); int from = all ? 0 : Math.max(0, n - 5);
+            LinearLayout hr = K.row(); hr.addView(K.text("Activity", UiTheme.Text.OVERLINE, T.ink2), K.weight());
+            if (n > 5 && tk.finished()) { Button tg = K.button(feedAll ? "Show less" : "Show all " + n, UiKit.Kind.QUIET, v -> { feedAll = !feedAll; refresh("task"); }); tg.setMinHeight(dp(40)); hr.addView(tg); }
+            c.addView(hr);
+            for (int i = from; i < n; i++) { UiTask.Event e = tk.feed.get(i);
+                LinearLayout r = K.row(); r.setGravity(Gravity.TOP);
+                int dot = e.kind.equals("ok") ? T.good : e.kind.equals("warn") ? T.warm : e.kind.equals("act") ? T.sun : e.kind.equals("step") ? T.ink : T.ink3;
+                View d = new View(this); d.setBackground(T.rounded(dot, 999)); LinearLayout.LayoutParams dp8 = new LinearLayout.LayoutParams(dp(8), dp(8)); dp8.topMargin = dp(8); r.addView(d, dp8);
+                TextView tx = K.text(e.text, e.kind.equals("step") ? UiTheme.Text.LABEL : UiTheme.Text.BODY, e.kind.equals("step") ? T.ink : T.ink2); LinearLayout.LayoutParams tp = K.weight(); tp.leftMargin = dp(12); r.addView(tx, tp);
+                TextView tm = K.text(clock(e.t / 1000), UiTheme.Text.CAPTION, T.ink3); LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(-2, -2); mp.leftMargin = dp(8); mp.topMargin = dp(2); r.addView(tm, mp);
+                r.setContentDescription(e.text + ", at " + clock(e.t / 1000)); K.add(c, r, 10);
+                if (fresh(tk.started + ":ev" + i)) K.appear(r, 0);
             }
             addGap(c, 12);
         }
@@ -472,10 +513,10 @@ public class MainActivity extends Activity {
             final String all = tk.answer + (tk.actionsTaken == null ? "" : "\n\n" + tk.actionsTaken);
             acts.addView(K.button("Copy", "copy", UiKit.Kind.QUIET, v -> { ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Meridian", all)); toast("Copied"); }));
             if (tk == task) acts.addView(K.button("Run again", "history", UiKit.Kind.QUIET, v -> runAgent(tk.request)));
-            c.addView(acts); addGap(c, 12);
+            c.addView(acts); addGap(c, 12); if (fresh(tk.started + ":result")) K.appear(c, 80);
         }
-        if (tk.status == UiTask.Status.PROBLEM && tk.problem != null) addGap(problemCard(tk.problem), 12);
-        if (tk.status == UiTask.Status.STOPPED) addGap(K.pill("stop", "Stopped. Nothing else will happen for this task.", T.surface2, T.ink2), 12);
+        if (tk.status == UiTask.Status.PROBLEM && tk.problem != null) { View pc = problemCard(tk.problem); addGap(pc, 12); if (fresh(tk.started + ":problem")) K.appear(pc, 80); }
+        if (tk.status == UiTask.Status.STOPPED) { View sp = K.pill("stop", "Stopped. Nothing else will happen for this task.", T.surface2, T.ink2); addGap(sp, 12); if (fresh(tk.started + ":stopped")) K.appear(sp, 0); }
     }
     /** Stop means stop: deny any pending approval and cancel the agent, which checks before every model call and every tool
      *  (Agent.cancel). Cancelling only the current generation was not enough: on the Nord (2026-09-22) a tool ran after Stop. */
@@ -486,6 +527,15 @@ public class MainActivity extends Activity {
         answerConsent(pendingConsent, false);
         Agent a = runningAgent; if (a != null) a.cancel();   // checked before every model call and tool run (harness, 2026-09-22)
         refresh("task", "home");
+    }
+    TextView liveView; boolean liveQueued; boolean feedAll;
+    /** The live line under "Working now": what the model is writing this instant (the plan forming, the action it is choosing,
+     *  the answer typing out). Updated in place ~12 times a second at most; never rebuilds the screen. */
+    void scheduleLive() {
+        if (liveQueued) return; liveQueued = true;
+        ui.postDelayed(() -> { liveQueued = false; UiTask tk = task; if (tk == null || tk.finished() || liveView == null || !liveView.isAttachedToWindow()) return;
+            String l = tk.live(); if (l == null) { liveView.setVisibility(View.GONE); return; }
+            liveView.setVisibility(View.VISIBLE); liveView.setText(withCaret(l)); }, 80);
     }
     boolean taskFooterRunning;
     /** The body refreshes in place; the footer (Stop vs. the next-task composer) swaps only when the task starts or ends. */
@@ -555,6 +605,7 @@ public class MainActivity extends Activity {
         for (ChatMsg m : chatMsgs) {
             TextView q = K.text(m.user, UiTheme.Text.BODY_L, T.ink); q.setBackground(T.rounded(T.surface2, 20)); q.setPadding(dp(16), dp(12), dp(16), dp(12)); q.setTextIsSelectable(true);
             LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-2, -2); rp.gravity = Gravity.END; rp.topMargin = dp(16); rp.leftMargin = dp(48); body.addView(q, rp);
+            if (fresh("chat:" + m.t0 + ":" + m.user.hashCode())) K.appear(q, 0);
             String[] parts = splitThinking(m.raw.toString()); int ph = phase(m); m.renderedPhase = ph; m.thinkView = null;
             if (ph == 0 || !parts[0].isEmpty()) {   // waiting for the first token, or the model's thinking (live while it thinks, folded after)
                 final LinearLayout box = K.tintCard(T.surface2); box.setPadding(dp(14), dp(10), dp(14), dp(10));
@@ -570,11 +621,14 @@ public class MainActivity extends Activity {
                     box.setContentDescription(label + ". Double tap to show or hide the thinking."); }
                 if (ph == 1) m.thinkView = tv; addGap(box, 10);
             }
-            TextView a = K.text(parts[1], UiTheme.Text.BODY_L, T.ink); a.setTextIsSelectable(true); m.answerView = a; if (!parts[1].isEmpty() || ph >= 2) addGap(a, 10);
+            TextView a = K.text(ph == 2 ? caret(parts[1]) : parts[1], UiTheme.Text.BODY_L, T.ink); a.setTextIsSelectable(ph == 3); m.answerView = a; if (!parts[1].isEmpty() || ph >= 2) addGap(a, 10);
             if (m.failed && m.info != null) addGap(problemCard(UiHumanize.of(m.info)), 8);
             else if (m.done && m.info != null) addGap(K.text(m.info, UiTheme.Text.CAPTION, T.ink3), 6);
         }
     }
+    /** The streaming answer ends in a marigold caret, so text visibly arriving reads as live. */
+    CharSequence withCaret(String s) { if (s.length() > 160) s = "…" + s.substring(s.length() - 160); return caret(s); }
+    CharSequence caret(String s) { SpannableString sp = new SpannableString(s + " \u258D"); sp.setSpan(new ForegroundColorSpan(T.sun), sp.length() - 1, sp.length(), 0); return sp; }
     /** 0 waiting for output, 1 thinking, 2 answering, 3 done. The body is rebuilt only when the phase changes. */
     static int phase(ChatMsg m) { if (m.done) return 3; String[] p = splitThinking(m.raw.toString()); return !p[1].isEmpty() ? 2 : !p[0].isEmpty() ? 1 : 0; }
     /** {thinking, answer} from a raw stream that may contain <think>..</think>. */
@@ -592,7 +646,7 @@ public class MainActivity extends Activity {
             if (!screen.equals("chat")) return;
             if (phase(m) != m.renderedPhase || m.answerView == null || !m.answerView.isAttachedToWindow()) { refresh("chat"); return; }
             String[] p = splitThinking(m.raw.toString());
-            if (m.renderedPhase == 1 && m.thinkView != null) m.thinkView.setText(p[0]); else m.answerView.setText(p[1]);
+            if (m.renderedPhase == 1 && m.thinkView != null) m.thinkView.setText(p[0]); else m.answerView.setText(caret(p[1]));
             if (bodyScroll != null) bodyScroll.post(() -> bodyScroll.fullScroll(View.FOCUS_DOWN)); }, 60);
     }
 
@@ -604,9 +658,13 @@ public class MainActivity extends Activity {
             if (profile == null) { addGap(needsYou("gauge", "I haven't checked this phone yet", "A one-time check measures what it can run.", "Check my phone", v -> go("setup")), 12); return; }
             addGap(K.heading(phoneVerdict(), UiTheme.Text.HEADLINE), 8);
             if (measuring || setupRunning) { LinearLayout c = K.card(); LinearLayout r = K.row(); r.addView(K.pulse()); LinearLayout.LayoutParams p = K.weight(); p.leftMargin = dp(12);
-                r.addView(K.text(measuring ? "Measuring speed…" : "Checking your phone…", UiTheme.Text.TITLE, T.ink), p); c.addView(r);
-                if (setupStage != null) K.add(c, K.text(setupStage, UiTheme.Text.CAPTION, T.ink2), 6); addGap(c, 16); }
+                r.addView(K.text(measuring ? "Measuring speed…" : "Checking your phone…", UiTheme.Text.TITLE, T.ink), p);
+                workClock = K.text(clock((System.currentTimeMillis() - workStarted) / 1000), UiTheme.Text.CAPTION, T.ink3); r.addView(workClock); c.addView(r);
+                stageView = K.text(setupStage == null ? "Starting" : setupStage, UiTheme.Text.BODY, T.ink2); stageView.setPadding(dp(34), 0, 0, 0); K.add(c, stageView, 6);
+                K.add(c, K.text(measuring ? "Takes about 2 minutes. Keep Meridian open." : "Takes a few minutes. Keep Meridian open.", UiTheme.Text.CAPTION, T.ink3), 8);
+                c.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE); addGap(c, 16); }
             if (phoneProblem != null) addGap(problemCard(phoneProblem), 16);
+            else if (!measuring && !setupRunning && notMeasured()) addGap(needsYou("gauge", "Measure this phone's speed", "A 2-minute test with small sample models. After it, I can tell you how fast each model will run here.", "Measure now", v -> measureCompute()), 16);
             addModelVerdicts(6, false);
             sectionTitle("About this phone", 24);
             LinearLayout facts = K.row(); facts.setGravity(Gravity.TOP);
@@ -634,6 +692,7 @@ public class MainActivity extends Activity {
         if (recs == null) return recsError != null ? "I couldn't work out what fits yet." : "Working out what fits…";
         double best = 0; int runs = 0;
         for (int i = 0; i < recs.length(); i++) { JSONObject e = recs.optJSONObject(i); if (e == null || !"Runs".equals(e.optString("verdict"))) continue; runs++; best = Math.max(best, conservativeTokS(e)); }
+        if (runs == 0 && notMeasured()) return "I need to measure this phone before I can say what it runs.";
         if (runs == 0) return "None of the listed models fit this phone yet.";
         if (best >= 20) return "Great for everyday tasks.";
         if (best >= 8) return "Good for everyday tasks. Bigger models take their time.";
@@ -644,10 +703,15 @@ public class MainActivity extends Activity {
         JSONObject d = e.optJSONObject("decode_tok_s"); if (d == null) return 0;
         return UiKit.basisOf(d.optString("provenance")) == UiKit.Basis.MEASURED && !Double.isNaN(d.optDouble("value", Double.NaN)) ? d.optDouble("value") : d.optDouble("lo", 0);
     }
+    boolean notMeasured() {
+        if (recs == null) return false;
+        for (int i = 0; i < recs.length(); i++) { JSONObject e = recs.optJSONObject(i); if (e != null && (e.optString("verdict") + e.optString("detail")).toLowerCase(Locale.ROOT).contains("notcalibrated")) return true; }
+        try { JSONObject cp = profile.getJSONObject("cpu").optJSONObject("compute"); return cp == null || cp.isNull("value"); } catch (Exception e) { return false; }
+    }
     JSONObject bestRecommendation() { if (recs == null) return null; for (int i = 0; i < recs.length(); i++) { JSONObject e = recs.optJSONObject(i); if (e != null && e.optBoolean("recommended")) return e; } return null; }
     /** One card per model from the recommendation list: plain speed words first, the measured-or-not chip, the number second. */
     void addModelVerdicts(int max, boolean fitsOnly) {
-        if (recs == null) { if (recsError != null) addGap(problemCard(UiHumanize.of(recsError)), 16); else addGap(K.text("Working out which models fit…", UiTheme.Text.BODY, T.ink2), 16); return; }
+        if (recs == null) { if (recsError != null) addGap(problemCard(UiHumanize.of(recsError)), 16); else { LinearLayout r = K.row(); r.addView(K.pulse()); TextView t = K.text("Working out which models fit…", UiTheme.Text.BODY, T.ink2); LinearLayout.LayoutParams p = K.weight(); p.leftMargin = dp(10); r.addView(t, p); addGap(r, 16); } return; }
         int shown = 0;
         for (int pass = 0; pass < 3; pass++) for (int i = 0; i < recs.length() && shown < max; i++) {
             final JSONObject e = recs.optJSONObject(i); if (e == null) continue; boolean runs = "Runs".equals(e.optString("verdict")), have = e.optBoolean("downloaded");
@@ -672,7 +736,7 @@ public class MainActivity extends Activity {
             LinearLayout sp = K.row(); sp.setPadding(0, dp(10), 0, dp(6));
             sp.addView(K.text(UiHumanize.speedWords(mid), UiTheme.Text.LABEL, T.ink), K.weight());
             // a single number only for a measured cell; anything predicted is a range (08 section 6)
-            String num = b == UiKit.Basis.MEASURED && !Double.isNaN(v) ? String.format(Locale.ROOT, "%.1f tokens/s", v) : String.format(Locale.ROOT, "about %.0f–%.0f tokens/s", lo, hi);
+            String num = b == UiKit.Basis.MEASURED && !Double.isNaN(v) ? String.format(Locale.ROOT, "%.1f tokens/s", v) : (Math.round(lo) == Math.round(hi) ? String.format(Locale.ROOT, "about %.0f tokens/s", lo) : String.format(Locale.ROOT, "about %.0f–%.0f tokens/s", lo, hi));
             sp.addView(K.text(num, UiTheme.Text.CAPTION, T.ink2)); c.addView(sp);
             LinearLayout meter = K.row(); for (int k = 0; k < 3; k++) { View s = new View(this); s.setBackground(T.rounded(k < UiHumanize.speedLevel(mid) ? T.ink : T.line, 999)); LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, dp(6), 1f); if (k > 0) p.leftMargin = dp(4); meter.addView(s, p); }
             c.addView(meter);
@@ -906,11 +970,28 @@ public class MainActivity extends Activity {
         l.addView(deviceReport);
         return scroll(l);
     }
-    void deviceStage(final String s) { onUi(() -> { deviceStatus.setText(s); setupStage = s; refresh("setup", "phone", "home"); }); }
+    void deviceStage(final String s) { onUi(() -> { deviceStatus.setText(s); String h = stageWords(s); boolean changed = !h.equals(setupStage); setupStage = h;
+        if (stageView != null && stageView.isAttachedToWindow()) stageView.setText(h); else if (changed) refresh("setup", "phone", "home"); }); }
+    long workStarted; TextView stageView, workClock;
+    /** Profile.run / ComputeProbe progress strings in plain words, e.g. "compute probe Q4_0_L3N@dot (rep 1/2)" ->
+     *  "Timing the processor on test models · pass 1 of 2". Unknown stages fall back to a generic line, never to raw text. */
+    static String stageWords(String raw) {
+        String l = raw == null ? "" : raw.toLowerCase(Locale.ROOT), what;
+        if (l.contains("compute")) what = "Timing the processor on test models";
+        else if (l.contains("grant") || l.contains("memprobe") || l.contains("fill")) what = "Checking how much memory Meridian can use";
+        else if (l.contains("dram") || l.contains("bandwidth")) what = "Measuring memory speed";
+        else if (l.contains("ufs") || l.contains("storage") || l.contains("read") || l.contains("write") || l.contains("i/o")) what = "Measuring storage speed";
+        else if (l.contains("placement") || l.contains("core") || l.contains("cluster") || l.contains("thread")) what = "Finding the fastest cores";
+        else if (l.contains("thermal") || l.contains("temp")) what = "Checking how warm the phone gets";
+        else if (l.contains("device") || l.contains("identity") || l.contains("cpu")) what = "Reading this phone's details";
+        else what = "Measuring";
+        Matcher m = Pattern.compile("rep (\\d+)/(\\d+)").matcher(l);
+        return m.find() ? what + " · pass " + m.group(1) + " of " + m.group(2) : what;
+    }
     void profileDevice() {
         if (busy) { toast("Meridian is busy. Try again when the current task finishes."); return; }
         if (chat != null) { unloadEngine(); if (loadBtn != null) loadBtn.setText("Load engine with selected model"); }   // profiling needs an idle device
-        final boolean mem = memGrant.isChecked(); setBusy(true); setupRunning = true; setupProblem = null; phoneProblem = null; setupStage = "Starting"; refresh("setup", "phone", "home");
+        final boolean mem = memGrant.isChecked(); setBusy(true); setupRunning = true; setupProblem = null; phoneProblem = null; setupStage = "Starting"; workStarted = System.currentTimeMillis(); ui.postDelayed(ticker, 1000); refresh("setup", "phone", "home");
         run(() -> {
             try {
                 File dir = internalModels();
@@ -933,7 +1014,7 @@ public class MainActivity extends Activity {
     void measureCompute() {
         if (busy || profile == null) { toast(profile == null ? "Check your phone first." : "Meridian is busy. Try again when the current task finishes."); return; }
         if (chat != null) { unloadEngine(); if (loadBtn != null) loadBtn.setText("Load engine with selected model"); }
-        setBusy(true); measuring = true; phoneProblem = null; setupStage = "Starting"; refresh("phone");
+        setBusy(true); measuring = true; phoneProblem = null; setupStage = "Starting"; workStarted = System.currentTimeMillis(); ui.postDelayed(ticker, 1000); refresh("phone");
         run(() -> { try { attachCompute(profile); saveProfile(); final String rep = Report.render(profile);
                 onUi(() -> { deviceStatus.setText("Compute probe done."); deviceReport.setText(colorize(rep)); refreshModels(); refreshRecommendations(); saveText("last_probe.txt", rep); }); }
             catch (Exception e) { onUi(() -> { deviceStatus.setText("Compute probe failed: " + e); phoneProblem = UiHumanize.of("Compute probe failed: " + e); }); }
@@ -1270,7 +1351,7 @@ public class MainActivity extends Activity {
             String res = a.runLoop(taskText, 12, new Agent.UI() {
                 // runLoop clears its cancel flag when it starts, so a Stop that lands in that gap is re-issued here.
                 public void log(String s) { onUi(() -> { agentLog.append(s + "\n"); if (tk.onLog(s)) taskChanged(); }); if (tk.stopRequested) a.cancel(); }
-                public void token(String t) { }
+                public void token(String t) { tk.onToken(t); scheduleLive(); }
                 public boolean consent(String tool, String text) { return !tk.stopRequested && askConsent(tk, tool, text); }
             });
             onUi(() -> { agentLog.append("\nResult: " + res + "\n"); saveText("last_agent.txt", agentLog.getText().toString()); tk.onResult(res); taskChanged(); });
