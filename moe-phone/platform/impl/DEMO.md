@@ -26,9 +26,14 @@ Switch back to Qwen3-4B (resident, fast). Task:
 - Cut to Notes/Clock to show the alarm and the saved restaurant list are real.
 - Follow-up task: *"I'm back. Give me a summary of everything you did for me earlier."* (the agent's task memory).
 
-### Scene 3 — Hands inside WhatsApp (~45 s)
-Task: *"Open WhatsApp and tell me who sent me the most recent messages."* The agent asks once to operate WhatsApp, opens it, reads the screen, and answers.
-Optional second beat (only with a friendly recipient who expects it): *"Reply to <name> on WhatsApp: I'll be there in 10 minutes."* The tap on Send raises the approval card **on top of WhatsApp** — the safety moment.
+### Scene 3 — A quick everyday task (~30 s after editing)
+Task: *"Is it going to rain in Chennai today? Remind me in 30 minutes to carry an umbrella."* Live weather (Open-Meteo), then a real
+reminder, both verified; the answer uses the forecast's own numbers.
+
+### Scene 4 — It knows your phone (~30 s)
+Models > "Recommended for this phone": every model with its tier (in memory or streamed) and a speed range predicted **before
+download** from this phone's measured compute, memory and storage; each chat turn shows the measured speed next to the prediction.
+Back-up evidence: the predictions were checked against real turns on this phone (`results/2026-09-22/oneplus15r/prediction_validation.json`).
 
 Closing card: on-device model · verified actions · approval before anything reaches another person · nothing leaves the phone except the web lookups the task asks for.
 
@@ -38,7 +43,8 @@ Closing card: on-device model · verified actions · approval before anything re
 3. "Now the agent: one sentence, five steps."
 4. "Every step is checked against the phone's real state. Anything that reaches another person waits for my OK."
 5. "It remembers what it did."
-6. "And it can work inside other apps — but a Send button always asks me first."
+6. "Everyday things are one sentence: live weather, a real reminder, both checked."
+7. "And it knows your phone: before you download a model, it predicts how fast it will run here — then proves it."
 
 ## 4. Numbers allowed on screen, and their sources
 | on screen | value | source |
