@@ -1,0 +1,566 @@
+{
+  "suite": "suite-v2",
+  "n_tasks": 14,
+  "model": "Qwen3-1.7B-Q4_0.gguf",
+  "summary": {
+    "loop": {
+      "S": "2\/14",
+      "S_frac": 0.14285714285714285,
+      "T_median_s": 25.458,
+      "T_q1_s": 24.631,
+      "T_q3_s": 25.458
+    },
+    "keyword_router": {
+      "S": "0\/14",
+      "S_frac": 0,
+      "T_median_s": null
+    },
+    "constant:say_hello": {
+      "S": "0\/14",
+      "S_frac": 0,
+      "T_median_s": null
+    },
+    "constant:battery_status": {
+      "S": "1\/14",
+      "S_frac": 0.07142857142857142,
+      "T_median_s": 0.001,
+      "T_q1_s": 0.001,
+      "T_q3_s": 0.001
+    }
+  },
+  "rows": [
+    {
+      "task": "dark_room",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 24.502,
+      "trace": [],
+      "calls": [],
+      "answer": "Open the flashlight and turn it on to help you see better in the dark.\n[actions taken: none]"
+    },
+    {
+      "task": "dark_room",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "dark_room",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "dark_room",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":78,\"charging\":false}"
+    },
+    {
+      "task": "quieter",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 26.424,
+      "trace": [],
+      "calls": [],
+      "answer": "Okay, let's lower the music volume. I'll go to the settings, find the volume option, and adjust it to a quarter of the current level.\n[actions taken: none]"
+    },
+    {
+      "task": "quieter",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "quieter",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "quieter",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":78,\"charging\":false}"
+    },
+    {
+      "task": "clipboard",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 24.345,
+      "trace": [],
+      "calls": [],
+      "answer": "You have copied the words 'meet at gate 12' to your clipboard.\n[actions taken: none]"
+    },
+    {
+      "task": "clipboard",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "clipboard",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "clipboard",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":78,\"charging\":false}"
+    },
+    {
+      "task": "split_bill",
+      "variant": "loop",
+      "pass": true,
+      "seconds": 24.631,
+      "trace": [],
+      "calls": [],
+      "answer": "Each person pays 2340 \/ 6 = 390 rupees.\n[actions taken: none]"
+    },
+    {
+      "task": "split_bill",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "split_bill",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "split_bill",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":78,\"charging\":false}"
+    },
+    {
+      "task": "weekday",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 24.717,
+      "trace": [],
+      "calls": [],
+      "answer": "It is a Thursday.\n[actions taken: none]"
+    },
+    {
+      "task": "weekday",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "weekday",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "weekday",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":78,\"charging\":false}"
+    },
+    {
+      "task": "tip_note",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 28.397,
+      "trace": [],
+      "calls": [],
+      "answer": "15% of 2,400 is 360. You have saved it in your notes.\n[actions taken: none]"
+    },
+    {
+      "task": "tip_note",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "tip_note",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "tip_note",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":78,\"charging\":false}"
+    },
+    {
+      "task": "charge_soon",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 27.902,
+      "trace": [],
+      "calls": [],
+      "answer": "Yes, you need to charge soon. The battery level is 25% and the phone is currently charging.\n[actions taken: none]"
+    },
+    {
+      "task": "charge_soon",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "charge_soon",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "charge_soon",
+      "variant": "constant:battery_status",
+      "pass": true,
+      "seconds": 0.001,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":78,\"charging\":false}"
+    },
+    {
+      "task": "ram",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 26.424,
+      "trace": [],
+      "calls": [],
+      "answer": "The total storage capacity of this phone is 128 gigabytes.\n[actions taken: none]"
+    },
+    {
+      "task": "ram",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "ram",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "ram",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":78,\"charging\":false}"
+    },
+    {
+      "task": "oven",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 26.946,
+      "trace": [],
+      "calls": [],
+      "answer": "Okay, I'll remind you to take the pizza out in 2 minutes.\n[actions taken: none]"
+    },
+    {
+      "task": "oven",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "oven",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "oven",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":77,\"charging\":false}"
+    },
+    {
+      "task": "weather",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 28.66,
+      "trace": [],
+      "calls": [],
+      "answer": "The weather in Chennai is currently clear and mild, with a temperature of 28°C. It's a perfect day for outdoor activities!\n[actions taken: none]"
+    },
+    {
+      "task": "weather",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "weather",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "weather",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":77,\"charging\":false}"
+    },
+    {
+      "task": "shakespeare",
+      "variant": "loop",
+      "pass": true,
+      "seconds": 25.458,
+      "trace": [],
+      "calls": [],
+      "answer": "William Shakespeare wrote Romeo and Juliet.\n[actions taken: none]"
+    },
+    {
+      "task": "shakespeare",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "shakespeare",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "shakespeare",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":77,\"charging\":false}"
+    },
+    {
+      "task": "text_declined",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 26.849,
+      "trace": [],
+      "calls": [],
+      "answer": "Text 5550100 that I'm running late.\n[actions taken: none]"
+    },
+    {
+      "task": "text_declined",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "text_declined",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "text_declined",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":77,\"charging\":false}"
+    },
+    {
+      "task": "impossible",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 28.782,
+      "trace": [],
+      "calls": [],
+      "answer": "I can help you transfer money. Please provide the recipient's bank account details and the amount, and I will assist you with the transfer.\n[actions taken: none]"
+    },
+    {
+      "task": "impossible",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "impossible",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "impossible",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":77,\"charging\":false}"
+    },
+    {
+      "task": "list_then",
+      "variant": "loop",
+      "pass": false,
+      "seconds": 25.27,
+      "trace": [],
+      "calls": [],
+      "answer": "Here are your notes:\n[actions taken: none]"
+    },
+    {
+      "task": "list_then",
+      "variant": "keyword_router",
+      "pass": false,
+      "seconds": 0.001,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "list_then",
+      "variant": "constant:say_hello",
+      "pass": false,
+      "seconds": 0,
+      "trace": [],
+      "calls": [],
+      "answer": "hello"
+    },
+    {
+      "task": "list_then",
+      "variant": "constant:battery_status",
+      "pass": false,
+      "seconds": 0,
+      "trace": [
+        "battery_status"
+      ],
+      "calls": [],
+      "answer": "{\"level_pct\":77,\"charging\":false}"
+    }
+  ],
+  "note": "T is defined only over correctly completed tasks and is reported with S. Predicates were fixed before any run and read device state, not the model's claims. One device, one model, one repeat."
+}

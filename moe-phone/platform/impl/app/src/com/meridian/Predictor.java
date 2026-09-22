@@ -134,6 +134,9 @@ public final class Predictor {
     public static JSONObject evaluate(JSONObject profile, Planner.Card card, long freeDisk, boolean onDisk, String modelPathFs) throws JSONException {
         JSONObject o = new JSONObject().put("model_id", card.modelId);
         long[] g = grant(profile); long grant = g[0]; int ctx = (int) Math.min(card.contextLimit, 4096);
+        // the largest context (4096, 3072, 2048 tokens) that lets the model stay resident: the KV cache is the only part that
+        // shrinks, and 2048 tokens still holds the agent's tool list plus a few steps. Below 2048 the answer is Infeasible.
+        for (int c : new int[]{4096, 3072, 2048}) { if (c > card.contextLimit) continue; if (card.totalBytes + card.kvF16PerToken * c + WORKING_SET <= grant) { ctx = c; break; } ctx = Math.min(c, (int) card.contextLimit); }
         long kv = card.kvF16PerToken * ctx, needRes = card.totalBytes + kv + WORKING_SET, floor = PlanV2.cycleBytes(card), needStr = card.residentBytes + kv + WORKING_SET + floor;
         o.put("grant_bytes", grant).put("grant_basis", g[1] == 1 ? "measured" : "prior").put("need_resident", needRes).put("need_streamed_min", card.streamable ? needStr : JSONObject.NULL).put("ctx", ctx);
         if (!onDisk && card.fileBytes + (512 * MIB) > freeDisk) return o.put("verdict", "NoSpace").put("detail", "needs " + (card.fileBytes / MIB) + " MiB of storage, " + (freeDisk / MIB) + " MiB free");

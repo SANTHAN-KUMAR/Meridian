@@ -25,9 +25,11 @@ public final class Agent {
         return null;
     }
 
-    private JSONObject ask(String prompt, int n, boolean clearKv, String grammar, String taskId, String step, UI ui) throws Exception {
+    private JSONObject ask(String prompt, int n, boolean clearKv, String grammar, String taskId, String step, UI ui) throws Exception { return ask(prompt, n, clearKv, false, grammar, taskId, step, ui); }
+    /** resetHistory: start a new conversation but keep the KV cache (the tool list prefix is reused); agent turns never "think". */
+    private JSONObject ask(String prompt, int n, boolean clearKv, boolean resetHistory, String grammar, String taskId, String step, UI ui) throws Exception {
         long t0 = System.currentTimeMillis();
-        String reply = chat.ask(prompt, n, clearKv, grammar, ui::token); String one = firstJsonObject(reply); if (one != null) reply = one;
+        String reply = chat.ask(prompt, n, clearKv, grammar, resetHistory, Boolean.FALSE, ui::token); String one = firstJsonObject(reply); if (one != null) reply = one;
         ui.log(step + "> " + reply.trim().replace('\n', ' '));
         JSONObject done = chat.lastResult, cond = Regime.snapshot(ctx);
         rec.write(new JSONObject().put("turn_id", taskId + "." + step).put("task_id", taskId).put("model_id", modelId).put("step", step).put("t_start", t0 / 1000.0).put("t_end", System.currentTimeMillis() / 1000.0)
@@ -101,7 +103,7 @@ public final class Agent {
         // (15R, Qwen2.5-3B, 2026-09-22), and the camera it opened then blocked the torch.
         // Step 0, query rewriting: indirect requests ("it's dark and I can't find my keys") failed selection on a 3B model, so the
         // model first restates the request as one direct instruction; selection then works on the instruction. General, no examples.
-        JSONObject in = ask(prompt + "\nFirst, restate what the user wants done as one short direct instruction (if it is only a question, restate the question):", 48, true, tools.intentGrammar(), taskId, "intent", ui);
+        JSONObject in = ask(prompt + "\nFirst, restate what the user wants done as one short direct instruction (if it is only a question, restate the question):", 48, false, true, tools.intentGrammar(), taskId, "intent", ui);
         String intent = in == null ? task : in.optString("intent", task).trim(); if (intent.isEmpty()) intent = task;
         // (A separate tool-SELECTION step was tried and removed the same day: with an optional list its grammar allowed, both
         //  Qwen2.5-3B and Qwen3-1.7B returned an empty list for every suite-v2 task and then invented answers; 2/14 on the 15R.)

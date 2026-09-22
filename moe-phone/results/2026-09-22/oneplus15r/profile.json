@@ -1,0 +1,865 @@
+{
+  "schema_version": 1,
+  "probe_suite": "meridian-app-0.1.0",
+  "state": "partial",
+  "created_at": 1.790073695092E9,
+  "profile_id": "58427d7d",
+  "identity": {
+    "manufacturer": "OnePlus",
+    "model": "CPH2767",
+    "soc_vendor": "QTI",
+    "soc_model": "SM8845",
+    "board": "canoe",
+    "os_version": "16",
+    "api_level": "36",
+    "build_fingerprint": "OnePlus\/CPH2767IN\/OP612DL1:16\/BP2A.250605.015\/B.R4T3.266e8a6-136672-136670:user\/release-keys",
+    "rooted": false,
+    "verified_boot": "green"
+  },
+  "cpu": {
+    "clusters": [
+      {
+        "name": "efficiency",
+        "core_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "max_khz": 3321600,
+        "isa_features": [
+          "aes",
+          "afp",
+          "asimd",
+          "asimddp",
+          "asimdfhm",
+          "asimdhp",
+          "asimdrdm",
+          "atomics",
+          "bf16",
+          "bti",
+          "cpuid",
+          "crc32",
+          "dcpodp",
+          "dcpop",
+          "dit",
+          "ecv",
+          "evtstrm",
+          "fcma",
+          "flagm",
+          "flagm2",
+          "fp",
+          "fphp",
+          "frint",
+          "i8mm",
+          "ilrcpc",
+          "jscvt",
+          "lrcpc",
+          "lrcpc3",
+          "paca",
+          "pacg",
+          "pmull",
+          "rng",
+          "rpres",
+          "sb",
+          "sha1",
+          "sha2",
+          "sha3",
+          "sha512",
+          "sm3",
+          "sm4",
+          "sme",
+          "smeb16f32",
+          "smef16f32",
+          "smef32f32",
+          "smei8i32",
+          "ssbs",
+          "sve",
+          "sve2",
+          "sveaes",
+          "svebf16",
+          "svei8mm",
+          "svepmull",
+          "svesha3",
+          "svesm4",
+          "uscat"
+        ],
+        "cpu_part": "0x002",
+        "matmul_gbps": {
+          "value": null,
+          "provenance": "unknown",
+          "confidence": 0,
+          "source": "compute_probe:not_implemented (PL-E11)"
+        }
+      },
+      {
+        "name": "performance",
+        "core_ids": [
+          6,
+          7
+        ],
+        "max_khz": 3801600,
+        "isa_features": [
+          "aes",
+          "afp",
+          "asimd",
+          "asimddp",
+          "asimdfhm",
+          "asimdhp",
+          "asimdrdm",
+          "atomics",
+          "bf16",
+          "bti",
+          "cpuid",
+          "crc32",
+          "dcpodp",
+          "dcpop",
+          "dit",
+          "ecv",
+          "evtstrm",
+          "fcma",
+          "flagm",
+          "flagm2",
+          "fp",
+          "fphp",
+          "frint",
+          "i8mm",
+          "ilrcpc",
+          "jscvt",
+          "lrcpc",
+          "lrcpc3",
+          "paca",
+          "pacg",
+          "pmull",
+          "rng",
+          "rpres",
+          "sb",
+          "sha1",
+          "sha2",
+          "sha3",
+          "sha512",
+          "sm3",
+          "sm4",
+          "sme",
+          "smeb16f32",
+          "smef16f32",
+          "smef32f32",
+          "smei8i32",
+          "ssbs",
+          "sve",
+          "sve2",
+          "sveaes",
+          "svebf16",
+          "svei8mm",
+          "svepmull",
+          "svesha3",
+          "svesm4",
+          "uscat"
+        ],
+        "cpu_part": "0x002",
+        "matmul_gbps": {
+          "value": null,
+          "provenance": "unknown",
+          "confidence": 0,
+          "source": "compute_probe:not_implemented (PL-E11)"
+        }
+      }
+    ],
+    "recommended_compute_mask": {
+      "value": null,
+      "provenance": "unknown",
+      "confidence": 0,
+      "source": "placement probe not run"
+    },
+    "recommended_io_mask": {
+      "value": null,
+      "provenance": "unknown",
+      "confidence": 0,
+      "source": "placement probe not run"
+    },
+    "compute": {
+      "value": {
+        "t0_ms": 0,
+        "t0_raw_ms": -0.0043258345092630265,
+        "t0_clamped": true,
+        "t_layer_ms": 0.09777822847002304,
+        "t_layer_raw_ms": 0.09777822847002304,
+        "t_layer_clamped": false,
+        "q4_0_arms_tok_s": {
+          "L1": [
+            744.158,
+            755.64
+          ],
+          "L3": [
+            249.928,
+            251.589
+          ],
+          "L3N": [
+            559.591,
+            566.55
+          ]
+        },
+        "types": {
+          "Q4_0": {
+            "w_gbps": 28.832623727032036,
+            "lo": 28.72957684465937,
+            "hi": 28.93572481736034,
+            "bytes_per_token": 106524032,
+            "decode_tok_s": [
+              249.928,
+              251.589
+            ],
+            "prefill_tok_s": [
+              459.64,
+              460.46
+            ],
+            "n": 2,
+            "note": "fitted with the 1-layer and narrow arms"
+          },
+          "Q8_0": {
+            "w_gbps": 57.94244487489243,
+            "lo": 57.78490916597529,
+            "hi": 58.100047351304646,
+            "bytes_per_token": 201161088,
+            "decode_tok_s": [
+              264.933,
+              266.265
+            ],
+            "prefill_tok_s": [
+              553.29,
+              554.27
+            ],
+            "n": 2,
+            "note": "t0 and t_layer from the Q4_0 fit"
+          },
+          "Q4_K": {
+            "w_gbps": 37.07496715938461,
+            "lo": 36.90153695171387,
+            "hi": 37.24854780367152,
+            "bytes_per_token": 106524032,
+            "decode_tok_s": [
+              317.143,
+              314.461
+            ],
+            "prefill_tok_s": [
+              488,
+              481.53
+            ],
+            "n": 2,
+            "note": "t0 and t_layer from the Q4_0 fit"
+          },
+          "Q6_K": {
+            "w_gbps": 23.47259109922349,
+            "lo": 21.06346408051194,
+            "hi": 25.902894172987004,
+            "bytes_per_token": 155321264,
+            "decode_tok_s": [
+              130.424,
+              158.992
+            ],
+            "prefill_tok_s": [
+              235.94,
+              269.14
+            ],
+            "n": 2,
+            "note": "t0 and t_layer from the Q4_0 fit"
+          },
+          "MXFP4": {
+            "w_gbps": 26.434776701258514,
+            "lo": 26.095854820145163,
+            "hi": 26.774321610151105,
+            "bytes_per_token": 100609216,
+            "decode_tok_s": [
+              241.039,
+              246.852
+            ],
+            "prefill_tok_s": [
+              311.16,
+              366.74
+            ],
+            "n": 2,
+            "note": "t0 and t_layer from the Q4_0 fit"
+          }
+        },
+        "prefill_gbps_q4_0": 49.0063809216,
+        "prefill_tok_s_q4_0_L3": [
+          459.64,
+          460.46
+        ],
+        "engine_variant": "dot",
+        "variant_basis": {
+          "i8mm_engine_bundled": true,
+          "cpu_has_i8mm": true,
+          "dot_decode_tok_s": [
+            220.367,
+            248.607
+          ],
+          "i8_decode_tok_s": [
+            246.746,
+            235.42
+          ],
+          "dot_prefill_tok_s": [
+            577.91,
+            461.33
+          ],
+          "i8_prefill_tok_s": [
+            383.51,
+            385.07
+          ],
+          "turn_s_dot": 0.6578328947837331,
+          "turn_s_i8": 0.7859090314694548,
+          "rule": "shorter median turn (200-token prompt + 64 output tokens) on the calibration model"
+        },
+        "threads": 4,
+        "cpu_mask": "f0",
+        "placement_basis": "topology rule: fastest non-little cores, max 4 (Topo.java); not yet A\/B-confirmed on this device",
+        "failures": 0,
+        "failure_log": []
+      },
+      "provenance": "measured",
+      "confidence": 0.7,
+      "source": "ComputeProbe: synthetic calibration GGUFs through the real engine, 2 ABBA repeats, 48 decoded tokens",
+      "conditions": {
+        "wakefulness": "awake",
+        "foreground": "self",
+        "power": "unplugged",
+        "thermal_status": 0,
+        "battery_pct": 82,
+        "n_samples": 40,
+        "in_regime": true
+      }
+    }
+  },
+  "memory": {
+    "total": 11639087104,
+    "available_at_probe": {
+      "value": 3444379648,
+      "provenance": "measured",
+      "confidence": 0.9,
+      "source": "\/proc\/meminfo"
+    },
+    "grantable_foreground": {
+      "value": null,
+      "provenance": "unknown",
+      "confidence": 0,
+      "source": "PL-S2:never_measured"
+    },
+    "zram_or_swap": {
+      "present": true,
+      "fault_cost": {
+        "value": null,
+        "provenance": "unknown",
+        "confidence": 0,
+        "source": "swap_fault_probe:not_implemented"
+      }
+    },
+    "grantable_quiesced": {
+      "value": 3201302528,
+      "provenance": "prior",
+      "confidence": 0.4,
+      "source": "memprobe n_runs=2",
+      "conditions": {
+        "wakefulness": "awake",
+        "foreground": "other-app",
+        "power": "unplugged",
+        "thermal_status": 0,
+        "battery_pct": 83,
+        "n_samples": 95,
+        "in_regime": false
+      },
+      "interval": [
+        2337275904,
+        3201302528
+      ]
+    },
+    "dram_read_gbps": {
+      "value": 60.376,
+      "provenance": "prior",
+      "confidence": 0.4,
+      "source": "dramprobe n_clean=11",
+      "conditions": {
+        "wakefulness": "awake",
+        "foreground": "other-app",
+        "power": "unplugged",
+        "thermal_status": 0,
+        "battery_pct": 83,
+        "n_samples": 95,
+        "in_regime": false
+      },
+      "interval": [
+        41.45,
+        62.529
+      ]
+    }
+  },
+  "storage": {
+    "path": "\/data\/user\/0\/com.meridian.app\/files\/models",
+    "filesystem": "f2fs",
+    "free_bytes": 29617000448,
+    "random_read": [
+      {
+        "size_bytes": 4096,
+        "threads": 1,
+        "mbps": {
+          "value": 47.31,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            45.82,
+            60.2
+          ]
+        },
+        "p50_us": 84.5,
+        "p99_us": 144
+      },
+      {
+        "size_bytes": 4096,
+        "threads": 4,
+        "mbps": {
+          "value": 184.98,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            181.81,
+            246.46
+          ]
+        },
+        "p50_us": 86.9,
+        "p99_us": 149.9
+      },
+      {
+        "size_bytes": 4096,
+        "threads": 8,
+        "mbps": {
+          "value": 331.42,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            265.34,
+            360.01
+          ]
+        },
+        "p50_us": 118.8,
+        "p99_us": 233.8
+      },
+      {
+        "size_bytes": 65536,
+        "threads": 1,
+        "mbps": {
+          "value": 384.38,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            381.2,
+            409.96
+          ]
+        },
+        "p50_us": 168.4,
+        "p99_us": 244.8
+      },
+      {
+        "size_bytes": 65536,
+        "threads": 4,
+        "mbps": {
+          "value": 1207.39,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            1170.07,
+            1240.91
+          ]
+        },
+        "p50_us": 206.5,
+        "p99_us": 483.9
+      },
+      {
+        "size_bytes": 65536,
+        "threads": 8,
+        "mbps": {
+          "value": 1634.49,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            1572.5,
+            1776.67
+          ]
+        },
+        "p50_us": 317.8,
+        "p99_us": 633
+      },
+      {
+        "size_bytes": 262144,
+        "threads": 1,
+        "mbps": {
+          "value": 731.05,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            711.87,
+            752.91
+          ]
+        },
+        "p50_us": 364.7,
+        "p99_us": 601
+      },
+      {
+        "size_bytes": 262144,
+        "threads": 4,
+        "mbps": {
+          "value": 2371.2,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            2368.62,
+            2599.15
+          ]
+        },
+        "p50_us": 424.8,
+        "p99_us": 679.4
+      },
+      {
+        "size_bytes": 262144,
+        "threads": 8,
+        "mbps": {
+          "value": 2650.94,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            2628.69,
+            3116.54
+          ]
+        },
+        "p50_us": 759.7,
+        "p99_us": 1289.1
+      },
+      {
+        "size_bytes": 1048576,
+        "threads": 1,
+        "mbps": {
+          "value": 979.34,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            976.65,
+            1029.34
+          ]
+        },
+        "p50_us": 1074.1,
+        "p99_us": 1365.1
+      },
+      {
+        "size_bytes": 1048576,
+        "threads": 4,
+        "mbps": {
+          "value": 2724.15,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            2709.11,
+            2884.29
+          ]
+        },
+        "p50_us": 1525.8,
+        "p99_us": 2106.4
+      },
+      {
+        "size_bytes": 1048576,
+        "threads": 8,
+        "mbps": {
+          "value": 2733.83,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            2699.97,
+            2828.54
+          ]
+        },
+        "p50_us": 3058.5,
+        "p99_us": 3778.1
+      },
+      {
+        "size_bytes": 4194304,
+        "threads": 1,
+        "mbps": {
+          "value": 989.45,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            978.83,
+            1000.96
+          ]
+        },
+        "p50_us": 4248.5,
+        "p99_us": 5347.1
+      },
+      {
+        "size_bytes": 4194304,
+        "threads": 4,
+        "mbps": {
+          "value": 2665.79,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            2637.98,
+            2676.01
+          ]
+        },
+        "p50_us": 6308.1,
+        "p99_us": 14387.9
+      },
+      {
+        "size_bytes": 4194304,
+        "threads": 8,
+        "mbps": {
+          "value": 2702.74,
+          "provenance": "prior",
+          "confidence": 0.4,
+          "source": "ufsbench n_repeats=3",
+          "conditions": {
+            "wakefulness": "awake",
+            "foreground": "other-app",
+            "power": "unplugged",
+            "thermal_status": 0,
+            "battery_pct": 83,
+            "n_samples": 95,
+            "in_regime": false
+          },
+          "interval": [
+            2699.18,
+            2740.09
+          ]
+        },
+        "p50_us": 12380,
+        "p99_us": 18546.6
+      }
+    ],
+    "efficient_request_size": {
+      "value": 262144,
+      "provenance": "prior",
+      "confidence": 0.4,
+      "source": "ufsbench knee over 3 repeats",
+      "conditions": {
+        "wakefulness": "awake",
+        "foreground": "other-app",
+        "power": "unplugged",
+        "thermal_status": 0,
+        "battery_pct": 83,
+        "n_samples": 95,
+        "in_regime": false
+      },
+      "interval": [
+        262144,
+        262144
+      ]
+    },
+    "sequential_write_mbps": {
+      "value": 1525.84,
+      "provenance": "prior",
+      "confidence": 0.4,
+      "source": "wrbench n_repeats=3 (fsync included)",
+      "conditions": {
+        "wakefulness": "awake",
+        "foreground": "other-app",
+        "power": "unplugged",
+        "thermal_status": 0,
+        "battery_pct": 83,
+        "n_samples": 95,
+        "in_regime": false
+      },
+      "interval": [
+        1500.79,
+        1572.52
+      ]
+    },
+    "direct_io_supported": true
+  },
+  "accelerators": [
+    {
+      "kind": "cpu",
+      "backend_id": "cpu-generic",
+      "available": true,
+      "reachable_unprivileged": true,
+      "fidelity_class": "bit-exact"
+    },
+    {
+      "kind": "gpu",
+      "backend_id": "opencl-adreno",
+      "available": true,
+      "reachable_unprivileged": true,
+      "fidelity_class": "unverified",
+      "note": "device node openable by this app; no engine backend probed"
+    }
+  ],
+  "thermal": {
+    "sustained_derate": {
+      "value": null,
+      "provenance": "unknown",
+      "confidence": 0,
+      "source": "T3 not implemented (PL-E14)"
+    }
+  },
+  "power": {
+    "rails_available": false,
+    "method": "none"
+  },
+  "validity": {
+    "conditions": {
+      "wakefulness": "awake",
+      "foreground": "other-app",
+      "power": "unplugged",
+      "thermal_status": 0,
+      "battery_pct": 83,
+      "n_samples": 95,
+      "in_regime": false
+    },
+    "rejected_runs": 4,
+    "rejection_reasons": [
+      "descheduled: dramprobe threads=2 ratio=0.865",
+      "descheduled: dramprobe threads=4 ratio=0.627",
+      "descheduled: dramprobe threads=6 ratio=0.851",
+      "descheduled: dramprobe threads=8 ratio=0.756"
+    ]
+  }
+}

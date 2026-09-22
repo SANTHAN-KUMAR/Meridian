@@ -1,0 +1,62 @@
+--- a/core/include/bmoe/session.h
++++ b/core/include/bmoe/session.h
+@@ -89,6 +89,10 @@
+     int n_predict = 32;
+     bool think = true;
+     bool clear_kv = true;
++    // Meridian 0021: with clear_kv=false, forget the engine-held conversation but KEEP the KV cache, so the next turn's rendered
++    // prompt re-uses whatever leading tokens still match (the prefix-reuse path below). An agent that sends the same long tool
++    // list at the start of every task then prefills only the new request. No effect when clear_kv=true.
++    bool reset_history = false;
+     // Populate TokenMetrics::text / ::reasoning on every token. Building them means parsing the
+     // WHOLE generation so far — the chat parser cannot resume — so it is O(n) per token and O(n²)
+     // over a turn, and in chat mode it also allocates a copy of everything generated. A UI that
+--- a/core/src/engine/session.cpp
++++ b/core/src/engine/session.cpp
+@@ -1367,6 +1367,11 @@
+         // fresh conversation. A continued turn (clear_kv=false) keeps the stream going, matching the
+         // KV it decodes against.
+         if (im.smpl) llama_sampler_reset(im.smpl);
++    } else if (req.reset_history) {
++        // Meridian 0021: a new conversation over the same KV. kv_tokens stay, so the prefix match below keeps every leading
++        // token the new prompt shares with the cache and prefills only the rest.
++        im.chat_history.clear();
++        if (im.smpl) llama_sampler_reset(im.smpl);
+     }
+ 
+     // Grammar-constrained decoding (per request). The chain is grammar -> greedy; llama_sampler_sample
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -222,6 +222,7 @@
+     int n_predict = 128;
+     bool think = true;
+     bool clear_kv = true;
++    bool reset_history = false;   // Meridian 0021
+     std::string grammar;
+ };
+ 
+@@ -248,7 +249,7 @@
+     // anything sensible about --drop-cold-experts, whose threshold is a fraction of 1/top-k: the
+     // same percentage trims a tail at 8 and takes half the routing at 2. 0 on a non-MoE model.
+     std::printf("BMOE_READY {\"load_s\":%.3f,\"arch\":\"%s\",\"n_ctx\":%d,\"think_ctl\":\"%s\","
+-                "\"n_expert_used\":%d,\"grammar\":true}\n",
++                "\"n_expert_used\":%d,\"grammar\":true,\"reset_history\":true}\n",
+                 session->load_seconds(), json_escape(session->arch()).c_str(), session->n_ctx(),
+                 bmoe::think_control_name(session->think_control()), session->n_expert_used());
+     std::fflush(stdout);
+@@ -280,6 +281,7 @@
+                 c.n_predict = json_get_int(line, "n_predict", cfg.n_predict);
+                 c.think = json_get_bool(line, "think", cfg.think);
+                 c.clear_kv = json_get_bool(line, "clear_kv", true);
++                c.reset_history = json_get_bool(line, "reset_history", false);
+                 json_get_string(line, "grammar", c.grammar);
+             } else {
+                 continue;
+@@ -317,6 +319,7 @@
+         req.n_predict = cmd.n_predict;
+         req.think = cmd.think;
+         req.clear_kv = cmd.clear_kv;
++        req.reset_history = cmd.reset_history;
+         req.grammar = cmd.grammar;
+         req.render_text = true; // the line protocol carries the parsed answer on every token
+ 

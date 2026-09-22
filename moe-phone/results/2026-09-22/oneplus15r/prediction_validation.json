@@ -1,0 +1,38 @@
+{
+ "source": "/run/media/santhankumar/New Volume/moe-phone/moe-phone/results/2026-09-22/oneplus15r/audit.jsonl",
+ "excluded_out_of_regime_turns": 0,
+ "rows": [
+  {
+   "model": "Qwen3-0.6B-Q4_0.gguf",
+   "predicted": 56.38,
+   "predicted_lo": 53.07,
+   "predicted_hi": 58.28,
+   "basis": "calibrated",
+   "observed": [
+    63.68,
+    58.46,
+    55.28,
+    55.8
+   ],
+   "observed_median": 57.13,
+   "point_error_frac": -0.0132,
+   "inside_range": "2/4"
+  },
+  {
+   "model": "qwen2.5-3b-instruct-q4_0.gguf",
+   "predicted": 14.52,
+   "predicted_lo": 14.2,
+   "predicted_hi": 14.79,
+   "basis": "calibrated",
+   "observed": [
+    14.53,
+    14.5,
+    14.3
+   ],
+   "observed_median": 14.5,
+   "point_error_frac": 0.0014,
+   "inside_range": "3/3"
+  }
+ ],
+ "note": "predictions were registered in the plan before the first turn; one device, one session each"
+}

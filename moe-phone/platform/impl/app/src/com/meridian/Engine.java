@@ -85,8 +85,14 @@ public final class Engine {
 
     public boolean supportsGrammar() { return readyInfo != null && readyInfo.optBoolean("grammar", false); }
 
-    public void generate(int id, String prompt, int nPredict, boolean clearKv, String grammar) throws IOException {
+    public boolean supportsResetHistory() { return readyInfo != null && readyInfo.optBoolean("reset_history", false); }
+    public void generate(int id, String prompt, int nPredict, boolean clearKv, String grammar) throws IOException { generate(id, prompt, nPredict, clearKv, grammar, false, null); }
+    /** resetHistory (engine patch 0021): new conversation that keeps the KV cache, so a shared prompt prefix is not prefilled again.
+     *  think: null = engine default; false renders the chat template with reasoning disabled. */
+    public void generate(int id, String prompt, int nPredict, boolean clearKv, String grammar, boolean resetHistory, Boolean think) throws IOException {
         try { JSONObject j = new JSONObject().put("cmd", "generate").put("id", id).put("prompt", prompt).put("n_predict", nPredict).put("clear_kv", clearKv);
+            if (resetHistory) { if (!supportsResetHistory()) { j.put("clear_kv", true); } else j.put("reset_history", true); }
+            if (think != null) j.put("think", think.booleanValue());
             if (grammar != null) { if (!supportsGrammar()) throw new IOException("this engine build does not support grammar-constrained decoding"); j.put("grammar", grammar); }
             send(j); }
         catch (JSONException e) { throw new IOException(e); }

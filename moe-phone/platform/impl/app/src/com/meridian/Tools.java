@@ -124,7 +124,7 @@ public final class Tools {
         add(new Tool("open_url", "Open a web address the user gives.", "ui", true, "none", "a browser accepted the URL", obj("url", "string")) {
             JSONObject execute(JSONObject a) throws Exception { String u = a.getString("url").trim(); if (!u.matches("(?i)https?://.*")) u = "https://" + u; return new JSONObject().put("opened", u).put("handled_by", launch(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(u)))); }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
-        add(new Tool("set_alarm", "Set an alarm. time like 7:30 am or 19:05; label is a short name or empty.", "write", true, "none", "the system's next scheduled alarm clock is at the requested hour and minute", obj("time", "string", "label", "string")) {
+        add(new Tool("set_alarm", "Set an alarm. time as the user said it (hour, minutes, am/pm if given); label is a short name or empty.", "write", true, "none", "the system's next scheduled alarm clock is at the requested hour and minute", obj("time", "string", "label", "string")) {
             JSONObject execute(JSONObject a) throws Exception { int[] t = parseTime(a.getString("time"));
                 Intent i = new Intent(android.provider.AlarmClock.ACTION_SET_ALARM).putExtra(android.provider.AlarmClock.EXTRA_HOUR, t[0]).putExtra(android.provider.AlarmClock.EXTRA_MINUTES, t[1])
                     .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, a.getString("label")).putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true);
@@ -132,12 +132,12 @@ public final class Tools {
             boolean verify(JSONObject a, JSONObject r) throws Exception {   // observable state: AlarmManager's next alarm clock
                 android.app.AlarmManager am = (android.app.AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE); android.app.AlarmManager.AlarmClockInfo n = am.getNextAlarmClock(); if (n == null) return false;
                 Calendar c = Calendar.getInstance(); c.setTimeInMillis(n.getTriggerTime()); return c.get(Calendar.HOUR_OF_DAY) == r.getInt("hour") && c.get(Calendar.MINUTE) == r.getInt("minute"); } });
-        add(new Tool("set_timer", "Start a countdown timer. duration like 5 minutes or 90 seconds; label short or empty.", "write", true, "none", "the clock app accepted the timer intent (no public API reads timers back)", obj("duration", "string", "label", "string")) {
+        add(new Tool("set_timer", "Start a countdown timer. duration as the user said it, with its unit; label short or empty.", "write", true, "none", "the clock app accepted the timer intent (no public API reads timers back)", obj("duration", "string", "label", "string")) {
             JSONObject execute(JSONObject a) throws Exception { int sec = parseDuration(a.getString("duration"));
                 String pkg = launch(new Intent(android.provider.AlarmClock.ACTION_SET_TIMER).putExtra(android.provider.AlarmClock.EXTRA_LENGTH, sec).putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, a.getString("label")).putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true));
                 return new JSONObject().put("seconds", sec).put("handled_by", pkg); }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
-        add(new Tool("calendar_event", "Open the calendar with a new event filled in. when like 5 pm or 17:30 today.", "ui", true, "none", "the calendar app opened the new-event screen with the title and time (the user saves it)", obj("title", "string", "when", "string")) {
+        add(new Tool("calendar_event", "Open the calendar with a new event filled in. when is the time the user said, and tomorrow if they said so.", "ui", true, "none", "the calendar app opened the new-event screen with the title and time (the user saves it)", obj("title", "string", "when", "string")) {
             JSONObject execute(JSONObject a) throws Exception { int[] t = parseTime(a.getString("when")); Calendar c = Calendar.getInstance(); c.set(Calendar.HOUR_OF_DAY, t[0]); c.set(Calendar.MINUTE, t[1]); c.set(Calendar.SECOND, 0);
                 if (a.getString("when").toLowerCase(Locale.ROOT).contains("tomorrow") || c.getTimeInMillis() < System.currentTimeMillis()) c.add(Calendar.DAY_OF_MONTH, 1);
                 Intent i = new Intent(Intent.ACTION_INSERT).setData(android.provider.CalendarContract.Events.CONTENT_URI).putExtra(android.provider.CalendarContract.Events.TITLE, a.getString("title"))
@@ -191,7 +191,7 @@ public final class Tools {
         add(new Tool("take_photo", "Open the camera to take a photo. Only when the user wants to take a picture.", "ui", true, "none", "a camera app accepted the still-image intent", obj()) {
             JSONObject execute(JSONObject a) throws Exception { return new JSONObject().put("handled_by", launch(new Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))); }
             boolean verify(JSONObject a, JSONObject r) { return r.has("handled_by"); } });
-        add(new Tool("calculate", "Compute an arithmetic expression exactly, e.g. 17*23 or (120-15)/4.", "read", true, "none", "the result re-computes to the same value", obj("expression", "string")) {
+        add(new Tool("calculate", "Compute an arithmetic expression exactly. Write the expression from the numbers in the request.", "read", true, "none", "the result re-computes to the same value", obj("expression", "string")) {
             JSONObject execute(JSONObject a) throws Exception { double v = calc(a.getString("expression")); return new JSONObject().put("expression", a.getString("expression")).put("result", v == Math.rint(v) && Math.abs(v) < 1e15 ? (Object) (long) v : (Object) v); }
             boolean verify(JSONObject a, JSONObject r) throws Exception { return Math.abs(calc(a.getString("expression")) - r.getDouble("result")) < 1e-9 * Math.max(1, Math.abs(r.getDouble("result"))); } });
         add(new Tool("time_now", "Read the current date, time and weekday. Only when the answer depends on the date or time.", "read", true, "none", "the time is within 5 seconds of the system clock", obj()) {

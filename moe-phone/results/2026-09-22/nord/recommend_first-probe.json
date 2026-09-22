@@ -1,0 +1,980 @@
+[
+  {
+    "model_id": "LFM2-8B-A1B-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 5201262336,
+    "need_streamed_min": 1435825920,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 10.578331137274407,
+      "lo": 10.293315277505181,
+      "hi": 10.83109916462073,
+      "provenance": "prior",
+      "notes": [
+        "F32 (6 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 24.606957302219936,
+      "lo": 24.56104771558518,
+      "hi": 24.65286688885469,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 8.22231549417678,
+      "lo": 8.204973464926194,
+      "hi": 8.240125530380586
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent",
+    "name": "LFM2 8B-A1B",
+    "url": "https:\/\/huggingface.co\/LiquidAI\/LFM2-8B-A1B-GGUF\/resolve\/main\/LFM2-8B-A1B-Q4_0.gguf",
+    "sha256": "63cd0f1be2f595293550d8dd5772782f211964d2979ad6113d7d32adafa9f785",
+    "size_bytes": 4733893312,
+    "quant": "Q4_0",
+    "license": "other (lfm1.0)",
+    "kind": "moe",
+    "params_note": "8.3B total \/ 1.5B active",
+    "params_b": 8.411556067555555,
+    "downloaded": false,
+    "filename": "LFM2-8B-A1B-Q4_0.gguf",
+    "recommended": true
+  },
+  {
+    "model_id": "OLMoE-1B-7B-0924-Instruct-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 4748339200,
+    "need_streamed_min": 1577445376,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 13.159178823503673,
+      "lo": 12.67055116549523,
+      "hi": 13.622698967016808,
+      "provenance": "prior",
+      "notes": [
+        "F32 (8 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (20 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 32.240820270298954,
+      "lo": 32.18066806565229,
+      "hi": 32.30097247494562,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 6.279308700589637,
+      "lo": 6.2651709379439975,
+      "hi": 6.2938345394710815
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent",
+    "name": "OLMoE 1B-7B 0924 Instruct",
+    "url": "https:\/\/huggingface.co\/bartowski\/OLMoE-1B-7B-0924-Instruct-GGUF\/resolve\/main\/OLMoE-1B-7B-0924-Instruct-Q4_0.gguf",
+    "sha256": "e6fe22c3beb101a0679e49647f57c159f87b4a5547f0b444ae7f6b90f09d23d8",
+    "size_bytes": 3944815424,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "moe",
+    "params_note": "6.9B total \/ 1.3B active",
+    "params_b": 7.009836145777777,
+    "downloaded": false,
+    "filename": "OLMoE-1B-7B-0924-Instruct-Q4_0.gguf"
+  },
+  {
+    "model_id": "granite-3.1-3b-a800m-instruct-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 2426873540,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 17.932823100902166,
+      "lo": 17.283222605621837,
+      "hi": 18.54849741985711,
+      "provenance": "prior",
+      "notes": [
+        "F32 (7 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (15 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 42.97751027541001,
+      "lo": 42.89732645962564,
+      "hi": 43.05769409119437,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 4.709360368540536,
+      "lo": 4.698843303080989,
+      "hi": 4.720154797529135
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent",
+    "name": "Granite 3.1 3B-A800M Instruct",
+    "url": "https:\/\/huggingface.co\/bartowski\/granite-3.1-3b-a800m-instruct-GGUF\/resolve\/main\/granite-3.1-3b-a800m-instruct-Q4_0.gguf",
+    "sha256": "3f86874aeecb6888169a660af26c06d327c96108fd6b43f15b4ced908f880576",
+    "size_bytes": 1891747392,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "moe",
+    "params_note": "3.3B total \/ 800M active",
+    "params_b": 3.360004672,
+    "downloaded": false,
+    "filename": "granite-3.1-3b-a800m-instruct-Q4_0.gguf"
+  },
+  {
+    "model_id": "qwen2.5-1.5b-instruct-q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 1446152704,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 10.453599445846226,
+      "lo": 10.06190799326673,
+      "hi": 10.797028181191521,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 24.276251402620392,
+      "lo": 24.2309588191755,
+      "hi": 24.321543986065283,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 8.334165065444935,
+      "lo": 8.31578023080251,
+      "hi": 8.353288402172577
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent",
+    "name": "Qwen2.5 1.5B Instruct",
+    "url": "https:\/\/huggingface.co\/Qwen\/Qwen2.5-1.5B-Instruct-GGUF\/resolve\/main\/qwen2.5-1.5b-instruct-q4_0.gguf",
+    "sha256": "dcd819ff094852c38faba6873d8ff0c9d51eadb2844539e52042ae5d647bbfdb",
+    "size_bytes": 1066227232,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "dense",
+    "params_note": "1.5B",
+    "params_b": 1.8849364195555556,
+    "downloaded": false,
+    "filename": "qwen2.5-1.5b-instruct-q4_0.gguf"
+  },
+  {
+    "model_id": "qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 1446152704,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 10.453599445846226,
+      "lo": 10.06190799326673,
+      "hi": 10.797028181191521,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 24.276251402620392,
+      "lo": 24.2309588191755,
+      "hi": 24.321543986065283,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 8.334165065444935,
+      "lo": 8.31578023080251,
+      "hi": 8.353288402172577
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent",
+    "name": "Qwen2.5-Coder 1.5B Instruct",
+    "url": "https:\/\/huggingface.co\/Qwen\/Qwen2.5-Coder-1.5B-Instruct-GGUF\/resolve\/main\/qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+    "sha256": "aa8353e0d0fca3a0041828701e90db7635197400f040676d11d7798665fa316e",
+    "size_bytes": 1066227264,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "dense",
+    "params_note": "1.5B",
+    "params_b": 1.8849364195555556,
+    "downloaded": false,
+    "filename": "qwen2.5-coder-1.5b-instruct-q4_0.gguf"
+  },
+  {
+    "model_id": "granite-3.1-1b-a400m-instruct-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 1239488984,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 35.52666313584129,
+      "lo": 34.03530258518478,
+      "hi": 36.9321866518495,
+      "provenance": "prior",
+      "notes": [
+        "F32 (3 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (7 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 87.49519449665415,
+      "lo": 87.33195333836974,
+      "hi": 87.65843565493853,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 2.3139876970668083,
+      "lo": 2.308659691754475,
+      "hi": 2.319493780833049
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent",
+    "name": "Granite 3.1 1B-A400M Instruct",
+    "url": "https:\/\/huggingface.co\/bartowski\/granite-3.1-1b-a400m-instruct-GGUF\/resolve\/main\/granite-3.1-1b-a400m-instruct-Q4_0.gguf",
+    "sha256": "642a83a3e38607015d14ccc0cb8069d02b94a32d4bf8fd18b958ead08d4b6e0e",
+    "size_bytes": 771466560,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "moe",
+    "params_note": "1.3B total \/ 400M active",
+    "params_b": 1.3684034417777777,
+    "downloaded": false,
+    "filename": "granite-3.1-1b-a400m-instruct-Q4_0.gguf"
+  },
+  {
+    "model_id": "Llama-3.2-1B-Instruct-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 1167847552,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 12.50843249006218,
+      "lo": 11.83009648100115,
+      "hi": 13.136574479487159,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (20 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 29.47321148458845,
+      "lo": 29.41822285111225,
+      "hi": 29.528200118064643,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 6.865769191405428,
+      "lo": 6.849309628622479,
+      "hi": 6.883037368971895
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent",
+    "name": "Llama 3.2 1B Instruct",
+    "url": "https:\/\/huggingface.co\/bartowski\/Llama-3.2-1B-Instruct-GGUF\/resolve\/main\/Llama-3.2-1B-Instruct-Q4_0.gguf",
+    "sha256": "fa0390e7c043f89ae1847bd6682d748041a99d4ef3de0e0b27d33b6af97a8be8",
+    "size_bytes": 773025920,
+    "quant": "Q4_0",
+    "license": "llama3.2",
+    "kind": "dense",
+    "params_note": "1B",
+    "params_b": 1.360345543111111,
+    "downloaded": false,
+    "filename": "Llama-3.2-1B-Instruct-Q4_0.gguf"
+  },
+  {
+    "model_id": "gemma-3-1b-it-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 1092872704,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 14.212000412870973,
+      "lo": 13.336579505457825,
+      "hi": 15.036724985244922,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (14 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 31.525296994174933,
+      "lo": 31.466479752540188,
+      "hi": 31.584114235809672,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 6.41447459673871,
+      "lo": 6.398801102049694,
+      "hi": 6.430951703007193
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent",
+    "name": "Gemma 3 1B IT",
+    "url": "https:\/\/huggingface.co\/unsloth\/gemma-3-1b-it-GGUF\/resolve\/main\/gemma-3-1b-it-Q4_0.gguf",
+    "sha256": "27ee88e03be02e9ba73def9a819d570d8ad73716e50769e87f374ae394b0276e",
+    "size_bytes": 721918496,
+    "quant": "Q4_0",
+    "license": "gemma",
+    "kind": "dense",
+    "params_note": "1B",
+    "params_b": 1.271796167111111,
+    "downloaded": false,
+    "filename": "gemma-3-1b-it-Q4_0.gguf"
+  },
+  {
+    "model_id": "qwen2.5-0.5b-instruct-q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 741549568,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 29.401007761314165,
+      "lo": 27.849961758965712,
+      "hi": 30.806033385637967,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 65.14239652794724,
+      "lo": 65.02085933583264,
+      "hi": 65.26393372006181,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 3.104209587055763,
+      "lo": 3.0969408732580876,
+      "hi": 3.1118426615497508
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent",
+    "name": "Qwen2.5 0.5B Instruct",
+    "url": "https:\/\/huggingface.co\/Qwen\/Qwen2.5-0.5B-Instruct-GGUF\/resolve\/main\/qwen2.5-0.5b-instruct-q4_0.gguf",
+    "sha256": "7671c0c304e6ce5a7fc577bcb12aba01e2c155cc2efd29b2213c95b18edaf6ed",
+    "size_bytes": 428730208,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "dense",
+    "params_note": "0.5B",
+    "params_b": 0.7516132693333334,
+    "downloaded": false,
+    "filename": "qwen2.5-0.5b-instruct-q4_0.gguf"
+  },
+  {
+    "model_id": "Qwen3-0.6B-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 1114401792,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 23.24604322597381,
+      "lo": 21.876049095794404,
+      "hi": 24.5087109565873,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (5 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 59.948108392852774,
+      "lo": 59.83626226567624,
+      "hi": 60.05995452002929,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 3.3792367695006913,
+      "lo": 3.370807671098881,
+      "hi": 3.388166859598201
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent",
+    "name": "Qwen3 0.6B",
+    "url": "https:\/\/huggingface.co\/unsloth\/Qwen3-0.6B-GGUF\/resolve\/main\/Qwen3-0.6B-Q4_0.gguf",
+    "sha256": "33bcc57074ec7b6eada5a90651ee546ec0c2b271002c22baf9f1b2dd1e8f75cb",
+    "size_bytes": 382156480,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "dense",
+    "params_note": "0.6B",
+    "params_b": 0.6688076231111112,
+    "downloaded": false,
+    "filename": "Qwen3-0.6B-Q4_0.gguf"
+  },
+  {
+    "model_id": "Qwen3-4B-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 3242231296,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 4.047144723885156,
+      "lo": 3.9018176646431253,
+      "hi": 4.183010734866855,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (59 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 9.51666071366457,
+      "lo": 9.498905330333686,
+      "hi": 9.53441609699545,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 21.262862746179763,
+      "lo": 21.21570078360035,
+      "hi": 21.311348526766754
+    },
+    "verdict": "Runs",
+    "speed_class": "usable",
+    "name": "Qwen3 4B",
+    "url": "https:\/\/huggingface.co\/unsloth\/Qwen3-4B-GGUF\/resolve\/main\/Qwen3-4B-Q4_0.gguf",
+    "sha256": "92f4a83cdfe691b216a949f915e47f35f0ed85b833aa03490c719160ac5cdf7a",
+    "size_bytes": 2375773472,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "dense",
+    "params_note": "4B",
+    "params_b": 4.213006336,
+    "downloaded": false,
+    "filename": "Qwen3-4B-Q4_0.gguf"
+  },
+  {
+    "model_id": "gemma-3-4b-it-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 3202385152,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 4.0402093345472485,
+      "lo": 3.8440929212548265,
+      "hi": 4.222014934008769,
+      "provenance": "prior",
+      "notes": [
+        "F32 (1 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (62 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 9.541994105453584,
+      "lo": 9.524191457215837,
+      "hi": 9.559796753691328,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 21.20749133955346,
+      "lo": 21.15780060642856,
+      "hi": 21.2592972638267
+    },
+    "verdict": "Runs",
+    "speed_class": "usable",
+    "name": "Gemma 3 4B IT",
+    "url": "https:\/\/huggingface.co\/unsloth\/gemma-3-4b-it-GGUF\/resolve\/main\/gemma-3-4b-it-Q4_0.gguf",
+    "sha256": "a3aa2db653fc95923d76e5d9039861d56f10dfb3c906afe6bcf8f72340ef2cbf",
+    "size_bytes": 2370065536,
+    "quant": "Q4_0",
+    "license": "gemma",
+    "kind": "dense",
+    "params_note": "4B",
+    "params_b": 4.2018210702222225,
+    "downloaded": false,
+    "filename": "gemma-3-4b-it-Q4_0.gguf"
+  },
+  {
+    "model_id": "qwen2.5-3b-instruct-q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 2411354112,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 5.387185930024448,
+      "lo": 5.231920998338196,
+      "hi": 5.523798190147209,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 12.412800298778118,
+      "lo": 12.389641542346038,
+      "hi": 12.435959055210194,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 16.298025385722788,
+      "lo": 16.263429393465124,
+      "hi": 16.333651447400733
+    },
+    "verdict": "Runs",
+    "speed_class": "usable",
+    "name": "Qwen2.5 3B Instruct",
+    "url": "https:\/\/huggingface.co\/Qwen\/Qwen2.5-3B-Instruct-GGUF\/resolve\/main\/qwen2.5-3b-instruct-q4_0.gguf",
+    "sha256": "670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a",
+    "size_bytes": 1997879712,
+    "quant": "Q4_0",
+    "license": "other (qwen-research)",
+    "kind": "dense",
+    "params_note": "3B",
+    "params_b": 3.5411977102222223,
+    "downloaded": false,
+    "filename": "qwen2.5-3b-instruct-q4_0.gguf"
+  },
+  {
+    "model_id": "Llama-3.2-3B-Instruct-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 2652268800,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 5.006957051856606,
+      "lo": 4.807853231400741,
+      "hi": 5.191418067241747,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (45 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 11.782599468478734,
+      "lo": 11.760616487631607,
+      "hi": 11.804582449325858,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 17.173905139078673,
+      "lo": 17.135198606114525,
+      "hi": 17.21390426813706
+    },
+    "verdict": "Runs",
+    "speed_class": "usable",
+    "name": "Llama 3.2 3B Instruct",
+    "url": "https:\/\/huggingface.co\/bartowski\/Llama-3.2-3B-Instruct-GGUF\/resolve\/main\/Llama-3.2-3B-Instruct-Q4_0.gguf",
+    "sha256": "4d491003bf6b470e4d04233824c5c939b76d6c81974ba17a3ff207343e1d8e85",
+    "size_bytes": 1921909280,
+    "quant": "Q4_0",
+    "license": "llama3.2",
+    "kind": "dense",
+    "params_note": "3B",
+    "params_b": 3.402793415111111,
+    "downloaded": false,
+    "filename": "Llama-3.2-3B-Instruct-Q4_0.gguf"
+  },
+  {
+    "model_id": "Qwen3-1.7B-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 1789028352,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 8.929681096130011,
+      "lo": 8.49486531643395,
+      "hi": 9.330028007714606,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (22 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 21.46181326690554,
+      "lo": 21.421771624884766,
+      "hi": 21.501854908926312,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 9.430863173792094,
+      "lo": 9.40870390841059,
+      "hi": 9.454014135785705
+    },
+    "verdict": "Runs",
+    "speed_class": "usable",
+    "name": "Qwen3 1.7B",
+    "url": "https:\/\/huggingface.co\/unsloth\/Qwen3-1.7B-GGUF\/resolve\/main\/Qwen3-1.7B-Q4_0.gguf",
+    "sha256": "c876f159707a4e4f70e045106c69db15bfc935a4981706fd4f65c6e7ea1e81c5",
+    "size_bytes": 1056782912,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "dense",
+    "params_note": "1.7B",
+    "params_b": 1.8681437297777777,
+    "downloaded": false,
+    "filename": "Qwen3-1.7B-Q4_0.gguf"
+  },
+  {
+    "model_id": "SmolLM2-1.7B-Instruct-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 2065833984,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 9.232554628936137,
+      "lo": 8.931777432699453,
+      "hi": 9.521760719697065,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (30 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 22.732500410929568,
+      "lo": 22.69008802795095,
+      "hi": 22.77491279390818,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 8.906288690128292,
+      "lo": 8.886614944554564,
+      "hi": 8.926381309317135
+    },
+    "verdict": "Runs",
+    "speed_class": "usable",
+    "name": "SmolLM2 1.7B Instruct",
+    "url": "https:\/\/huggingface.co\/bartowski\/SmolLM2-1.7B-Instruct-GGUF\/resolve\/main\/SmolLM2-1.7B-Instruct-Q4_0.gguf",
+    "sha256": "99b866e77adee858930244229afa833dbe3372a7bf122905ea506119c6911ae8",
+    "size_bytes": 993874912,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "dense",
+    "params_note": "1.7B",
+    "params_b": 1.7637193955555557,
+    "downloaded": false,
+    "filename": "SmolLM2-1.7B-Instruct-Q4_0.gguf"
+  },
+  {
+    "model_id": "Qwen3-30B-A3B-Q4_0.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 18045106176,
+    "need_streamed_min": 2719119360,
+    "ctx": 4096,
+    "tier": "streamed",
+    "cache_bytes": 6929876992,
+    "decode_tok_s": {
+      "value": 3.0649365668635107,
+      "lo": 1.0151298915193752,
+      "hi": 3.3630494331049987,
+      "provenance": "prior",
+      "notes": [
+        "F32 (48 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (45 MiB\/token) priced from measured kernels of the same family",
+        "expert cache 42% of the experts: hit 42-91% (curve from a Qwen3-30B-A3B trace; low end = no locality)",
+        "cache management 22-51 ms\/token: prior from the two phones the research measured",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 12.257119251246351,
+      "lo": 12.234250951389267,
+      "hi": 12.279987551103433,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 16.64331876839509,
+      "lo": 16.584010644411673,
+      "hi": 17.332643228411204
+    },
+    "verdict": "Runs",
+    "speed_class": "slow",
+    "name": "Qwen3 30B-A3B",
+    "url": "https:\/\/huggingface.co\/unsloth\/Qwen3-30B-A3B-GGUF\/resolve\/main\/Qwen3-30B-A3B-Q4_0.gguf",
+    "sha256": "8b8e9febb6ed326d91a016f5d465cf5b55a0b328d157a43e2242fda71fde9c40",
+    "size_bytes": 17379988032,
+    "quant": "Q4_0",
+    "license": "apache-2.0",
+    "kind": "moe",
+    "params_note": "30B total \/ 3B active",
+    "params_b": 30.887142286222222,
+    "downloaded": true,
+    "filename": "Qwen3-30B-A3B-Q4_0.gguf"
+  },
+  {
+    "model_id": "gpt-oss-20b-MXFP4.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 12566320384,
+    "need_streamed_min": 3659793664,
+    "ctx": 4096,
+    "tier": "streamed",
+    "cache_bytes": 6204599040,
+    "decode_tok_s": {
+      "value": 2.5611977386670914,
+      "lo": 0.9747632695873822,
+      "hi": 2.959515952096099,
+      "provenance": "prior",
+      "notes": [
+        "F32 (12 MiB\/token) priced from measured kernels of the same family",
+        "expert cache 61% of the experts: hit 61-96% (curve from a Qwen3-30B-A3B trace; low end = no locality)",
+        "cache management 22-51 ms\/token: prior from the two phones the research measured",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 8.759356419397758,
+      "lo": 8.743013950580421,
+      "hi": 8.775698888215093,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 23.223170030604162,
+      "lo": 23.128100750652234,
+      "hi": 23.901296823254587
+    },
+    "verdict": "Runs",
+    "speed_class": "slow",
+    "name": "GPT-OSS 20B",
+    "url": "https:\/\/huggingface.co\/ggml-org\/gpt-oss-20b-GGUF\/resolve\/main\/gpt-oss-20b-MXFP4.gguf",
+    "sha256": "27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901",
+    "size_bytes": 12109566624,
+    "quant": "MXFP4",
+    "license": "apache-2.0",
+    "kind": "moe",
+    "params_note": "20B total \/ ~3.6B active",
+    "params_b": 11.384996080941177,
+    "downloaded": false,
+    "filename": "gpt-oss-20b-MXFP4.gguf"
+  },
+  {
+    "model_id": "Qwen3-8B-Q4_K_M.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 5894242304,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 2.00838676703968,
+      "lo": 1.719642097745487,
+      "hi": 2.296981174613962,
+      "provenance": "prior",
+      "notes": [
+        "F32 (1 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 4.827453448221632,
+      "lo": 4.818446792519166,
+      "hi": 4.8364601039240975,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 41.92762280983985,
+      "lo": 41.78791265322553,
+      "hi": 42.08866764235249
+    },
+    "verdict": "Runs",
+    "speed_class": "slow",
+    "name": "Qwen3 8B",
+    "url": "https:\/\/huggingface.co\/unsloth\/Qwen3-8B-GGUF\/resolve\/main\/Qwen3-8B-Q4_K_M.gguf",
+    "sha256": "120307ba529eb2439d6c430d94104dabd578497bc7bfe7e322b5d9933b449bd4",
+    "size_bytes": 5027784512,
+    "quant": "Q4_K_M",
+    "license": "apache-2.0",
+    "kind": "dense",
+    "params_note": "8B",
+    "params_b": 8.927692572444444,
+    "downloaded": false,
+    "filename": "Qwen3-8B-Q4_K_M.gguf"
+  },
+  {
+    "model_id": "Phi-4-mini-instruct-Q4_K_M.gguf",
+    "grant_bytes": 8592031744,
+    "grant_basis": "measured",
+    "need_resident": 3288929664,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 3.7412582486786508,
+      "lo": 3.205284578811188,
+      "hi": 4.312165513352588,
+      "provenance": "prior",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "Q5_K (330 MiB\/token) priced from measured kernels of the same family",
+        "the compute probe ran out of regime (plugged in, screen off or app in background)",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 9.0805781501576,
+      "lo": 9.063636372913132,
+      "hi": 9.097519927402066,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 22.292319074843018,
+      "lo": 22.21591544579962,
+      "hi": 22.378183351905104
+    },
+    "verdict": "Runs",
+    "speed_class": "slow",
+    "name": "Phi-4-mini Instruct",
+    "url": "https:\/\/huggingface.co\/unsloth\/Phi-4-mini-instruct-GGUF\/resolve\/main\/Phi-4-mini-instruct-Q4_K_M.gguf",
+    "sha256": "88c00229914083cd112853aab84ed51b87bdf6b9ce42f532d8c85c7c63b1730a",
+    "size_bytes": 2491874272,
+    "quant": "Q4_K_M",
+    "license": "mit",
+    "kind": "dense",
+    "params_note": "3.8B",
+    "params_b": 4.415330304,
+    "downloaded": false,
+    "filename": "Phi-4-mini-instruct-Q4_K_M.gguf"
+  }
+]

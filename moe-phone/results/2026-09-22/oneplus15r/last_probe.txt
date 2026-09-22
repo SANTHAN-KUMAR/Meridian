@@ -1,0 +1,38 @@
+OnePlus CPH2767  -  QTI SM8845
+Android 16 (API 36), rooted: false
+
+CPU
+  efficiency: cores [0,1,2,3,4,5], 3.32 GHz, ISA [aes,afp,asimd,asimddp,asimdfhm,asimdhp,asimdrdm,atomics,bf16,bti,cpuid,crc32,dcpodp,dcpop,dit,ecv,evtstrm,fcma,flagm,flagm2,fp,fphp,frint,i8mm,ilrcpc,jscvt,lrcpc,lrcpc3,paca,pacg,pmull,rng,rpres,sb,sha1,sha2,sha3,sha512,sm3,sm4,sme,smeb16f32,smef16f32,smef32f32,smei8i32,ssbs,sve,sve2,sveaes,svebf16,svei8mm,svepmull,svesha3,svesm4,uscat]
+  performance: cores [6,7], 3.80 GHz, ISA [aes,afp,asimd,asimddp,asimdfhm,asimdhp,asimdrdm,atomics,bf16,bti,cpuid,crc32,dcpodp,dcpop,dit,ecv,evtstrm,fcma,flagm,flagm2,fp,fphp,frint,i8mm,ilrcpc,jscvt,lrcpc,lrcpc3,paca,pacg,pmull,rng,rpres,sb,sha1,sha2,sha3,sha512,sm3,sm4,sme,smeb16f32,smef16f32,smef32f32,smei8i32,ssbs,sve,sve2,sveaes,svebf16,svei8mm,svepmull,svesha3,svesm4,uscat]
+  best thread placement: not calibrated
+
+Memory
+  total 10.8 GiB, available now 3.2 GiB [measured]
+  one process can keep (quiesced): 2.98 GiB [prior, observed 2.18-2.98]
+  ...with a foreground app: not measured (PL-S2:never_measured)  (the number an agent lives on; never measured yet)
+  DRAM read: 60.38 GB/s [prior, observed 41.45-62.53]
+
+Storage (f2fs, /data/user/0/com.meridian.app/files/models)
+  free 27.6 GiB, direct I/O: true, efficient request size 256 KiB [prior, observed 256-256]
+  sequential write: 1526 MB/s [prior, observed 1501-1573]
+    4 KiB x8: 331 MB/s [prior, observed 265-360]
+    64 KiB x8: 1634 MB/s [prior, observed 1573-1777]
+    256 KiB x8: 2651 MB/s [prior, observed 2629-3117]
+    1024 KiB x8: 2734 MB/s [prior, observed 2700-2829]
+    4096 KiB x8: 2703 MB/s [prior, observed 2699-2740]
+
+Conditions: power unplugged, awake, foreground other-app, battery 83%
+  NOT the deployment regime: every figure above is labelled [prior], not [measured]. Re-run unplugged with the screen on and this app in front.
+  4 contaminated probe row(s) rejected, not averaged.
+
+Engine compute (measured with the real engine on synthetic calibration models)
+  engine build dotprod (portable), 4 threads on mask f0 [measured]
+  fixed cost per token 0.00 ms, per layer 0.098 ms
+  Q4_0   28.8 GB/s of weights (observed 28.7-28.9)
+  Q8_0   57.9 GB/s of weights (observed 57.8-58.1)
+  Q4_K   37.1 GB/s of weights (observed 36.9-37.2)
+  Q6_K   23.5 GB/s of weights (observed 21.1-25.9)
+  MXFP4  26.4 GB/s of weights (observed 26.1-26.8)
+  prefill (Q4_0) 49.0 GB/s-tokens
+
+Not measured in this build: thermal derate over long sessions, foreground memory grant, NPU. Predicted speeds on the Models tab come from the figures above and are labelled with their basis.

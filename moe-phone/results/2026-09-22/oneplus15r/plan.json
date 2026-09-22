@@ -1,0 +1,127 @@
+{
+  "model_id": "Qwen3-1.7B-Q4_0.gguf",
+  "evaluation": {
+    "model_id": "Qwen3-1.7B-Q4_0.gguf",
+    "grant_bytes": 3201302528,
+    "grant_basis": "prior",
+    "need_resident": 1789028352,
+    "need_streamed_min": null,
+    "ctx": 4096,
+    "tier": "resident",
+    "cache_bytes": 0,
+    "decode_tok_s": {
+      "value": 23.7727770573725,
+      "lo": 22.792227058998638,
+      "hi": 24.45381992692644,
+      "provenance": "calibrated",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (22 MiB\/token) priced from measured kernels of the same family",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "prefill_tok_s": {
+      "value": 46.6358415484963,
+      "lo": 46.59427933779119,
+      "hi": 46.677403759201404,
+      "provenance": "prior",
+      "notes": [
+        "scaled from a Q4_0 prefill at a 118-token prompt; longer prompts and other weight types differ"
+      ]
+    },
+    "ttft_200_s": {
+      "value": 4.330611956521111,
+      "lo": 4.325621859567856,
+      "hi": 4.336247036244416
+    },
+    "verdict": "Runs",
+    "speed_class": "fluent"
+  },
+  "plan_id": "1eae6cc",
+  "config": {
+    "tier": "resident",
+    "threads": 4,
+    "cpu_mask": "f0",
+    "ctx": 4096,
+    "ubatch": 512,
+    "cache_floor_mb": 0,
+    "cache_ceil_mb": 0,
+    "io_threads": 4,
+    "io_mask": null,
+    "variant": "dot"
+  },
+  "chosen": {
+    "tier": "resident",
+    "need_lower_bound": 1789028352,
+    "decode_tok_s": {
+      "value": 23.7727770573725,
+      "lo": 22.792227058998638,
+      "hi": 24.45381992692644,
+      "provenance": "calibrated",
+      "notes": [
+        "F32 (0 MiB\/token) priced from measured kernels of the same family",
+        "Q4_1 (22 MiB\/token) priced from measured kernels of the same family",
+        "sustained heat is not modelled yet (T3): expect lower after several minutes of continuous use"
+      ]
+    },
+    "basis": "calibrated"
+  },
+  "lease": {
+    "floor": 1789028352,
+    "target": 1789028352,
+    "purpose": "engine",
+    "priority": "interactive"
+  },
+  "falsification": {
+    "metric": "decode_tok_s",
+    "lo": 22.792227058998638,
+    "hi": 24.45381992692644,
+    "tolerance_frac": 0.034947386750773024,
+    "min_observations": 3,
+    "window": 5
+  },
+  "valid_while": {
+    "thermal_status_max": 1,
+    "power_state": "unplugged",
+    "profile_id": "58427d7d"
+  },
+  "ladder": [
+    {
+      "trigger": "memory",
+      "action": "reduce_context",
+      "params": {
+        "ctx": 2048
+      },
+      "expected_cost": {
+        "rate_frac": null,
+        "quality": "bounded"
+      },
+      "reversible": true,
+      "hysteresis_ms": 60000
+    },
+    {
+      "trigger": "memory",
+      "action": "suspend",
+      "params": {},
+      "expected_cost": {
+        "rate_frac": 0,
+        "quality": "none"
+      },
+      "reversible": true,
+      "hysteresis_ms": 60000
+    },
+    {
+      "trigger": "memory",
+      "action": "refuse",
+      "params": {
+        "code": "MemoryUnavailable"
+      },
+      "expected_cost": {
+        "rate_frac": 0,
+        "quality": "none"
+      },
+      "reversible": true,
+      "hysteresis_ms": 0
+    }
+  ]
+}

@@ -6,6 +6,64 @@ what it does not do. This extends the stub registry of
 unregistered stub is a false claim (CLAUDE.md section 7.5), so everything
 this code skips is listed here, not silently omitted.
 
+## 2026-09-22: engine generalization, pre-download prediction, agent (read this first)
+
+What changed, what was measured, and what is still not true. Every figure below is read from a committed artifact
+under `../../results/2026-09-22/` (`oneplus15r/`, `nord/`); `tools/validation_report.py` regenerates the prediction table.
+
+**Any model, not a registry.** `Planner.derive` accepts every GGUF llama.cpp loads: dense models run resident, MoE models
+(expert tensors found by llama.cpp's `_exps` naming, with integrity checks) run resident or, for the ten architectures the
+engine can stream (`Planner.STREAMABLE`), streamed. `RemoteGguf` reads a remote file's header with HTTP Range requests, so a
+model is evaluated before it is downloaded. `assets/catalog.json` carries ungated Hugging Face GGUFs whose cards were
+derived from their real headers (`app/test/CatalogMain.java`, which also cross-checks any entry present locally); any other
+https `.gguf` URL and Hugging Face search results go through the same path.
+
+**Compute is measured on the phone (closes PL-E11).** `ComputeProbe` runs synthetic calibration GGUFs (constant weights, so they
+compress to a few MB in the APK; `tools/make_calib_models.py`) through the real engine and fits
+`t_token = t0 + n_layer * t_layer + sum_T bytes_T / W_T` for Q4_0, Q8_0, Q4_K, Q6_K and MXFP4. Rows taken with the screen off
+are excluded and counted. When the i8mm engine build is bundled and the CPU has i8mm, both builds run and the one with the
+shorter representative turn (200-token prompt + 64 tokens) is chosen: on the 15R that was the portable dotprod build, because
+the i8mm build prefilled slower (`oneplus15r/profile.json`, `cpu.compute.value.variant_basis`).
+
+**Predictions before download, checked after.** `Predictor` prices compute, the KV re-read and (streamed) flash stall and cache
+management from measured inputs only, labels each figure `calibrated` or `prior`, ranks on the lower bound, and refuses without
+a compute probe. Prior-basis figures are shown as ranges only. Checked on the 15R against real chat turns
+(`oneplus15r/prediction_validation.json`, generated from the app's audit trail):
+
+two models so far (Qwen3-0.6B and Qwen2.5-3B-Instruct, both Q4_0): each row of the artifact has the prediction, every
+observed turn, the median, the point error and how many turns fell inside the predicted range. Regenerate with
+`python3 tools/validation_report.py ../../results/2026-09-22/oneplus15r/audit.jsonl out.json`.
+Known gap: the streamed tier's prediction is `prior` (hit-rate curve and cache-management cost transferred from the research's
+Qwen3-30B-A3B measurements); a back-test against the research's Nord measurement of Qwen3-30B-A3B
+(`../../results/2026-09-19/nord/`) had the measured rate inside the predicted range but the point estimate well above it,
+which is why prior figures are shown as ranges and ranked by their lower end.
+
+**Auto-configuration (closes PL-E25, PL-E23).** `AutoPlan` picks the tier (resident if it fits the measured memory grant, else
+streamed with the cache sized from the grant), the largest context of 4096/3072/2048 that fits, threads and CPU mask
+(`Topo`: fastest non-little cores, at most 4, until the placement A/B has run), I/O lanes on the other cores, and the engine
+build. Two engine builds share one APK through same-length ELF renames (`app/elf_rename.py`). Plans feed the existing
+Lease and Governor; the Governor falsifies a plan whose observed speed leaves the predicted range.
+
+**Agent.** `Agent.runLoop`: the request is rewritten as one direct instruction, a constrained yes/no decides whether a tool
+is needed, each step is grammar-constrained over all tools (30 intent/system tools, `Tools.java`), each result is verified
+against device state, a constrained yes/no after each result decides whether to answer, and every answer ends with a
+verified-action summary generated from the call log (the model's words are not trusted for what happened). Messages, calls
+and email only open the composer/dialer and ask consent every time. Evaluated with suite-v2 (`Eval.java`: requests that never
+name a tool, predicates on device state, a simulated user who approves consent only for the tool a task is about):
+see `oneplus15r/eval_suite-v2_*.json` (each file's `summary.S`). **The agent's success rate with the small models that fit
+this phone is well below reliable**: Qwen3-1.7B passed about half the tasks, above the no-model baselines but far from
+dependable; the larger-model run is recorded in the same folder when it completes.
+
+**Not done, stated plainly.**
+- The agent cannot operate inside other apps (read the screen, tap, type). An AccessibilityService for that was not built:
+  the development environment's safety policy blocked writing it. Everything the agent does goes through standard Android
+  intents and system APIs.
+- Thermal derate (T3) is not in the predictions; they describe the first minutes of use.
+- The 15R's memory grant was measured with many user apps resident (`oneplus15r/profile.json`, `memory.grantable_quiesced`);
+  the research measured much larger grants on the same phone when quiesced (`EVIDENCE.md`, `dev_budget_max_mib`), so the
+  recommendation list on this phone is conservative.
+- The Nord's compute probe in this session ran while charging and dozing and is labelled `prior` (`nord/`).
+
 ## Conformance reached (per `../10_EXTENSION_POINTS.md` section 1)
 
 **Delivered: `app/dist/meridian.apk`** (build: `app/build.sh`; details: [`app/README.md`](app/README.md)). One arm64 APK containing the
@@ -28,9 +86,9 @@ the binary but are not exposed (`PL-E25`).
 | id | what | state |
 |---|---|---|
 | ~~`PL-E7`~~ | grammar from ToolSpecs | **closed**: `Tools.grammar*()` + engine patch 0020; string-typed arguments only (others refused at generation time) |
-| `PL-E23` | i8mm engine variant | not shipped: two engine builds collide on library names inside one APK; the portable armv8.2 build runs everywhere with dotprod+fp16 |
+| ~~`PL-E23`~~ | i8mm engine variant | **closed 2026-09-22**: both builds ship (the i8mm one with same-length renamed libraries, `app/elf_rename.py`); `ComputeProbe` picks one per device by measurement |
 | `PL-E24` | engine crash isolation | the engine is a child process of the app; a foreground service keeps priority, but there is no separate-process supervisor/restart |
-| `PL-E25` | streamed tier in the app | engine flags exist; not exposed, because cache sizing needs the memory-lease protocol and `grantable_foreground` (PL-S2) |
+| ~~`PL-E25`~~ | streamed tier in the app | **closed 2026-09-22**: `AutoPlan` chooses streamed when resident does not fit and sizes the cache from the measured grant (quiesced grant until PL-S2 is measured; stated in the plan's `grant_basis`) |
 | `PL-E26` | Java tests | only `app/test/test_parity.py` (Java planner == Python planner on 3 real GGUFs); no UI or agent unit tests. Agent behaviour was verified by hand on a Nord |
 | `PL-S1` | frozen task suite + baselines | still open; the agent's success rate is unmeasured. Observed: with grammar-constrained plan/act/answer, one 2-tool task succeeded and verified on a 3B model; a free-form loop failed on the same model |
 
@@ -138,7 +196,7 @@ bytes by alignment padding (D-6, fixed).
 | `PL-E21` | engine working-set bytes | excluded from tier need (makes need a lower bound; verdicts stay sound) | measured from a real engine session |
 | `PL-E22` | further registry rows | qwen3moe added (observed); others refused `ArchitectureUnsupported` | a real checkpoint's expert pattern is observed |
 | ~~`PL-E10`~~ | L0 engine + session protocol | **closed**: engine bundled in the APK and driven over its session protocol (`app/src/com/meridian/Engine.java`) | - |
-| `PL-E11` | per-cluster `matmul_gbps` (T2 compute probe) | `Measured.unknown` in every `CpuCluster`; requires `host/app/ggml_matmul_bench.cpp`, which needs a ggml build this pass did not attempt | the ggml-based compute probe is cross-compiled and wired in |
+| ~~`PL-E11`~~ | T2 compute probe | **closed 2026-09-22** by `ComputeProbe` (the real engine on synthetic calibration models, per weight type) rather than a separate ggml benchmark; `cpu.clusters[].matmul_gbps` stays unknown because the probe measures the engine at its chosen placement, not per cluster | - |
 | ~~`PL-E12`~~ | thread-placement A/B | **closed for the compute mask** (I/O mask still unknown): app `Placement.java` A/Bs masks with the real engine (ABBA, 2 reps). On the Nord, olmoe: cores 6-7 = 17.3 tok/s vs default unpinned-4 = 8.3 (results in the app's `profile.json`, `cpu.recommended_compute_mask.arms`) | - |
 | `PL-E13` | per-accelerator decode/prefill rate, dispatch overhead | `Measured.unknown` for CPU/GPU/NPU; requires an engine (`PL-E10`) | T2 profiling ships |
 | `PL-E14` | thermal derate curve, time-to-throttle, recovery (T3) | not attempted; would need a sustained decode load this pass has no engine to generate | T3 profiling ships, per `04_DEVICE_PROFILING.md` §3.5 |

@@ -23,10 +23,11 @@ public final class Chat implements Engine.Listener {
 
     /** Returns the model's reply text; lastResult holds the BMOE_DONE telemetry. */
     public synchronized String ask(String prompt, int nPredict, boolean clearKv, TokenSink s) throws Exception { return ask(prompt, nPredict, clearKv, null, s); }
-    public synchronized String ask(String prompt, int nPredict, boolean clearKv, String grammar, TokenSink s) throws Exception {
+    public synchronized String ask(String prompt, int nPredict, boolean clearKv, String grammar, TokenSink s) throws Exception { return ask(prompt, nPredict, clearKv, grammar, false, null, s); }
+    public synchronized String ask(String prompt, int nPredict, boolean clearKv, String grammar, boolean resetHistory, Boolean think, TokenSink s) throws Exception {
         if (error != null) throw new IllegalStateException(error);
         sink = s; text.setLength(0); done.clear();
-        engine.generate(nextId++, prompt, nPredict, clearKv, grammar);
+        engine.generate(nextId++, prompt, nPredict, clearKv, grammar, resetHistory, think);
         JSONObject d = done.poll(600, TimeUnit.SECONDS);
         if (d == null) { engine.cancel(); throw new IllegalStateException(error != null ? error : "generation timed out"); }
         if (d.optBoolean("error")) throw new IllegalStateException(error);
