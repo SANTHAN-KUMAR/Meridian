@@ -5,11 +5,14 @@ that must behave as promised. It is distilled from one project's complete record
 days, what nearly shipped false — and stripped of that project's subject matter. Drop it into a new project and it still
 applies.
 
-It answers a different question from a validity rulebook. A rulebook (`CLAUDE.md` in this repository) says **what makes a
-result valid**: define before you estimate, identify, check that the design can estimate it at all, specify, compute,
-report. This document says **how to behave while getting there**: what to work on next, how long to keep digging, what to
-do the moment something fails, and how to stay honest when honesty is inconvenient. Keep both; on validity questions the
-rulebook wins.
+This document is self-contained. It carries both halves of the method: **what makes a result valid** (the order of
+validity, §2) and **how to behave while getting there** (everything else) — what to work on next, how long to keep
+digging, what to do the moment something fails, and how to stay honest when honesty is inconvenient. An agent with only
+this file has everything it needs to run a project properly.
+
+**How to use it.** Read §0 and §1 before starting. Write §3's opening documents before the first experiment or the first
+line of code. Consult §2 whenever a result is about to become a claim. Use §15's checklists at the start of the project,
+before every experiment, and before every statement you publish.
 
 ---
 
@@ -47,7 +50,59 @@ close only with evidence, and refuse to touch anything whose best case cannot ch
 
 ---
 
-## 2. Write the question so it can be answered
+## 2. The order of validity: what makes a result true
+
+Six levels. **Each is meaningless unless every level below it holds**, so work bottom-up and never repair a level before
+the one beneath it is verified. Name the level you are working at; if you cannot name it, you do not yet understand the
+task.
+
+| level | the question | if it fails |
+|---|---|---|
+| **L1 Definition** | Is the target quantity written down unambiguously — including the unit of analysis, the population, the conditions and the units? | You are estimating an unknown. |
+| **L2 Identification** | Is it recoverable from what you can observe, under assumptions you have stated? | No amount of data helps. |
+| **L3 Estimability** | Does your design contain enough of the right variation to measure it at the scale you have? | Every number you produce is noise wearing a point estimate. |
+| **L4 Specification** | Does your method target *that* quantity, or a different one? | You measured something real, but not the thing. |
+| **L5 Computation** | Is the arithmetic right, and did the tool answer the question you asked it? | The number is not what your method would have produced. |
+| **L6 Reporting** | Does the claim match the evidence? | Everything below it was wasted. |
+
+**The costliest mistakes are low-level defects diagnosed as high-level ones** — a design that cannot answer the question
+treated as a modelling problem, so a "better method" produces a different wrong number that looks the same. When
+something does not work, walk *down* the levels, not sideways.
+
+What each level demands in practice:
+
+- **L1 Definition.** Write the target before any method exists: the quantity, the conditions, the units, a plausible
+  magnitude range taken from outside your own work, and — the item most often skipped — **how your method's implicit
+  weighting differs from the quantity's intended one**. A quantity you cannot write down precisely, you cannot measure.
+- **L2 Identification.** State assumptions as explicit conditions over named quantities, not as prose. Say which are
+  testable and which are not; test the testable ones and report the result; name the untestable ones as limitations in
+  the same paragraph that relies on them. Point at the line, mechanism or procedure that makes each one true — an
+  assumption nothing enforces is a wish. When you implement a method from a source, quote the source's own statement of
+  it beside the implementation and map every symbol; a method attributed to a source that does not contain it is a
+  fabrication, however well the code runs.
+- **L3 Estimability.** Before running anything, compute the precision the design permits and compare it to the effect you
+  are chasing. If the noise is the size of the effect, the design cannot answer the question at any effort: **stop, report
+  that as the finding, and state what design would be needed.** Watch for the same problem wearing different names —
+  weak signal, near-deterministic assignment, poor coverage, collinearity, repeated near-identical samples — they are all
+  "the denominator is near zero". Sampling a process faster than it changes adds rows and no information; report the
+  effective sample size, not the row count. And **feed the design something where the answer is known to be
+  unrecoverable**: a method that returns a confident number there is reporting its own regularisation and will do the same
+  on real data without telling you.
+- **L4 Specification.** Write out what your method actually computes, as implemented, and check it against L1. Ask whether
+  a simpler error — a wrong functional form, a missing term, a mismatched population — is larger than the effect you are
+  isolating; if it is, your contribution is unobservable. Two methods that are algebraically identical are one method and
+  a bug in the comparison: agreement beyond a few significant figures between nominally different approaches is a defect,
+  not a validation.
+- **L5 Computation.** Never let a tool mask an ill-posed problem: a solver that "handles" a degenerate input returns
+  something that is not an estimate. Assert the conditions that make the computation meaningful *before* computing, and
+  fail rather than proceed. Never suppress warnings globally; narrow them to the call site with a comment naming what is
+  expected and why. Never catch an error without logging and counting it — every fallback increments a counter that
+  appears in the results, or silent substitution will relabel your numbers for an unknown fraction of cases.
+- **L6 Reporting.** Covered in §10.
+
+---
+
+## 3. Write the question so it can be answered
 
 Before any experiment or any code:
 
@@ -73,7 +128,7 @@ this".
 
 ---
 
-## 3. Choose work by ceilings
+## 4. Choose work by ceilings
 
 - **Floor and ceiling, from artifacts, before starting.** The current cost of the thing you are attacking, and the best
   case if your idea worked perfectly. **If the ceiling cannot change the decision, do not run it.**
@@ -91,7 +146,7 @@ this".
 
 ---
 
-## 4. Never abandon a genuine open end
+## 5. Never abandon a genuine open end
 
 When something fails, "it doesn't work" is almost never the finding. Walk the ladder, and report the rung you reached:
 
@@ -118,7 +173,7 @@ Both are progress. A closure with no ladder behind it is laziness wearing the co
 
 ---
 
-## 5. Do not drift
+## 6. Do not drift
 
 - **The closing rule binds.** When it fires, stop and write up. Park new ideas in writing; parked ideas are cheap.
 - **One architectural experiment at a time**, not five tunings. Tunings are how a day disappears.
@@ -133,7 +188,7 @@ Both are progress. A closure with no ladder behind it is laziness wearing the co
 
 ---
 
-## 6. Substitutes, proxies, and self-deception
+## 7. Substitutes, proxies, and self-deception
 
 - **Transfer test before any proxy.** A simulator, microbenchmark or synthetic stand-in informs a decision only after one
   real end-to-end measurement agrees with it. Quote both numbers.
@@ -153,7 +208,7 @@ Both are progress. A closure with no ladder behind it is laziness wearing the co
 
 ---
 
-## 7. Measure as if the environment is adversarial
+## 8. Measure as if the environment is adversarial
 
 - **Record the validity conditions with every measurement** — power, sleep state, temperature, background load, which app
   or process was in front, resource headroom — and **gate results on them**. Sample them *during* the run, not only at
@@ -174,7 +229,7 @@ Both are progress. A closure with no ladder behind it is laziness wearing the co
 
 ---
 
-## 8. Verify against the world
+## 9. Verify against the world
 
 - **Postconditions, not self-reports.** After an action, read the state back from whoever owns it. A component that
   returns "success" has proved nothing.
@@ -189,7 +244,7 @@ Both are progress. A closure with no ladder behind it is laziness wearing the co
 
 ---
 
-## 9. Report so the claim matches the evidence
+## 10. Report so the claim matches the evidence
 
 - **Label every number with its basis** — measured, calibrated, estimated — and never let an estimated number be the sole
   basis of a promise. Show estimates as ranges; decide and rank on the conservative end.
@@ -208,7 +263,7 @@ Both are progress. A closure with no ladder behind it is laziness wearing the co
 
 ---
 
-## 10. When a check fails
+## 11. When a check fails
 
 1. **The check is right until proven otherwise.** Moving a threshold to make a test pass is changing the science; if a
    criterion genuinely needs revising, record the revision, the reason and the date.
@@ -223,7 +278,7 @@ Both are progress. A closure with no ladder behind it is laziness wearing the co
 
 ---
 
-## 11. Working with the stakeholder
+## 12. Working with the stakeholder
 
 - **Block only when proceeding either way would waste the work.** Otherwise choose the sensible default, state the
   assumption, and continue.
@@ -237,7 +292,7 @@ Both are progress. A closure with no ladder behind it is laziness wearing the co
 
 ---
 
-## 12. Using agents and parallelism
+## 13. Using agents and parallelism
 
 - **Delegate search, curation and enumeration; keep judgement.** A subagent is good at "find and verify the candidates",
   poor at "decide what this means".
@@ -248,7 +303,7 @@ Both are progress. A closure with no ladder behind it is laziness wearing the co
 
 ---
 
-## 13. What a high-quality project looks like at the end
+## 14. What a high-quality project looks like at the end
 
 - A short document stating the claim, its condition, and the decision it supports.
 - Every number reproducible by a committed script from a committed artifact, with validity conditions attached.
@@ -264,26 +319,71 @@ say which, baselines are reported, and everything not done is written down.
 
 ---
 
+## 15. Checklists
+
+**Day one, before any experiment or code**
+- [ ] The question in one sentence, containing the number or decision that answers it.
+- [ ] The condition the result must hold in, written down.
+- [ ] The quantity defined precisely (L1): population, units, conditions, plausible range from outside your own work.
+- [ ] The decision tree, every leaf a decision.
+- [ ] Kill criteria per planned experiment, with the arithmetic behind each threshold.
+- [ ] The closing rule, agreed with the stakeholder, quoted in their words.
+- [ ] The cheapest experiment that could kill the project, identified and scheduled first.
+
+**Before running an experiment**
+- [ ] Floor and ceiling written from artifacts; the ceiling can change the decision.
+- [ ] Expected effect exceeds the design's noise (L3), or the design was changed.
+- [ ] Analysis rule pre-registered: which rows count, which statistic, which threshold.
+- [ ] Validity conditions to be recorded, and sampled during the run.
+- [ ] Arms alternated with repeats; a control that must come out trivially included.
+- [ ] Environment prepared: no competing heavy job, shared resources locked, orphan processes cleared, restore step planned.
+
+**Before believing a result**
+- [ ] The artifact opened: rows present, in regime, counters consistent with the claimed mechanism.
+- [ ] Contaminated rows excluded and counted.
+- [ ] Reproduced, or its variability characterised.
+- [ ] Checked against something the component cannot fake (system state, independent counter, physical bound, published value).
+- [ ] Beaten against the three baselines: no-data, best constant, simplest one-parameter method.
+- [ ] Derived quantities recomputed from raw output and matching their names.
+- [ ] Would it survive: rescaling an input, setting the true effect to zero, a different seed, a stricter reader?
+
+**Before writing a claim**
+- [ ] Every number read from an artifact by a committed script; none typed by hand.
+- [ ] Basis labelled: measured, calibrated, estimated; estimates shown as ranges.
+- [ ] Spread, failure rate and refusals reported, not just the central value.
+- [ ] Limits stated where the reader meets them, including externally imposed ones.
+- [ ] Superseded numbers deleted everywhere, not annotated.
+- [ ] Stubs registered; open routes carry their reopening conditions.
+
+**When something fails**
+- [ ] The check is assumed right; the code is assumed wrong.
+- [ ] Mechanism named in units before any fix.
+- [ ] Blast radius assessed: what else shares this assumption or consumed this output.
+- [ ] Fixed at the level of the class, not the instance.
+- [ ] Defect recorded with its regression check; threshold changes recorded with reason and date.
+
+---
+
 ## Appendix: cases that produced these rules
 
 Each of these happened. The rule is what it cost.
 
 | what happened | rule |
 |---|---|
-| A comparison against a published baseline was made across sessions in different power states and quoted for days; a same-session controlled run gave a much smaller ratio. | Controlled comparison or none; retract by deletion (§9). |
-| Two overnight campaigns were invalidated because the device slept mid-run: rows were bimodal, not noisy. | Sample validity conditions during the run; reject and count (§7). |
-| A simulator promised a rate the system never reached, because a cost term was missing from the simulation. | Transfer test before any proxy (§6). |
-| Days went into a route whose ceiling had already been measured as too small, while the largest measured gap sat untested for over a day. | Floors and ceilings first; go at the largest gap (§3). |
-| An evaluation's tasks resembled the examples in the system's own prompt, inflating the score. | Keep examples out of the evaluation; fix pass rules before the run (§6). |
-| A tool description contained a worked example, and the system copied that example's numbers into a real answer. | Documentation is an input; no concrete values in descriptions (§6). |
-| A decision step that allowed "nothing needed" was chosen almost always, and the system then invented answers; removing it multiplied the score. | Structured decisions must not offer a free escape hatch; measure each change end to end (§8). |
-| A watchdog fired on a sub-threshold fluctuation and tore down a healthy running system. | Thresholds on noisy signals are design parameters: state, justify, test the trigger (§10). |
-| A plan predicted a rate, the system reconfigured itself under pressure, and the prediction was never recomputed. | A prediction is stale the moment its configuration changes; say so in the artifact (§9). |
-| The best candidate missed a hard resource limit by a small margin until one parameter was made adaptive. | Search the configuration space before declaring infeasibility (§4, rung 4). |
-| Fixes were made to whatever the latest probe exposed, leaving whole classes of input uncovered. | Fix the class; map the space before writing more code (§5). |
-| A component reported success for actions that had not happened; only reading back the system's own state exposed it. | Postconditions, not self-reports; show verified actions beside claims (§8). |
+| A comparison against a published baseline was made across sessions in different power states and quoted for days; a same-session controlled run gave a much smaller ratio. | Controlled comparison or none; retract by deletion (§10). |
+| Two overnight campaigns were invalidated because the device slept mid-run: rows were bimodal, not noisy. | Sample validity conditions during the run; reject and count (§8). |
+| A simulator promised a rate the system never reached, because a cost term was missing from the simulation. | Transfer test before any proxy (§7). |
+| Days went into a route whose ceiling had already been measured as too small, while the largest measured gap sat untested for over a day. | Floors and ceilings first; go at the largest gap (§4). |
+| An evaluation's tasks resembled the examples in the system's own prompt, inflating the score. | Keep examples out of the evaluation; fix pass rules before the run (§7). |
+| A tool description contained a worked example, and the system copied that example's numbers into a real answer. | Documentation is an input; no concrete values in descriptions (§7). |
+| A decision step that allowed "nothing needed" was chosen almost always, and the system then invented answers; removing it multiplied the score. | Structured decisions must not offer a free escape hatch; measure each change end to end (§9). |
+| A watchdog fired on a sub-threshold fluctuation and tore down a healthy running system. | Thresholds on noisy signals are design parameters: state, justify, test the trigger (§11). |
+| A plan predicted a rate, the system reconfigured itself under pressure, and the prediction was never recomputed. | A prediction is stale the moment its configuration changes; say so in the artifact (§10). |
+| The best candidate missed a hard resource limit by a small margin until one parameter was made adaptive. | Search the configuration space before declaring infeasibility (§5, rung 4). |
+| Fixes were made to whatever the latest probe exposed, leaving whole classes of input uncovered. | Fix the class; map the space before writing more code (§6). |
+| A component reported success for actions that had not happened; only reading back the system's own state exposed it. | Postconditions, not self-reports; show verified actions beside claims (§9). |
 
 ---
 
-*Written 2026-09-30 from the moe-phone project's full record, for use on any project. Pair it with the project's own
-validity rulebook, not in place of it.*
+*Written 2026-09-30 from one project's complete record, for use on any project. Self-contained: if a project also keeps its
+own rulebook, that rulebook wins wherever the two differ.*
